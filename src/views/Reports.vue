@@ -24,15 +24,39 @@
         <div v-if="exporting" class="mt-4 text-sm text-gray-500">Preparing export...</div>
         <div v-if="errorMessage" class="mt-2 text-sm text-red-600">{{ errorMessage }}</div>
       </div>
+
+      <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="text-base font-semibold text-gray-800 dark:text-white">Dues collected by year</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Totals include manual and online payments for each dues year.
+            </p>
+          </div>
+          <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">USD</span>
+        </div>
+
+        <div class="mt-4">
+          <div v-if="loadingSummary" class="text-sm text-gray-500">Loading dues summary...</div>
+          <div v-else-if="summaryError" class="text-sm text-red-600">{{ summaryError }}</div>
+          <div v-else-if="!paymentsSummary.length" class="text-sm text-gray-500">No payments recorded yet.</div>
+          <div v-else class="-ml-4 -mr-2">
+            <VueApexCharts type="bar" height="340" :options="chartOptions" :series="chartSeries" />
+          </div>
+        </div>
+      </div>
     </div>
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import VueApexCharts from 'vue3-apexcharts'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { useAuth } from '@/composables/useAuth'
+
+type PaymentsSummaryRow = { Year: number; Total: number }
 
 const { currentUser } = useAuth()
 
@@ -64,6 +88,9 @@ const schemaColumnOrder = {
 
 const exporting = ref(false)
 const errorMessage = ref('')
+const paymentsSummary = ref<PaymentsSummaryRow[]>([])
+const loadingSummary = ref(false)
+const summaryError = ref('')
 
 const getColumnsForTable = (tableId: string, rows: any[]) => {
   if (rows.length === 0) return []
@@ -80,6 +107,11 @@ const formatCellValue = (value: any) => {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
+}
+
+const formatCurrency = (value: number) => {
+  const val = Number.isFinite(value) ? value : 0
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val)
 }
 
 const exportReport = async (table: { id: string; name: string }) => {
@@ -133,9 +165,95 @@ const exportReport = async (table: { id: string; name: string }) => {
   }
 }
 
+const loadPaymentsSummary = async () => {
+  if (!currentUser.value) return
+  loadingSummary.value = true
+  summaryError.value = ''
+  try {
+    const headers = await getAuthHeaders()
+    const response = await fetch('/api/reports/payments/summary', { headers })
+    if (!response.ok) {
+      throw new Error('Failed to fetch payments summary')
+    }
+    const rows = await response.json()
+    paymentsSummary.value = Array.isArray(rows)
+      ? rows
+        .map((row: any) => ({ Year: Number(row.Year), Total: Number(row.Total) || 0 }))
+        .filter(row => Number.isFinite(row.Year))
+        .sort((a, b) => a.Year - b.Year)
+      : []
+  } catch (error) {
+    summaryError.value = 'Could not load payments summary.'
+    console.error('Error loading payments summary:', error)
+  } finally {
+    loadingSummary.value = false
+  }
+}
+
+const chartSeries = computed(() => [{
+  name: 'Dues collected',
+  data: paymentsSummary.value.map(row => row.Total)
+}])
+
+const chartOptions = computed(() => ({
+  chart: {
+    type: 'bar',
+    fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, sans-serif',
+    toolbar: { show: false },
+    animations: { easing: 'easeinout' }
+  },
+  colors: ['#0f766e'],
+  plotOptions: {
+    bar: {
+      columnWidth: '55%',
+      borderRadius: 8,
+      borderRadiusApplication: 'end'
+    }
+  },
+  dataLabels: { enabled: false },
+  stroke: {
+    show: true,
+    width: 3,
+    colors: ['transparent']
+  },
+  grid: {
+    strokeDashArray: 4,
+    borderColor: '#e5e7eb'
+  },
+  xaxis: {
+    categories: paymentsSummary.value.map(row => String(row.Year)),
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+    labels: { style: { colors: '#6b7280' } }
+  },
+  yaxis: {
+    labels: {
+      formatter: (val: number) => formatCurrency(val),
+      style: { colors: '#6b7280' }
+    }
+  },
+  tooltip: {
+    y: {
+      formatter: (val: number) => formatCurrency(val)
+    }
+  },
+  legend: {
+    show: false
+  },
+  fill: {
+    opacity: 0.9
+  }
+}))
+
+onMounted(loadPaymentsSummary)
+
 watch(currentUser, (user) => {
   if (!user) {
     errorMessage.value = ''
+    summaryError.value = ''
+    paymentsSummary.value = []
+  } else {
+    loadPaymentsSummary()
   }
 })
 </script>

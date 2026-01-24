@@ -1023,6 +1023,20 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// Reports endpoint - payments summary by year
+app.get('/api/reports/payments/summary', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  try {
+    const rows = await db.getPaymentsByYearSummary();
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching payments summary:', error);
+    res.status(500).json({ error: 'Failed to fetch payments summary' });
+  }
+});
+
 // Reports endpoint - return raw database table data
 app.get('/api/reports/:table', async (req, res) => {
   if (!req.user) {

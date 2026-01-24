@@ -1214,6 +1214,21 @@ class Database {
       });
     });
   }
+
+  getPaymentsByYearSummary() {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT Year, SUM(Amount) as Total
+        FROM payments
+        GROUP BY Year
+        ORDER BY Year
+      `;
+      this.db.all(sql, [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
 }
 
 module.exports = new Database();
