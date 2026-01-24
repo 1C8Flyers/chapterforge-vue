@@ -67,13 +67,40 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
    cd "c:\Users\jmanr\seadrive_root\Josh\My Libraries\My Library\Code Projects\New - ChapterForge"
    ```
 
-2. **Install dependencies**
+   ## GitHub & Deployment
+
+   ### Repository
+   **Code**: [github.com/1C8Flyers/chapterforge-vue](https://github.com/1C8Flyers/chapterforge-vue)
+
+   ### Deployment Options
+
+   **Local Development** (this machine):
    ```powershell
-   npm install
+   npm run dev
    ```
 
-3. **Configure email (.env)**
+   **Docker (Local Testing)**:
+   ```powershell
+   docker compose up -d --build
    ```
+
+   **Production Server** (Docker):
+   See [DEPLOYMENT.md](DEPLOYMENT.md) for full instructions
+   ```bash
+   git clone https://github.com/1C8Flyers/chapterforge-vue.git
+   cd chapterforge-vue
+   docker compose up -d --build
+   ```
+
+   **Access**: https://chapterforge.eaa22.org (once deployed)
+
+   ---
+
+   ## Local Setup Instructions
+
+   ### Prerequisites
+   - Node.js 16+ installed
+   - Email account for renewal notices (Gmail, Outlook, etc.)
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=587
    SMTP_USER=your-email@gmail.com

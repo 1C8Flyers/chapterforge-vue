@@ -355,24 +355,50 @@ docker compose up -d --build
 
 ---
 
-## Authentication (Firebase)
+## GitHub Repository
 
-- Frontend uses FirebaseUI for Google sign-in.
-- Backend verifies ID tokens via Firebase Admin SDK.
-- Access is restricted to allowlisted users (Settings → Users).
-- **Admins** are determined by custom claims (`admin` or `role=admin`) or by `FIREBASE_ADMIN_EMAILS`.
-- Initial admins in `FIREBASE_ADMIN_EMAILS` are allowed even if not on the allowlist.
-- Non-admins are read-only (GET/HEAD) on the API.
+**Repository**: [github.com/1C8Flyers/chapterforge-vue](https://github.com/1C8Flyers/chapterforge-vue)
+
+All code is version-controlled on GitHub. To clone locally:
+```powershell
+git clone https://github.com/1C8Flyers/chapterforge-vue.git
+cd chapterforge-vue
+npm install
+npm run dev
+```
 
 ---
 
-## Feature Documentation
+## Docker Deployment
 
-### 1. Member Management
+### Local Development
+```powershell
+docker compose up -d --build
+```
 
-**Add Member** (`/members`):
-- Click blue "Add Member" button → Modal form appears
-- Fields: First Name, Last Name, Email, Phone (required)
+### Production Deployment
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete step-by-step instructions including:
+- Server setup
+- Environment configuration
+- Firebase console setup
+- Nginx proxy configuration
+- Backup procedures
+- Troubleshooting
+
+**Quick Start**:
+```bash
+# On server
+git clone https://github.com/1C8Flyers/chapterforge-vue.git
+cd chapterforge-vue
+# Create .env with production settings
+# Upload Firebase credentials JSON
+docker compose up -d --build
+```
+
+**Notes**:
+- SQLite database persisted via volume mount
+- All sensitive data in `.env` (not committed to git)
+- Firebase credentials protected by `.gitignore`
 - Member Type dropdown (populates from Settings)
 - Status: Active/Inactive
 
