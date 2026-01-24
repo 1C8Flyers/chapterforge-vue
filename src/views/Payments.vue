@@ -179,9 +179,11 @@ const fetchMembers = async () => {
     const data = await response.json() as Member[]
     const memberMap = new Map<number, string>()
     data.forEach(member => {
-      memberMap.set(member.MemberID, `${member.FirstName} ${member.LastName}`)
+      const memberId = typeof member.MemberID === 'string' ? parseInt(member.MemberID, 10) : member.MemberID
+      memberMap.set(memberId, `${member.FirstName} ${member.LastName}`)
     })
     members.value = memberMap
+    console.log('Members loaded:', memberMap.size, 'members')
   } catch (error) {
     console.error('Error fetching members:', error)
   }
@@ -224,8 +226,11 @@ const refreshPayments = () => {
 }
 
 const getMemberName = (memberId: number) => {
-  if (!memberId) return 'Unknown'
-  return members.value.get(memberId) || `Member #${memberId}`
+  if (!memberId || memberId <= 0) return 'Unknown'
+  const name = members.value.get(memberId)
+  if (name) return name
+  console.warn('Member not found:', memberId, 'Available IDs:', Array.from(members.value.keys()))
+  return `Member #${memberId}`
 }
 
 const formatDate = (dateString: string) => {
