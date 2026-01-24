@@ -49,11 +49,15 @@
       </div>
 
       <!-- Youth Protection Card -->
-      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+      <div 
+        @click="showYPModal"
+        class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] cursor-pointer transition-all hover:shadow-lg hover:border-red-300 dark:hover:border-red-700"
+      >
         <div class="flex items-center justify-between">
           <div>
             <h4 class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ stats.youthProtectionExpiring }}</h4>
             <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">YP Expiring Soon</span>
+            <span class="mt-2 text-xs text-red-600 dark:text-red-400">Click for details</span>
           </div>
           <div class="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 dark:bg-red-500/10">
             <svg class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,6 +67,70 @@
         </div>
       </div>
     </div>
+
+    <!-- YP Expiring Soon Modal -->
+    <div
+      v-if="showYPDetailsModal"
+      class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+      @click.self="showYPDetailsModal = false"
+    >
+      <div class="w-full max-w-2xl my-8 rounded-xl bg-white p-6 dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-xl font-semibold text-gray-800 dark:text-white/90">
+            Youth Protection Expiring Soon (30 days)
+          </h3>
+          <button
+            @click="showYPDetailsModal = false"
+            class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div v-if="loadingYPDetails" class="text-sm text-gray-500">Loading details...</div>
+        <div v-else-if="ypDetailsError" class="text-sm text-red-600">{{ ypDetailsError }}</div>
+        <div v-else-if="!ypExpiringMembers.length" class="text-sm text-gray-500">No members with expiring YP certifications.</div>
+        <div v-else class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-gray-200 dark:border-gray-800">
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Name</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Email</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Status</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">YP Expires</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="member in ypExpiringMembers" :key="member.MemberID" class="border-b border-gray-200 dark:border-gray-800">
+                <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">
+                  {{ member.FirstName }} {{ member.LastName }}
+                </td>
+                <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                  {{ member.Email }}
+                </td>
+                <td class="px-4 py-4">
+                  <span
+                    :class="[
+                      'inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium',
+                      member.Status === 'Active'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400'
+                        : 'bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400'
+                    ]"
+                  >
+                    {{ member.Status }}
+                  </span>
+                </td>
+                <td class="px-4 py-4 text-sm font-medium text-red-600 dark:text-red-400">
+                  {{ formatDate(member.YouthProtectionExpiration) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
 
     <!-- Chapter Information -->
     <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
@@ -95,6 +163,10 @@ const currentPageTitle = ref('Dashboard')
 const chapterName = ref(import.meta.env.VITE_CHAPTER_NAME || 'EAA Chapter')
 const chapterEmail = ref('info@eaa22.org')
 const lastUpdated = ref(new Date().toLocaleDateString())
+const showYPDetailsModal = ref(false)
+const ypExpiringMembers = ref<any[]>([])
+const loadingYPDetails = ref(false)
+const ypDetailsError = ref('')
 
 const stats = ref({
   totalMembers: 0,
@@ -125,6 +197,44 @@ const fetchStats = async () => {
   } catch (error) {
     console.error('Error fetching stats:', error)
   }
+}
+
+const formatDate = (dateString: string | null): string => {
+  if (!dateString) return 'Not set'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    })
+  } catch {
+    return 'Invalid date'
+  }
+}
+
+const loadYPExpiringMembers = async () => {
+  loadingYPDetails.value = true
+  ypDetailsError.value = ''
+  try {
+    const headers = await getAuthHeaders()
+    const response = await fetch('/api/members/yp-expiring', { headers })
+    if (response.ok) {
+      ypExpiringMembers.value = await response.json()
+    } else {
+      ypDetailsError.value = 'Failed to load YP expiring members'
+    }
+  } catch (error) {
+    ypDetailsError.value = 'Error loading YP details'
+    console.error('Error fetching YP expiring members:', error)
+  } finally {
+    loadingYPDetails.value = false
+  }
+}
+
+const showYPModal = async () => {
+  showYPDetailsModal.value = true
+  await loadYPExpiringMembers()
 }
 
 onMounted(() => {

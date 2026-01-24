@@ -157,6 +157,32 @@ app.get('/api/members/stats', async (req, res) => {
   }
 });
 
+// Get members with expiring YP certification
+app.get('/api/members/yp-expiring', async (req, res) => {
+  try {
+    const members = await db.getAllMembers();
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    
+    const expiringMembers = members
+      .filter(m => {
+        if (!m.YouthProtectionExpiration) return false;
+        const expirationDate = new Date(m.YouthProtectionExpiration);
+        return expirationDate <= thirtyDaysFromNow;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.YouthProtectionExpiration);
+        const dateB = new Date(b.YouthProtectionExpiration);
+        return dateA.getTime() - dateB.getTime();
+      });
+    
+    res.json(expiringMembers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error loading YP expiring members' });
+  }
+});
+
 // CSV template download
 app.get('/api/members/import/template', (req, res) => {
   res.setHeader('Content-Type', 'text/csv');
