@@ -2,6 +2,62 @@
   <AdminLayout>
     <PageBreadcrumb pageTitle="Payment Log" />
 
+    <!-- Manual Payment Entry Form -->
+    <div class="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-900 dark:bg-blue-950">
+      <h3 class="mb-4 text-lg font-semibold text-blue-900 dark:text-blue-100">Record Manual Payment</h3>
+      <div class="grid gap-3 sm:grid-cols-5">
+        <div>
+          <label class="block text-xs font-medium text-blue-800 dark:text-blue-200">Member ID</label>
+          <input
+            v-model="manualPayment.memberId"
+            type="number"
+            placeholder="Member ID..."
+            class="mt-1 w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-blue-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-blue-800 dark:text-blue-200">Year</label>
+          <input
+            v-model="manualPayment.year"
+            type="number"
+            placeholder="2026"
+            class="mt-1 w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-blue-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-blue-800 dark:text-blue-200">Amount</label>
+          <input
+            v-model="manualPayment.amount"
+            type="number"
+            placeholder="$0.00"
+            step="0.01"
+            class="mt-1 w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-blue-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-blue-800 dark:text-blue-200">Method</label>
+          <select
+            v-model="manualPayment.method"
+            class="mt-1 w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-blue-700 dark:bg-gray-900 dark:text-white/90"
+          >
+            <option value="cash">Cash</option>
+            <option value="check">Check</option>
+            <option value="transfer">Transfer</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button
+            @click="recordManualPayment"
+            :disabled="recordingPayment || !manualPayment.memberId || !manualPayment.year || !manualPayment.amount"
+            class="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {{ recordingPayment ? 'Recording...' : 'Record Payment' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <div class="border-b border-gray-200 p-6 dark:border-gray-800">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -151,6 +207,13 @@ const { currentUser } = useAuth()
 const payments = ref<Payment[]>([])
 const members = ref<Map<number, string>>(new Map())
 const loading = ref(false)
+const recordingPayment = ref(false)
+const manualPayment = ref({
+  memberId: '',
+  year: new Date().getFullYear(),
+  amount: '',
+  method: 'cash'
+})
 const filters = ref({
   memberId: '',
   provider: '',
@@ -223,6 +286,50 @@ const filteredPayments = computed(() => {
 
 const refreshPayments = () => {
   fetchPayments()
+}
+
+const recordManualPayment = async () => {
+  try {
+    recordingPayment.value = true
+    const memberId = Number(manualPayment.value.memberId)
+    const year = Number(manualPayment.value.year)
+    const amount = Number(manualPayment.value.amount)
+
+    if (!memberId || !year || !amount) {
+      alert('Please fill in all fields')
+      return
+    }
+
+    const headers = await getAuthHeaders()
+    const response = await fetch(`/api/members/${memberId}/payments`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        Year: year,
+        Amount: amount,
+        Method: manualPayment.value.method
+      })
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to record payment')
+    }
+
+    alert('Payment recorded successfully!')
+    manualPayment.value = {
+      memberId: '',
+      year: new Date().getFullYear(),
+      amount: '',
+      method: 'cash'
+    }
+    await fetchPayments()
+  } catch (error) {
+    alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    console.error('Error recording payment:', error)
+  } finally {
+    recordingPayment.value = false
+  }
 }
 
 const getMemberName = (memberId: number) => {
