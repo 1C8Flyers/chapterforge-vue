@@ -730,7 +730,11 @@ app.post('/api/members/:id/payments', async (req, res) => {
       return res.status(400).json({ error: 'Valid Year is required' });
     }
 
-    await db.createPayment(memberId, yearNum, Number.isFinite(amountNum) ? amountNum : 0, Method || 'manual');
+    // Manual payments are marked as COMPLETED since they represent received payments
+    await db.createPayment(memberId, yearNum, Number.isFinite(amountNum) ? amountNum : 0, Method || 'manual', {
+      Provider: Method || 'manual',
+      ProviderStatus: 'COMPLETED'
+    });
     await db.refreshMemberPaymentSummary(memberId);
     res.json({ success: true });
   } catch (error) {
