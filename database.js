@@ -1218,10 +1218,18 @@ class Database {
   getPaymentsByYearSummary() {
     return new Promise((resolve, reject) => {
       const sql = `
-        SELECT Year, SUM(Amount) as Total
-        FROM payments
-        GROUP BY Year
-        ORDER BY Year
+        SELECT 
+          p.Year,
+          CASE 
+            WHEN LOWER(COALESCE(m.MemberType, '')) LIKE '%family%' THEN 'Family'
+            WHEN LOWER(COALESCE(m.MemberType, '')) = '' THEN 'Unknown'
+            ELSE 'Individual'
+          END AS Category,
+          SUM(p.Amount) AS Total
+        FROM payments p
+        LEFT JOIN members m ON p.MemberID = m.MemberID
+        GROUP BY p.Year, Category
+        ORDER BY p.Year, Category
       `;
       this.db.all(sql, [], (err, rows) => {
         if (err) reject(err);

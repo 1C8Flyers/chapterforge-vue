@@ -118,7 +118,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { useAuth } from '@/composables/useAuth'
 
-type PaymentsSummaryRow = { Year: number; Total: number }
+type PaymentsSummaryRow = { Year: number; Category: string; Total: number }
 
 const { currentUser } = useAuth()
 
@@ -245,9 +245,12 @@ const loadPaymentsSummary = async () => {
     const rows = await response.json()
     paymentsSummary.value = Array.isArray(rows)
       ? rows
-        .map((row: any) => ({ Year: Number(row.Year), Total: Number(row.Total) || 0 }))
+        .map((row: any) => ({
+          Year: Number(row.Year),
+          Category: String(row.Category || 'Unknown'),
+          Total: Number(row.Total) || 0
+        }))
         .filter(row => Number.isFinite(row.Year))
-        .sort((a, b) => a.Year - b.Year)
       : []
   } catch (error) {
     summaryError.value = 'Could not load payments summary.'
@@ -257,19 +260,41 @@ const loadPaymentsSummary = async () => {
   }
 }
 
-const chartSeries = computed(() => [{
-  name: 'Dues collected',
-  data: paymentsSummary.value.map(row => row.Total)
-}])
+const categoryOrder = ['Family', 'Individual', 'Unknown']
+
+const categories = computed(() => {
+  const found = Array.from(new Set(paymentsSummary.value.map(row => row.Category)))
+  return [
+    ...categoryOrder.filter(cat => found.includes(cat)),
+    ...found.filter(cat => !categoryOrder.includes(cat))
+  ]
+})
+
+const years = computed(() => Array.from(new Set(paymentsSummary.value.map(row => row.Year))).sort((a, b) => a - b))
+
+const categoryColorMap: Record<string, string> = {
+  Family: '#0ea5e9',
+  Individual: '#0f766e',
+  Unknown: '#94a3b8'
+}
+
+const chartSeries = computed(() => categories.value.map(category => ({
+  name: `${category} dues`,
+  data: years.value.map(year => {
+    const match = paymentsSummary.value.find(row => row.Year === year && row.Category === category)
+    return match ? match.Total : 0
+  })
+})))
 
 const chartOptions = computed(() => ({
   chart: {
     type: 'bar',
     fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, sans-serif',
     toolbar: { show: false },
-    animations: { easing: 'easeinout' }
+    animations: { easing: 'easeinout' },
+    stacked: true
   },
-  colors: ['#0f766e'],
+  colors: categories.value.map(cat => categoryColorMap[cat] || '#0ea5e9'),
   plotOptions: {
     bar: {
       columnWidth: '55%',
@@ -288,7 +313,7 @@ const chartOptions = computed(() => ({
     borderColor: '#e5e7eb'
   },
   xaxis: {
-    categories: paymentsSummary.value.map(row => String(row.Year)),
+    categories: years.value.map(year => String(year)),
     axisBorder: { show: false },
     axisTicks: { show: false },
     labels: { style: { colors: '#6b7280' } }
@@ -305,7 +330,7 @@ const chartOptions = computed(() => ({
     }
   },
   legend: {
-    show: false
+    show: true
   },
   fill: {
     opacity: 0.9
@@ -314,8 +339,8 @@ const chartOptions = computed(() => ({
 
 const onChartClick = async (event: any, chartContext: any, config: any) => {
   const dataPointIndex = config.dataPointIndex
-  if (dataPointIndex >= 0 && dataPointIndex < paymentsSummary.value.length) {
-    const year = paymentsSummary.value[dataPointIndex].Year
+  if (dataPointIndex >= 0 && dataPointIndex < years.value.length) {
+    const year = years.value[dataPointIndex]
     selectedYear.value = year
     await loadPaymentDetails(year)
     showDetailsModal.value = true
