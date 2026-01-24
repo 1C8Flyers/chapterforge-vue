@@ -78,8 +78,8 @@
             >
               <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">{{ payment.PaymentID }}</td>
               <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">
-                <span v-if="payment.MemberID > 0">{{ payment.MemberID }}</span>
-                <span v-else class="text-gray-400 italic">unmatched</span>
+                <div v-if="payment.MemberID > 0">{{ getMemberName(payment.MemberID) }}</div>
+                <div v-else class="text-gray-400 italic">unmatched</div>
               </td>
               <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">
                 <span v-if="payment.Year > 0">{{ payment.Year }}</span>
@@ -140,9 +140,16 @@ interface Payment {
   CreatedAt: string
 }
 
+interface Member {
+  MemberID: number
+  FirstName: string
+  LastName: string
+}
+
 const { currentUser } = useAuth()
 
 const payments = ref<Payment[]>([])
+const members = ref<Map<number, string>>(new Map())
 const loading = ref(false)
 const filters = ref({
   memberId: '',
@@ -159,6 +166,24 @@ const getAuthHeaders = async () => {
   return {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'
+  }
+}
+
+const fetchMembers = async () => {
+  try {
+    const headers = await getAuthHeaders()
+    const response = await fetch('/api/members', { headers })
+    
+    if (!response.ok) throw new Error('Failed to fetch members')
+    
+    const data = await response.json() as Member[]
+    const memberMap = new Map<number, string>()
+    data.forEach(member => {
+      memberMap.set(member.MemberID, `${member.FirstName} ${member.LastName}`)
+    })
+    members.value = memberMap
+  } catch (error) {
+    console.error('Error fetching members:', error)
   }
 }
 
@@ -198,13 +223,19 @@ const refreshPayments = () => {
   fetchPayments()
 }
 
+const getMemberName = (memberId: number) => {
+  if (!memberId) return 'Unknown'
+  return members.value.get(memberId) || `Member #${memberId}`
+}
+
 const formatDate = (dateString: string) => {
   if (!dateString) return '-'
   const date = new Date(dateString)
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-onMounted(() => {
-  fetchPayments()
+onMounted(async () => {
+  await fetchMembers()
+  await fetchPayments()
 })
 </script>
