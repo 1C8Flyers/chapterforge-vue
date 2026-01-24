@@ -77,8 +77,14 @@
               class="border-b border-gray-200 dark:border-gray-800"
             >
               <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">{{ payment.PaymentID }}</td>
-              <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">{{ payment.MemberID }}</td>
-              <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">{{ payment.Year }}</td>
+              <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">
+                <span v-if="payment.MemberID > 0">{{ payment.MemberID }}</span>
+                <span v-else class="text-gray-400 italic">unmatched</span>
+              </td>
+              <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">
+                <span v-if="payment.Year > 0">{{ payment.Year }}</span>
+                <span v-else class="text-gray-400 italic">-</span>
+              </td>
               <td class="px-4 py-4 text-right text-sm font-medium text-gray-800 dark:text-white/90">
                 ${{ payment.Amount.toFixed(2) }}
               </td>
@@ -106,7 +112,8 @@
                 {{ formatDate(payment.CreatedAt) }}
               </td>
               <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400 font-mono text-xs">
-                {{ payment.ProviderPaymentId ? payment.ProviderPaymentId.substring(0, 12) + '...' : '-' }}
+                <span v-if="payment.ProviderPaymentId">{{ payment.ProviderPaymentId.substring(0, 12) }}...</span>
+                <span v-else class="text-gray-400">-</span>
               </td>
             </tr>
           </tbody>

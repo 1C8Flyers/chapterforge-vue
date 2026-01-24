@@ -661,16 +661,11 @@ app.post('/api/payments/square/webhook', async (req, res) => {
     console.log('[WEBHOOK] Order retrieved:', order ? 'success' : 'null');
     
     const metadata = order?.metadata || {};
-    const memberId = Number(metadata.memberId);
-    const year = Number(metadata.year);
+    const memberId = Number(metadata.memberId) || 0;
+    const year = Number(metadata.year) || 0;
     console.log('[WEBHOOK] Extracted metadata: memberId =', memberId, 'year =', year);
     if (metadata && Object.keys(metadata).length > 0) {
       console.log('[WEBHOOK] Metadata object keys:', Object.keys(metadata));
-    }
-    
-    if (!memberId || !Number.isFinite(year)) {
-      console.log('[WEBHOOK] Ignoring: invalid memberId or year from order metadata');
-      return res.json({ received: true });
     }
 
     const amountCents = payment.amount_money?.amount || order?.total_money?.amount || 0;
@@ -678,6 +673,7 @@ app.post('/api/payments/square/webhook', async (req, res) => {
     console.log('[WEBHOOK] Amount: $' + amount + ' (' + amountCents + ' cents)');
 
     console.log('[WEBHOOK] Creating payment record...');
+    // Record payment even if metadata is missing - helps with debugging
     await db.createPayment(memberId, year, amount, 'square', {
       Provider: 'square',
       ProviderPaymentId: payment.id,
@@ -685,9 +681,16 @@ app.post('/api/payments/square/webhook', async (req, res) => {
       ProviderInvoiceId: payment.invoice_id || null,
       ProviderStatus: payment.status
     });
-    console.log('[WEBHOOK] Payment created, refreshing member summary...');
-    await db.refreshMemberPaymentSummary(memberId);
-    console.log('[WEBHOOK] Payment processing complete for member', memberId);
+    console.log('[WEBHOOK] Payment created');
+    
+    // Only refresh member summary if we have a valid memberId
+    if (memberId > 0) {
+      console.log('[WEBHOOK] Refreshing member summary...');
+      await db.refreshMemberPaymentSummary(memberId);
+      console.log('[WEBHOOK] Payment processing complete for member', memberId);
+    } else {
+      console.log('[WEBHOOK] Skipping member summary refresh - no valid memberId');
+    }
 
     res.json({ received: true });
   } catch (error) {
