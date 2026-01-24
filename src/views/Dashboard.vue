@@ -49,15 +49,24 @@
       </div>
 
       <!-- Youth Protection Card -->
-      <div 
+      <div
+        role="button"
+        tabindex="0"
         @click="showYPModal"
-        class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] cursor-pointer transition-all hover:shadow-lg hover:border-red-300 dark:hover:border-red-700"
+        @keydown.enter="showYPModal"
+        @keydown.space.prevent="showYPModal"
+        class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] cursor-pointer transition-all hover:shadow-lg hover:border-red-300 dark:hover:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-400"
       >
         <div class="flex items-center justify-between">
           <div>
             <h4 class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ stats.youthProtectionExpiring }}</h4>
             <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">YP Expiring Soon</span>
-            <span class="mt-2 text-xs text-red-600 dark:text-red-400">Click for details</span>
+            <span class="mt-2 inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-600 dark:bg-red-500/10 dark:text-red-300">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              View details
+            </span>
           </div>
           <div class="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 dark:bg-red-500/10">
             <svg class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
