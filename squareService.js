@@ -66,10 +66,23 @@ async function retrieveOrder(orderId) {
   }
   const result = await client.orders.get({ orderId });
   
-  // Log without trying to JSON.stringify (which fails on BigInt)
-  console.log('[SQUARE] Order API result received, extracting order...');
+  // Log the top-level keys to see result structure
+  console.log('[SQUARE] Result keys:', Object.keys(result));
   
-  const order = result.data?.order || result.result?.order || null;
+  // Try different possible result structures
+  let order = result?.data?.order || result?.result?.order || result?.order || null;
+  
+  // If still null, log the entire result structure (omit problematic fields)
+  if (!order) {
+    const safeResult = {};
+    for (const [key, value] of Object.entries(result || {})) {
+      if (key !== 'errors' && typeof value !== 'object') {
+        safeResult[key] = value;
+      }
+    }
+    console.log('[SQUARE] Result structure (non-nested):', safeResult);
+  }
+  
   console.log('[SQUARE] Extracted order:', order ? 'found' : 'null');
   
   if (order) {
