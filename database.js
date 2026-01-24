@@ -1254,6 +1254,28 @@ class Database {
       });
     });
   }
+
+  getPaymentsByMemberByYear() {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT 
+          m.MemberID,
+          m.FirstName,
+          m.LastName,
+          COALESCE(m.MemberType, 'Unknown') AS MemberType,
+          p.Year,
+          SUM(p.Amount) AS TotalPaid
+        FROM payments p
+        LEFT JOIN members m ON p.MemberID = m.MemberID
+        GROUP BY m.MemberID, p.Year
+        ORDER BY p.Year DESC, m.LastName, m.FirstName
+      `;
+      this.db.all(sql, [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
 }
 
 module.exports = new Database();

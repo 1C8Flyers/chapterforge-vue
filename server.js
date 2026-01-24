@@ -1081,6 +1081,20 @@ app.get('/api/reports/payments/year/:year', async (req, res) => {
   }
 });
 
+// Reports endpoint - payments per member per year (CSV-friendly)
+app.get('/api/reports/payments/by-member-year', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  try {
+    const rows = await db.getPaymentsByMemberByYear();
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching payments by member/year:', error);
+    res.status(500).json({ error: 'Failed to fetch payments by member/year' });
+  }
+});
+
 // Reports endpoint - return raw database table data
 app.get('/api/reports/:table', async (req, res) => {
   if (!req.user) {

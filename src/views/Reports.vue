@@ -19,6 +19,15 @@
             <span>{{ table.name }}</span>
             <span class="text-xs text-gray-500 dark:text-gray-400">Export CSV</span>
           </button>
+
+          <button
+            :key="duesByMemberReport.id"
+            @click="exportDuesByMemberYear()"
+            class="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 dark:border-emerald-900/40 dark:bg-emerald-900/30 dark:text-emerald-100 dark:hover:bg-emerald-900/50"
+          >
+            <span>{{ duesByMemberReport.name }}</span>
+            <span class="text-xs text-emerald-700 dark:text-emerald-200">Export CSV</span>
+          </button>
         </div>
 
         <div v-if="exporting" class="mt-4 text-sm text-gray-500">Preparing export...</div>
@@ -141,6 +150,11 @@ const tables = [
   { id: 'email_templates', name: 'Email Templates' },
 ]
 
+const duesByMemberReport = {
+  id: 'dues_by_member_year',
+  name: 'Dues by Year by Member'
+}
+
 const schemaColumnOrder = {
   'members': ['MemberID', 'HouseholdID', 'FirstName', 'LastName', 'EAANumber', 'Phone', 'Email', 'MemberType', 'Status', 'DuesRate', 'LastPaidYear', 'AmountDue', 'YouthProtectionExpiration', 'BackgroundCheckExpiration', 'YoungEaglePilot', 'YoungEagleVolunteer', 'EaglePilot', 'EagleFlightVolunteer', 'BoardMember', 'Officer', 'RenewalNoticeSentAt', 'RenewalNoticeSentYear', 'Notes', 'CreatedAt', 'UpdatedAt'],
   'member_types': ['MemberTypeID', 'Name', 'DuesRate', 'SortOrder'],
@@ -226,6 +240,57 @@ const exportReport = async (table: { id: string; name: string }) => {
     document.body.removeChild(link)
   } catch (error) {
     console.error('Error exporting report:', error)
+    errorMessage.value = 'Failed to export report.'
+  } finally {
+    exporting.value = false
+  }
+}
+
+const exportDuesByMemberYear = async () => {
+  if (!currentUser.value) {
+    errorMessage.value = 'Please sign in to export reports.'
+    return
+  }
+
+  exporting.value = true
+  errorMessage.value = ''
+
+  try {
+    const headers = await getAuthHeaders()
+    const response = await fetch('/api/reports/payments/by-member-year', { headers })
+    if (!response.ok) {
+      throw new Error('Failed to fetch dues by member report')
+    }
+
+    const rows = await response.json()
+    if (!rows || rows.length === 0) {
+      errorMessage.value = 'No data available for export.'
+      return
+    }
+
+    const headersOrder = ['MemberID', 'FirstName', 'LastName', 'MemberType', 'Year', 'TotalPaid']
+    const csvContent = [
+      headersOrder.join(','),
+      ...rows.map((row: any) =>
+        headersOrder.map(col => {
+          const val = row[col] ?? ''
+          const str = typeof val === 'string' ? val.replace(/"/g, '""') : String(val)
+          return `"${str}"`
+        }).join(',')
+      )
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `dues_by_member_year_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  } catch (error) {
+    console.error('Error exporting dues by member/year report:', error)
     errorMessage.value = 'Failed to export report.'
   } finally {
     exporting.value = false
