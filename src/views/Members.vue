@@ -56,10 +56,50 @@
         <table class="w-full">
           <thead>
             <tr class="border-b border-gray-200 dark:border-gray-800">
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Name</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Email</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Status</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Last Paid</th>
+              <th 
+                @click="sortBy('name')"
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              >
+                <div class="flex items-center gap-2">
+                  Name
+                  <span v-if="sortColumn === 'name'" class="text-xs text-brand-500">
+                    {{ sortDirection === 'asc' ? '▲' : '▼' }}
+                  </span>
+                </div>
+              </th>
+              <th 
+                @click="sortBy('email')"
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              >
+                <div class="flex items-center gap-2">
+                  Email
+                  <span v-if="sortColumn === 'email'" class="text-xs text-brand-500">
+                    {{ sortDirection === 'asc' ? '▲' : '▼' }}
+                  </span>
+                </div>
+              </th>
+              <th 
+                @click="sortBy('status')"
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              >
+                <div class="flex items-center gap-2">
+                  Status
+                  <span v-if="sortColumn === 'status'" class="text-xs text-brand-500">
+                    {{ sortDirection === 'asc' ? '▲' : '▼' }}
+                  </span>
+                </div>
+              </th>
+              <th 
+                @click="sortBy('lastPaid')"
+                class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              >
+                <div class="flex items-center gap-2">
+                  Last Paid
+                  <span v-if="sortColumn === 'lastPaid'" class="text-xs text-brand-500">
+                    {{ sortDirection === 'asc' ? '▲' : '▼' }}
+                  </span>
+                </div>
+              </th>
               <th class="px-4 py-3 text-right text-sm font-semibold text-gray-800 dark:text-white/90">Actions</th>
             </tr>
           </thead>
@@ -540,6 +580,8 @@ const searchQuery = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const expandedHouseholds = ref<Set<number>>(new Set())
 const memberTypes = ref<any[]>([])
+const sortColumn = ref<'name' | 'email' | 'status' | 'lastPaid' | null>(null)
+const sortDirection = ref<'asc' | 'desc'>('asc')
 
 const isFamilyMember = computed(() => formData.value.MemberType === 'Family Member')
 
@@ -568,14 +610,43 @@ const formData = ref({
 })
 
 const filteredMembers = computed(() => {
-  if (!searchQuery.value) return members.value
+  let filtered = members.value
   
-  const query = searchQuery.value.toLowerCase()
-  return members.value.filter(member => 
-    member.FirstName?.toLowerCase().includes(query) ||
-    member.LastName?.toLowerCase().includes(query) ||
-    member.Email?.toLowerCase().includes(query)
-  )
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(member => 
+      member.FirstName?.toLowerCase().includes(query) ||
+      member.LastName?.toLowerCase().includes(query) ||
+      member.Email?.toLowerCase().includes(query)
+    )
+  }
+
+  // Apply sorting
+  if (sortColumn.value) {
+    filtered = [...filtered].sort((a, b) => {
+      let aVal: any, bVal: any
+
+      if (sortColumn.value === 'name') {
+        aVal = `${a.FirstName} ${a.LastName}`.toLowerCase()
+        bVal = `${b.FirstName} ${b.LastName}`.toLowerCase()
+      } else if (sortColumn.value === 'email') {
+        aVal = (a.Email || '').toLowerCase()
+        bVal = (b.Email || '').toLowerCase()
+      } else if (sortColumn.value === 'status') {
+        aVal = a.Status || ''
+        bVal = b.Status || ''
+      } else if (sortColumn.value === 'lastPaid') {
+        aVal = a.LastPaidYear || 0
+        bVal = b.LastPaidYear || 0
+      }
+
+      if (aVal < bVal) return sortDirection.value === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDirection.value === 'asc' ? 1 : -1
+      return 0
+    })
+  }
+
+  return filtered
 })
 
 const groupedMembers = computed(() => {
@@ -626,6 +697,17 @@ const toggleHousehold = (householdId: number) => {
     expandedHouseholds.value.add(householdId)
   }
   expandedHouseholds.value = new Set(expandedHouseholds.value)
+}
+
+const sortBy = (column: 'name' | 'email' | 'status' | 'lastPaid') => {
+  if (sortColumn.value === column) {
+    // Toggle direction if clicking the same column
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    // Set new column and reset to ascending
+    sortColumn.value = column
+    sortDirection.value = 'asc'
+  }
 }
 
 const getAuthHeaders = async () => {
