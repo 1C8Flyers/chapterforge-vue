@@ -21,6 +21,12 @@
               Import CSV
             </button>
             <button
+              @click="downloadSampleCsv"
+              class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              Download Sample CSV
+            </button>
+            <button
               @click="openAddModal"
               class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
             >
@@ -790,6 +796,26 @@ const handleFileUpload = async (event: Event) => {
   
   // Reset file input
   if (target) target.value = ''
+}
+
+const downloadSampleCsv = async () => {
+  try {
+    const headers = await getAuthHeaders()
+    const response = await fetch('/api/members/import/template', { headers })
+    if (!response.ok) throw new Error('Failed to download template')
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'members-template.csv'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Error downloading template:', error)
+    alert('Failed to download template')
+  }
 }
 
 const formatDate = (dateString: string | null) => {
