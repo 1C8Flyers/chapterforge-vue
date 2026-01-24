@@ -38,6 +38,47 @@
         >
           User Management
         </button>
+        <button
+          @click="activeTab = 'payments'"
+          :class="[
+            'px-4 py-3 text-sm font-medium border-b-2 transition',
+            activeTab === 'payments'
+              ? 'border-brand-500 text-brand-500 dark:text-brand-400'
+              : 'border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+          ]"
+        >
+          Payment Settings
+        </button>
+      </div>
+    </div>
+
+    <!-- Payments Tab -->
+    <div v-if="activeTab === 'payments'" class="space-y-6">
+      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Square Payment Settings</h3>
+          <button
+            @click="savePaymentSettings"
+            class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
+            :disabled="savingPaymentSettings"
+          >
+            {{ savingPaymentSettings ? 'Saving...' : 'Save Settings' }}
+          </button>
+        </div>
+
+        <div class="space-y-3 text-sm text-gray-700 dark:text-gray-200">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Processing Fee Amount (USD)</label>
+          <input
+            v-model.number="paymentSettings.squareFeeAmount"
+            type="number"
+            min="0"
+            step="0.01"
+            class="h-11 w-full max-w-xs rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          />
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            This fee is added to Square payment links sent in renewal emails and manual link generation.
+          </p>
+        </div>
       </div>
     </div>
 
@@ -394,6 +435,8 @@ const showPreview = ref(false)
 const users = ref<any[]>([])
 const showUserModal = ref(false)
 const editingUserEmail = ref<string | null>(null)
+const paymentSettings = ref({ squareFeeAmount: 1 })
+const savingPaymentSettings = ref(false)
 
 const memberTypeForm = ref({
   Name: '',
@@ -450,6 +493,19 @@ const fetchMembers = async () => {
     }
   } catch (error) {
     console.error('Error fetching members:', error)
+  }
+}
+
+const fetchPaymentSettings = async () => {
+  try {
+    const headers = await getAuthHeaders()
+    const response = await fetch('/api/settings/payments', { headers })
+    if (response.ok) {
+      const data = await response.json()
+      paymentSettings.value.squareFeeAmount = Number(data.squareFeeAmount ?? 1)
+    }
+  } catch (error) {
+    console.error('Error fetching payment settings:', error)
   }
 }
 
@@ -568,6 +624,28 @@ const saveEmailTemplate = async () => {
   } catch (error) {
     console.error('Error saving email template:', error)
     alert('Failed to save email template')
+  }
+}
+
+const savePaymentSettings = async () => {
+  try {
+    savingPaymentSettings.value = true
+    const headers = await getAuthHeaders()
+    const response = await fetch('/api/settings/payments', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ squareFeeAmount: paymentSettings.value.squareFeeAmount })
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to save payment settings')
+    }
+    alert('Payment settings saved')
+  } catch (error) {
+    console.error('Error saving payment settings:', error)
+    alert(error instanceof Error ? error.message : 'Failed to save payment settings')
+  } finally {
+    savingPaymentSettings.value = false
   }
 }
 
@@ -691,5 +769,6 @@ onMounted(() => {
   fetchEmailTemplate()
   fetchMembers()
   fetchUsers()
+  fetchPaymentSettings()
 })
 </script>

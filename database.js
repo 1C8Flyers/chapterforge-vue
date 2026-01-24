@@ -216,6 +216,14 @@ class Database {
       addPaymentColumn('ProviderStatus', 'TEXT');
       addPaymentColumn('ProviderLinkId', 'TEXT');
 
+      // App settings for configurable values (e.g., Square fee)
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS app_settings (
+          Key TEXT PRIMARY KEY,
+          Value TEXT
+        )
+      `);
+
       // Normalize legacy manual payments without a ProviderStatus
       // Ensure previously recorded manual payments appear as completed in the UI
       this.db.run(`
@@ -1133,6 +1141,37 @@ class Database {
         else resolve(row);
       });
     });
+  }
+
+  // Generic key-value settings
+  getSetting(key, defaultValue = null) {
+    return new Promise((resolve, reject) => {
+      this.db.get('SELECT Value FROM app_settings WHERE Key = ?', [key], (err, row) => {
+        if (err) reject(err);
+        else resolve(row?.Value ?? defaultValue);
+      });
+    });
+  }
+
+  setSetting(key, value) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `INSERT INTO app_settings (Key, Value) VALUES (?, ?)
+         ON CONFLICT(Key) DO UPDATE SET Value = excluded.Value`,
+        [key, value],
+        (err) => {
+          if (err) reject(err);
+          else resolve({ saved: true });
+        }
+      );
+    });
+  }
+
+  async getSquareFeeAmount(defaultValue = 1) {
+    const stored = await this.getSetting('square_fee_amount', null);
+    const envFallback = Number(process.env.SQUARE_FEE_AMOUNT || defaultValue);
+    const parsed = stored !== null ? Number(stored) : envFallback;
+    return Number.isFinite(parsed) ? parsed : defaultValue;
   }
 
   saveEmailTemplate(templateKey, subject, htmlBody) {

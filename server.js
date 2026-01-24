@@ -402,7 +402,7 @@ app.post('/api/renewals/send/:id', async (req, res) => {
     const year = req.body.year || new Date().getFullYear();
     let emailOptions = {};
     if (squareService.isConfigured()) {
-      const squareFee = Number(process.env.SQUARE_FEE_AMOUNT || 1);
+      const squareFee = await db.getSquareFeeAmount(1);
       const feeAmount = Number.isFinite(squareFee) ? squareFee : 0;
       const baseAmount = Number(member.DuesRate || member.AmountDue || 0);
       const totalAmount = baseAmount + (feeAmount > 0 ? feeAmount : 0);
@@ -448,7 +448,7 @@ app.post('/api/renewals/send-bulk', async (req, res) => {
     
     const results = await emailService.sendBulkRenewalNotices(members, year, async (member) => {
       if (!squareService.isConfigured()) return {};
-      const squareFee = Number(process.env.SQUARE_FEE_AMOUNT || 1);
+      const squareFee = await db.getSquareFeeAmount(1);
       const feeAmount = Number.isFinite(squareFee) ? squareFee : 0;
       const baseAmount = Number(member.DuesRate || member.AmountDue || 0);
       const totalAmount = baseAmount + (feeAmount > 0 ? feeAmount : 0);
@@ -535,7 +535,7 @@ app.post('/api/payments/square/link', async (req, res) => {
       return res.status(400).json({ error: 'Square is not configured' });
     }
 
-    const squareFee = Number(process.env.SQUARE_FEE_AMOUNT || 1);
+    const squareFee = await db.getSquareFeeAmount(1);
     const feeAmount = Number.isFinite(squareFee) ? squareFee : 0;
     const memberId = Number(req.body.memberId);
     const year = Number(req.body.year) || new Date().getFullYear();
@@ -840,6 +840,30 @@ app.get('/api/settings/email-template', async (req, res) => {
       subject: tpl?.Subject || fallback.subject,
       body: tpl?.HtmlBody || fallback.html
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Payment settings (Square fee)
+app.get('/api/settings/payments', async (req, res) => {
+  try {
+    const squareFeeAmount = await db.getSquareFeeAmount(1);
+    res.json({ squareFeeAmount });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings/payments', async (req, res) => {
+  try {
+    const raw = req.body?.squareFeeAmount;
+    const fee = Number(raw);
+    if (!Number.isFinite(fee) || fee < 0) {
+      return res.status(400).json({ error: 'squareFeeAmount must be a non-negative number' });
+    }
+    await db.setSetting('square_fee_amount', fee);
+    res.json({ success: true, squareFeeAmount: fee });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
