@@ -216,6 +216,16 @@ class Database {
       addPaymentColumn('ProviderStatus', 'TEXT');
       addPaymentColumn('ProviderLinkId', 'TEXT');
 
+      // Normalize legacy manual payments without a ProviderStatus
+      // Ensure previously recorded manual payments appear as completed in the UI
+      this.db.run(`
+        UPDATE payments
+        SET ProviderStatus = 'COMPLETED'
+        WHERE ProviderStatus IS NULL
+          AND (Provider IS NULL OR Provider NOT IN ('square'))
+          AND (Method IS NULL OR Method IN ('manual','cash','check','transfer','other'))
+      `, [], () => {});
+
       // Seed common member types if none exist
       this.db.get('SELECT COUNT(*) as count FROM member_types', [], (err, row) => {
         if (err || !row || row.count > 0) return;
