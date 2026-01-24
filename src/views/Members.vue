@@ -96,7 +96,7 @@
                   </span>
                 </td>
                 <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
-                  {{ formatDate(item.type === 'individual' ? item.member.LastPaidYear : item.primary.LastPaidYear) }}
+                  {{ formatYear(item.type === 'individual' ? item.member.LastPaidYear : item.primary.LastPaidYear) }}
                 </td>
                 <td class="px-4 py-4 text-right text-sm">
                   <button
@@ -150,7 +150,7 @@
                     </span>
                   </td>
                   <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
-                    {{ formatDate(familyMember.LastPaidYear) }}
+                    {{ formatYear(familyMember.LastPaidYear) }}
                   </td>
                   <td class="px-4 py-4 text-right text-sm">
                     <button
@@ -796,6 +796,13 @@ const formatDate = (dateString: string | null) => {
   if (!dateString) return 'N/A'
   const date = new Date(dateString)
   return date.toLocaleDateString()
+}
+
+const formatYear = (year: number | string | null) => {
+  if (year === null || year === undefined) return 'N/A'
+  const num = typeof year === 'string' ? parseInt(year, 10) : year
+  if (!Number.isFinite(num) || num <= 0) return 'N/A'
+  return String(num)
 }
 
 onMounted(() => {
