@@ -65,7 +65,13 @@ async function retrieveOrder(orderId) {
     throw new Error('Square is not configured');
   }
   const result = await client.orders.get({ orderId });
-  return result.data?.order || null;
+  console.log('[SQUARE] Order API result:', JSON.stringify(result).substring(0, 500));
+  const order = result.data?.order || result.result?.order || null;
+  console.log('[SQUARE] Extracted order:', order ? 'found' : 'null');
+  if (order) {
+    console.log('[SQUARE] Order metadata:', order.metadata);
+  }
+  return order;
 }
 
 async function verifyWebhookSignature({ signature, body, url }) {

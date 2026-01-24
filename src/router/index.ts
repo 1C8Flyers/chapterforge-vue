@@ -53,6 +53,15 @@ const router = createRouter({
       },
     },
     {
+      path: '/payments',
+      name: 'Payments',
+      component: () => import('../views/Payments.vue'),
+      meta: {
+        title: 'Payment Log',
+        requiresAuth: true
+      },
+    },
+    {
       path: '/form-elements',
       name: 'Form Elements',
       component: () => import('../views/Forms/FormElements.vue'),

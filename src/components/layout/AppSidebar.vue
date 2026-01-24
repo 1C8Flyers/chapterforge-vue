@@ -243,6 +243,11 @@ const menuGroups = [
         path: "/reports",
       },
       {
+        icon: PieChartIcon,
+        name: "Payments",
+        path: "/payments",
+      },
+      {
         icon: SettingsIcon,
         name: "Settings",
         path: "/settings",

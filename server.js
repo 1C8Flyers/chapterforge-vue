@@ -587,45 +587,97 @@ app.post('/api/payments/square/webhook', async (req, res) => {
     const body = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body || {});
     const webhookUrl = process.env.SQUARE_WEBHOOK_URL || `${req.protocol}://${req.get('host')}${req.originalUrl}`;
 
+    console.log('[WEBHOOK] Received webhook, validating signature...');
     const isValid = await squareService.verifyWebhookSignature({ signature, body, url: webhookUrl });
     if (!isValid) {
+      console.log('[WEBHOOK] Invalid signature');
       return res.status(401).json({ error: 'Invalid signature' });
     }
+    console.log('[WEBHOOK] Signature valid');
 
     const event = req.body && typeof req.body === 'object' ? req.body : JSON.parse(body);
     const eventType = event?.type || '';
-    const payment = event?.data?.object?.payment;
+    
+    // Handle both payment.* events and invoice.payment_made events
+    let payment = event?.data?.object?.payment;
+    let invoice = event?.data?.object?.invoice;
+    
+    console.log('[WEBHOOK] Event type:', eventType, 'Full event data:', JSON.stringify(event?.data?.object || {}));
 
-    if (!payment || !eventType.startsWith('payment.')) {
+    // For invoice.payment_made events, the payment is in a different structure
+    if (eventType === 'invoice.payment_made' && invoice) {
+      console.log('[WEBHOOK] Processing invoice.payment_made event, invoice ID:', invoice.id);
+      // For invoices, we need to extract the payment info differently
+      // The payment ID will be in the invoice's payments array or we need to use the invoice itself
+      payment = {
+        id: invoice.id, // Use invoice ID as payment ID for tracking
+        order_id: invoice.order_id,
+        amount_money: invoice.total_money,
+        status: 'COMPLETED',
+        invoice_id: invoice.id
+      };
+    }
+
+    console.log('[WEBHOOK] Payment ID:', payment?.id, 'Status:', payment?.status, 'Order ID:', payment?.order_id);
+
+    if (!payment) {
+      console.log('[WEBHOOK] Ignoring: no payment object found');
       return res.json({ received: true });
     }
 
-    if (payment.status !== 'COMPLETED') {
+    if (eventType !== 'invoice.payment_made' && !eventType.startsWith('payment.')) {
+      console.log('[WEBHOOK] Ignoring: wrong event type');
+      return res.json({ received: true });
+    }
+
+    if (payment.status !== 'COMPLETED' && payment.status !== 'APPROVED') {
+      console.log('[WEBHOOK] Ignoring: payment status is', payment.status, '(not COMPLETED or APPROVED)');
       return res.json({ received: true });
     }
 
     const existing = await db.getPaymentByProviderPaymentId(payment.id);
     if (existing) {
+      console.log('[WEBHOOK] Payment already exists with ID:', payment.id);
       await db.updatePaymentProviderStatus(existing.PaymentID, payment.status);
       return res.json({ received: true });
     }
 
     const orderId = payment.order_id;
+    console.log('[WEBHOOK] Order ID:', orderId);
     if (!orderId) {
+      console.log('[WEBHOOK] Ignoring: no order_id on payment');
       return res.json({ received: true });
     }
 
-    const order = await squareService.retrieveOrder(orderId);
+    console.log('[WEBHOOK] Retrieving order...');
+    let order;
+    try {
+      order = await squareService.retrieveOrder(orderId);
+    } catch (orderError) {
+      console.log('[WEBHOOK] Failed to retrieve order:', orderError?.errors?.[0]?.detail || orderError.message);
+      // For test webhooks with fake order IDs, try to continue
+      order = null;
+    }
+    console.log('[WEBHOOK] Order retrieved:', order ? 'success' : 'null');
+    if (order) {
+      console.log('[WEBHOOK] Full order object:', JSON.stringify(order).substring(0, 500));
+    }
+    
     const metadata = order?.metadata || {};
     const memberId = Number(metadata.memberId);
     const year = Number(metadata.year);
+    console.log('[WEBHOOK] Extracted metadata: memberId =', memberId, 'year =', year);
+    
     if (!memberId || !Number.isFinite(year)) {
+      console.log('[WEBHOOK] Ignoring: invalid memberId or year from order metadata');
       return res.json({ received: true });
     }
 
     const amountCents = payment.amount_money?.amount || order?.total_money?.amount || 0;
     const amount = Number(amountCents) / 100;
+    console.log('[WEBHOOK] Amount: $' + amount + ' (' + amountCents + ' cents)');
 
+    console.log('[WEBHOOK] Creating payment record...');
     await db.createPayment(memberId, year, amount, 'square', {
       Provider: 'square',
       ProviderPaymentId: payment.id,
@@ -633,10 +685,13 @@ app.post('/api/payments/square/webhook', async (req, res) => {
       ProviderInvoiceId: payment.invoice_id || null,
       ProviderStatus: payment.status
     });
+    console.log('[WEBHOOK] Payment created, refreshing member summary...');
     await db.refreshMemberPaymentSummary(memberId);
+    console.log('[WEBHOOK] Payment processing complete for member', memberId);
 
     res.json({ received: true });
   } catch (error) {
+    console.error('[WEBHOOK] Error processing webhook:', error);
     res.status(500).json({ error: error.message });
   }
 });
