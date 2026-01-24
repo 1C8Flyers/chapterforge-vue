@@ -6,14 +6,27 @@
     <div class="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-900 dark:bg-blue-950">
       <h3 class="mb-4 text-lg font-semibold text-blue-900 dark:text-blue-100">Record Manual Payment</h3>
       <div class="grid gap-3 sm:grid-cols-5">
-        <div>
-          <label class="block text-xs font-medium text-blue-800 dark:text-blue-200">Member ID</label>
+        <div class="relative">
+          <label class="block text-xs font-medium text-blue-800 dark:text-blue-200">Member</label>
           <input
-            v-model="manualPayment.memberId"
-            type="number"
-            placeholder="Member ID..."
+            v-model="memberSearch"
+            type="text"
+            placeholder="Search member..."
             class="mt-1 w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-blue-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
           />
+          <div v-if="memberSearch && filteredMembersForSearch.length > 0" class="absolute top-full left-0 right-0 z-10 mt-1 max-h-40 overflow-y-auto rounded-lg border border-blue-300 bg-white shadow-lg dark:border-blue-700 dark:bg-gray-900">
+            <div
+              v-for="member in filteredMembersForSearch"
+              :key="member.MemberID"
+              @click="selectMember(member)"
+              class="cursor-pointer border-b border-blue-200 px-3 py-2 text-sm text-gray-800 hover:bg-blue-100 dark:border-blue-800 dark:text-white/90 dark:hover:bg-blue-900"
+            >
+              {{ member.FirstName }} {{ member.LastName }} (#{{ member.MemberID }})
+            </div>
+          </div>
+          <div v-if="manualPayment.memberId" class="mt-1 text-xs text-blue-700 dark:text-blue-300">
+            Selected: {{ getMemberName(manualPayment.memberId) }}
+          </div>
         </div>
         <div>
           <label class="block text-xs font-medium text-blue-800 dark:text-blue-200">Year</label>
@@ -206,6 +219,8 @@ const { currentUser } = useAuth()
 
 const payments = ref<Payment[]>([])
 const members = ref<Map<number, string>>(new Map())
+const allMembers = ref<Member[]>([])
+const memberSearch = ref('')
 const loading = ref(false)
 const recordingPayment = ref(false)
 const manualPayment = ref({
@@ -240,6 +255,7 @@ const fetchMembers = async () => {
     if (!response.ok) throw new Error('Failed to fetch members')
     
     const data = await response.json() as Member[]
+    allMembers.value = data
     const memberMap = new Map<number, string>()
     data.forEach(member => {
       const memberId = typeof member.MemberID === 'string' ? parseInt(member.MemberID, 10) : member.MemberID
@@ -286,6 +302,20 @@ const filteredPayments = computed(() => {
 
 const refreshPayments = () => {
   fetchPayments()
+}
+
+const filteredMembersForSearch = computed(() => {
+  if (!memberSearch.value) return []
+  const search = memberSearch.value.toLowerCase()
+  return allMembers.value.filter(member =>
+    `${member.FirstName} ${member.LastName}`.toLowerCase().includes(search) ||
+    member.MemberID.toString().includes(search)
+  )
+})
+
+const selectMember = (member: Member) => {
+  manualPayment.value.memberId = member.MemberID.toString()
+  memberSearch.value = ''
 }
 
 const recordManualPayment = async () => {
