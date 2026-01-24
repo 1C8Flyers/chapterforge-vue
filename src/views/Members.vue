@@ -27,6 +27,12 @@
               Download Sample CSV
             </button>
             <button
+              @click="showImportHelp = true"
+              class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              Import Instructions
+            </button>
+            <button
               @click="openAddModal"
               class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
             >
@@ -474,6 +480,49 @@
       </div>
     </div>
   </AdminLayout>
+
+  <!-- Import Instructions Modal -->
+  <div
+    v-if="showImportHelp"
+    class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+    @click.self="showImportHelp = false"
+  >
+    <div class="w-full max-w-3xl my-8 rounded-xl bg-white p-6 dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-start justify-between gap-4 mb-4">
+        <h3 class="text-xl font-semibold text-gray-800 dark:text-white/90">CSV Import Instructions</h3>
+        <button
+          @click="showImportHelp = false"
+          class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="space-y-3 text-sm text-gray-700 dark:text-gray-200">
+        <p>Use the sample CSV for column order. Required columns: FirstName, LastName, Email. Others are optional.</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li><strong>MemberID</strong>: leave blank (auto-generated).</li>
+          <li><strong>HouseholdID</strong>: optional. Use the same number to group family members; leave blank for individuals.</li>
+          <li><strong>MemberType</strong>: Individual, Family, Student, or Family Member.</li>
+          <li><strong>Status</strong>: Active, Inactive, or Pending.</li>
+          <li><strong>DuesRate</strong>, <strong>AmountDue</strong>: numeric; optional.</li>
+          <li><strong>LastPaidYear</strong>: numeric year (e.g., 2025); optional.</li>
+          <li><strong>Payments</strong>: semi-colon list of year:amount entries, e.g., <code>2025:30; 2024:30</code>. If LastPaidYear is blank, it will be set to the max year provided.</li>
+          <li><strong>Email</strong> &amp; <strong>Phone</strong>: email required, phone optional.</li>
+        </ul>
+        <p>Family grouping: assign the same HouseholdID to the primary member and all related family members. No automatic household creation is done during import.</p>
+        <p class="text-gray-500 dark:text-gray-400">Tip: Download the sample CSV, fill it, then use Import CSV.</p>
+      </div>
+      <div class="mt-6 flex justify-end">
+        <button
+          @click="showImportHelp = false"
+          class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -485,6 +534,7 @@ import { auth } from '@/firebase'
 const currentPageTitle = ref('Members')
 const members = ref<any[]>([])
 const showModal = ref(false)
+const showImportHelp = ref(false)
 const isEditing = ref(false)
 const searchQuery = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
