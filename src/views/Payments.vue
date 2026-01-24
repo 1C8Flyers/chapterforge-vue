@@ -137,6 +137,7 @@
               <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Status</th>
               <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Date</th>
               <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Provider Payment ID</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -184,9 +185,102 @@
                 <span v-if="payment.ProviderPaymentId">{{ payment.ProviderPaymentId.substring(0, 12) }}...</span>
                 <span v-else class="text-gray-400">-</span>
               </td>
+                <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      @click="openEdit(payment)"
+                      class="rounded-md bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      @click="confirmDelete(payment)"
+                      class="rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Edit Payment Modal -->
+    <div
+      v-if="editModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      @click.self="editModalOpen = false"
+    >
+      <div class="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Edit Payment #{{ editForm.paymentId }}</h3>
+          <button @click="editModalOpen = false" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Member ID</label>
+            <input v-model="editForm.memberId" type="number" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Assign to a different member if needed.</p>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Year</label>
+            <input v-model="editForm.year" type="number" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Amount</label>
+            <input v-model="editForm.amount" type="number" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Method</label>
+            <select v-model="editForm.method" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+              <option value="manual">manual</option>
+              <option value="cash">cash</option>
+              <option value="check">check</option>
+              <option value="transfer">transfer</option>
+              <option value="square">square</option>
+              <option value="other">other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Provider</label>
+            <input v-model="editForm.provider" type="text" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Provider Status</label>
+            <select v-model="editForm.providerStatus" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+              <option value="">(leave as-is)</option>
+              <option value="COMPLETED">COMPLETED</option>
+              <option value="APPROVED">APPROVED</option>
+              <option value="PENDING">PENDING</option>
+              <option value="CANCELED">CANCELED</option>
+              <option value="FAILED">FAILED</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Provider Payment ID</label>
+            <input v-model="editForm.providerPaymentId" type="text" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Provider Order ID</label>
+            <input v-model="editForm.providerOrderId" type="text" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Provider Invoice ID</label>
+            <input v-model="editForm.providerInvoiceId" type="text" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Provider Link ID</label>
+            <input v-model="editForm.providerLinkId" type="text" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
+          </div>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-3">
+          <button @click="editModalOpen = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-white/90 dark:hover:bg-gray-800">Cancel</button>
+          <button @click="saveEdit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Save</button>
+        </div>
       </div>
     </div>
   </AdminLayout>
@@ -204,8 +298,12 @@ interface Payment {
   Year: number
   Amount: number
   Provider: string
-  ProviderStatus: string
+  Method: string
+  ProviderStatus: string | null
   ProviderPaymentId: string | null
+  ProviderOrderId: string | null
+  ProviderInvoiceId: string | null
+  ProviderLinkId: string | null
   CreatedAt: string
 }
 
@@ -233,6 +331,21 @@ const filters = ref({
   memberId: '',
   provider: '',
   year: ''
+})
+
+const editModalOpen = ref(false)
+const editForm = ref({
+  paymentId: 0,
+  memberId: '',
+  year: new Date().getFullYear().toString(),
+  amount: '',
+  method: 'manual',
+  provider: '',
+  providerStatus: '',
+  providerPaymentId: '',
+  providerOrderId: '',
+  providerInvoiceId: '',
+  providerLinkId: ''
 })
 
 const getAuthHeaders = async () => {
@@ -359,6 +472,78 @@ const recordManualPayment = async () => {
     console.error('Error recording payment:', error)
   } finally {
     recordingPayment.value = false
+  }
+}
+
+const openEdit = (payment: Payment) => {
+  editForm.value = {
+    paymentId: payment.PaymentID,
+    memberId: payment.MemberID ? payment.MemberID.toString() : '',
+    year: payment.Year ? payment.Year.toString() : '',
+    amount: payment.Amount?.toString() || '',
+    method: payment.Method || payment.Provider || 'manual',
+    provider: payment.Provider || '',
+    providerStatus: payment.ProviderStatus || '',
+    providerPaymentId: payment.ProviderPaymentId || '',
+    providerOrderId: payment.ProviderOrderId || '',
+    providerInvoiceId: payment.ProviderInvoiceId || '',
+    providerLinkId: payment.ProviderLinkId || ''
+  }
+  editModalOpen.value = true
+}
+
+const saveEdit = async () => {
+  try {
+    const headers = await getAuthHeaders()
+    const body = {
+      MemberID: editForm.value.memberId ? Number(editForm.value.memberId) : null,
+      Year: Number(editForm.value.year),
+      Amount: Number(editForm.value.amount),
+      Method: editForm.value.method,
+      Provider: editForm.value.provider || null,
+      ProviderStatus: editForm.value.providerStatus || null,
+      ProviderPaymentId: editForm.value.providerPaymentId || null,
+      ProviderOrderId: editForm.value.providerOrderId || null,
+      ProviderInvoiceId: editForm.value.providerInvoiceId || null,
+      ProviderLinkId: editForm.value.providerLinkId || null
+    }
+
+    const response = await fetch(`/api/payments/${editForm.value.paymentId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(body)
+    })
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err.error || 'Failed to update payment')
+    }
+
+    editModalOpen.value = false
+    await fetchPayments()
+  } catch (error) {
+    alert(`Error updating payment: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    console.error('Error updating payment:', error)
+  }
+}
+
+const confirmDelete = async (payment: Payment) => {
+  const ok = window.confirm(`Delete payment #${payment.PaymentID}? This cannot be undone.`)
+  if (!ok) return
+  try {
+    const headers = await getAuthHeaders()
+    const response = await fetch(`/api/payments/${payment.PaymentID}`, {
+      method: 'DELETE',
+      headers
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err.error || 'Failed to delete payment')
+    }
+    await fetchPayments()
+  } catch (error) {
+    alert(`Error deleting payment: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    console.error('Error deleting payment:', error)
   }
 }
 

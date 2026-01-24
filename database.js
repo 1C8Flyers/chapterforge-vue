@@ -1005,7 +1005,7 @@ class Database {
     });
   }
 
-  updatePayment(paymentId, year, amount, method = 'manual', provider = {}) {
+  updatePayment(paymentId, memberId, year, amount, method = 'manual', provider = {}) {
     return new Promise((resolve, reject) => {
       const {
         Provider = null,
@@ -1017,7 +1017,8 @@ class Database {
       } = provider || {};
       const sql = `
         UPDATE payments
-        SET Year = ?, Amount = ?, Method = ?,
+        SET MemberID = COALESCE(?, MemberID),
+            Year = ?, Amount = ?, Method = ?,
             Provider = COALESCE(?, Provider),
             ProviderPaymentId = COALESCE(?, ProviderPaymentId),
             ProviderOrderId = COALESCE(?, ProviderOrderId),
@@ -1029,6 +1030,7 @@ class Database {
       this.db.run(
         sql,
         [
+          memberId,
           year,
           amount,
           method,

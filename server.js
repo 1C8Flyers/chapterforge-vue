@@ -771,9 +771,10 @@ app.post('/api/members/:id/payments', async (req, res) => {
 app.put('/api/payments/:id', async (req, res) => {
   try {
     const paymentId = Number(req.params.id);
-    const { Year, Amount, Method } = req.body;
+    const { Year, Amount, Method, MemberID, Provider, ProviderStatus, ProviderPaymentId, ProviderOrderId, ProviderInvoiceId, ProviderLinkId } = req.body;
     const yearNum = Number(Year);
     const amountNum = Number(Amount);
+    const memberIdNum = MemberID !== undefined ? Number(MemberID) : null;
 
     if (!paymentId || !Number.isFinite(yearNum)) {
       return res.status(400).json({ error: 'Valid Year is required' });
@@ -784,8 +785,29 @@ app.put('/api/payments/:id', async (req, res) => {
       return res.status(404).json({ error: 'Payment not found' });
     }
 
-    await db.updatePayment(paymentId, yearNum, Number.isFinite(amountNum) ? amountNum : 0, Method || payment.Method || 'manual');
+    const providerPayload = {
+      Provider: Provider,
+      ProviderPaymentId,
+      ProviderOrderId,
+      ProviderInvoiceId,
+      ProviderStatus,
+      ProviderLinkId
+    };
+
+    const newMemberId = Number.isFinite(memberIdNum) && memberIdNum > 0 ? memberIdNum : payment.MemberID;
+
+    await db.updatePayment(
+      paymentId,
+      newMemberId,
+      yearNum,
+      Number.isFinite(amountNum) ? amountNum : 0,
+      Method || payment.Method || 'manual',
+      providerPayload
+    );
     await db.refreshMemberPaymentSummary(payment.MemberID);
+    if (newMemberId !== payment.MemberID) {
+      await db.refreshMemberPaymentSummary(newMemberId);
+    }
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
