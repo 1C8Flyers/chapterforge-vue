@@ -1037,6 +1037,24 @@ app.get('/api/reports/payments/summary', async (req, res) => {
   }
 });
 
+// Reports endpoint - payments details for a specific year
+app.get('/api/reports/payments/year/:year', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  try {
+    const year = Number(req.params.year);
+    if (!Number.isFinite(year) || year < 1900 || year > 2100) {
+      return res.status(400).json({ error: 'Invalid year' });
+    }
+    const rows = await db.getPaymentsByYear(year);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching payments for year:', error);
+    res.status(500).json({ error: 'Failed to fetch payments for year' });
+  }
+});
+
 // Reports endpoint - return raw database table data
 app.get('/api/reports/:table', async (req, res) => {
   if (!req.user) {

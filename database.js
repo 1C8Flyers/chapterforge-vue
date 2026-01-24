@@ -1229,6 +1229,23 @@ class Database {
       });
     });
   }
+
+  getPaymentsByYear(year) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT p.PaymentID, p.MemberID, p.Year, p.Amount, p.Method, p.Provider,
+               m.FirstName, m.LastName, m.Email, m.MemberType
+        FROM payments p
+        LEFT JOIN members m ON p.MemberID = m.MemberID
+        WHERE p.Year = ?
+        ORDER BY m.LastName, m.FirstName
+      `;
+      this.db.all(sql, [year], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
 }
 
 module.exports = new Database();

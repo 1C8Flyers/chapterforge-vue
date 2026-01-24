@@ -30,7 +30,7 @@
           <div>
             <h3 class="text-base font-semibold text-gray-800 dark:text-white">Dues collected by year</h3>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Totals include manual and online payments for each dues year.
+              Click a bar to see payment details for that year.
             </p>
           </div>
           <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">USD</span>
@@ -41,8 +41,70 @@
           <div v-else-if="summaryError" class="text-sm text-red-600">{{ summaryError }}</div>
           <div v-else-if="!paymentsSummary.length" class="text-sm text-gray-500">No payments recorded yet.</div>
           <div v-else class="-ml-4 -mr-2">
-            <VueApexCharts type="bar" height="340" :options="chartOptions" :series="chartSeries" />
+            <VueApexCharts type="bar" height="340" :options="chartOptions" :series="chartSeries" @click="onChartClick" />
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Details Modal -->
+    <div
+      v-if="showDetailsModal"
+      class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+      @click.self="showDetailsModal = false"
+    >
+      <div class="w-full max-w-2xl my-8 rounded-xl bg-white p-6 dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-xl font-semibold text-gray-800 dark:text-white/90">
+            Payments for {{ selectedYear }}
+          </h3>
+          <button
+            @click="showDetailsModal = false"
+            class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div v-if="loadingDetails" class="text-sm text-gray-500">Loading details...</div>
+        <div v-else-if="detailsError" class="text-sm text-red-600">{{ detailsError }}</div>
+        <div v-else-if="!paymentDetails.length" class="text-sm text-gray-500">No payments found for this year.</div>
+        <div v-else class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-gray-200 dark:border-gray-800">
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Member</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Type</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Method</th>
+                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-800 dark:text-white/90">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="payment in paymentDetails" :key="payment.PaymentID" class="border-b border-gray-200 dark:border-gray-800">
+                <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">
+                  {{ payment.FirstName }} {{ payment.LastName }}
+                </td>
+                <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                  {{ payment.MemberType }}
+                </td>
+                <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                  {{ payment.Provider || payment.Method }}
+                </td>
+                <td class="px-4 py-4 text-right text-sm font-medium text-gray-800 dark:text-white/90">
+                  {{ formatCurrency(payment.Amount) }}
+                </td>
+              </tr>
+              <tr class="border-t-2 border-gray-300 dark:border-gray-700 font-semibold">
+                <td colspan="3" class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">
+                  Total for {{ selectedYear }}
+                </td>
+                <td class="px-4 py-4 text-right text-sm text-gray-800 dark:text-white/90">
+                  {{ formatCurrency(paymentDetails.reduce((sum, p) => sum + (p.Amount || 0), 0)) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -91,6 +153,11 @@ const errorMessage = ref('')
 const paymentsSummary = ref<PaymentsSummaryRow[]>([])
 const loadingSummary = ref(false)
 const summaryError = ref('')
+const showDetailsModal = ref(false)
+const selectedYear = ref<number | null>(null)
+const paymentDetails = ref<any[]>([])
+const loadingDetails = ref(false)
+const detailsError = ref('')
 
 const getColumnsForTable = (tableId: string, rows: any[]) => {
   if (rows.length === 0) return []
@@ -244,6 +311,34 @@ const chartOptions = computed(() => ({
     opacity: 0.9
   }
 }))
+
+const onChartClick = async (event: any, chartContext: any, config: any) => {
+  const dataPointIndex = config.dataPointIndex
+  if (dataPointIndex >= 0 && dataPointIndex < paymentsSummary.value.length) {
+    const year = paymentsSummary.value[dataPointIndex].Year
+    selectedYear.value = year
+    await loadPaymentDetails(year)
+    showDetailsModal.value = true
+  }
+}
+
+const loadPaymentDetails = async (year: number) => {
+  loadingDetails.value = true
+  detailsError.value = ''
+  try {
+    const headers = await getAuthHeaders()
+    const response = await fetch(`/api/reports/payments/year/${year}`, { headers })
+    if (!response.ok) {
+      throw new Error('Failed to fetch payment details')
+    }
+    paymentDetails.value = await response.json()
+  } catch (error) {
+    detailsError.value = 'Could not load payment details.'
+    console.error('Error loading payment details:', error)
+  } finally {
+    loadingDetails.value = false
+  }
+}
 
 onMounted(loadPaymentsSummary)
 
