@@ -65,12 +65,21 @@ async function retrieveOrder(orderId) {
     throw new Error('Square is not configured');
   }
   const result = await client.orders.get({ orderId });
-  console.log('[SQUARE] Order API result:', JSON.stringify(result).substring(0, 500));
+  
+  // Log without trying to JSON.stringify (which fails on BigInt)
+  console.log('[SQUARE] Order API result received, extracting order...');
+  
   const order = result.data?.order || result.result?.order || null;
   console.log('[SQUARE] Extracted order:', order ? 'found' : 'null');
+  
   if (order) {
-    console.log('[SQUARE] Order metadata:', order.metadata);
+    console.log('[SQUARE] Order ID:', order.id);
+    console.log('[SQUARE] Order metadata:', JSON.stringify(order.metadata || {}, (key, value) => {
+      if (typeof value === 'bigint') return value.toString();
+      return value;
+    }));
   }
+  
   return order;
 }
 

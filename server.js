@@ -659,14 +659,14 @@ app.post('/api/payments/square/webhook', async (req, res) => {
       order = null;
     }
     console.log('[WEBHOOK] Order retrieved:', order ? 'success' : 'null');
-    if (order) {
-      console.log('[WEBHOOK] Full order object:', JSON.stringify(order).substring(0, 500));
-    }
     
     const metadata = order?.metadata || {};
     const memberId = Number(metadata.memberId);
     const year = Number(metadata.year);
     console.log('[WEBHOOK] Extracted metadata: memberId =', memberId, 'year =', year);
+    if (metadata && Object.keys(metadata).length > 0) {
+      console.log('[WEBHOOK] Metadata object keys:', Object.keys(metadata));
+    }
     
     if (!memberId || !Number.isFinite(year)) {
       console.log('[WEBHOOK] Ignoring: invalid memberId or year from order metadata');
