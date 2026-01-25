@@ -47,7 +47,7 @@ import FullScreenLayout from '@/components/layout/FullScreenLayout.vue'
 import { auth } from '@/firebase'
 import * as firebaseui from 'firebaseui'
 import 'firebaseui/dist/firebaseui.css'
-import { EmailAuthProvider, GoogleAuthProvider } from 'firebase/auth'
+import { GoogleAuthProvider } from 'firebase/auth'
 
 const router = useRouter()
 const chapterName = ref(import.meta.env.VITE_CHAPTER_NAME || 'EAA Chapter')
@@ -60,7 +60,6 @@ onMounted(() => {
   
   const uiConfig: firebaseui.auth.Config = {
     signInOptions: [
-      EmailAuthProvider.PROVIDER_ID,
       GoogleAuthProvider.PROVIDER_ID
     ],
     signInSuccessUrl: '/',
