@@ -461,7 +461,6 @@ const previewData = ref({
   Subject: '',
   HtmlBody: ''
 })
-}
 
 const fetchMemberTypes = async () => {
   try {
