@@ -76,7 +76,7 @@ app.use('/api', async (req, res, next) => {
       return res.status(403).json({ error: 'User is not authorized' });
     }
 
-    if (firebaseAllowedDomains.length > 0 && !isAdminEnv) {
+    if (firebaseAllowedDomains.length > 0 && !isAdminEnv && allowlistEntry) {
       const domain = email.split('@')[1] || '';
       if (!firebaseAllowedDomains.includes(domain)) {
         return res.status(403).json({ error: 'Access denied for this domain' });
