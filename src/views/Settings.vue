@@ -49,6 +49,53 @@
         >
           Payment Settings
         </button>
+        <button
+          @click="activeTab = 'timezone'"
+          :class="[
+            'px-4 py-3 text-sm font-medium border-b-2 transition',
+            activeTab === 'timezone'
+              ? 'border-brand-500 text-brand-500 dark:text-brand-400'
+              : 'border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+          ]"
+        >
+          Timezone
+        </button>
+      </div>
+    </div>
+
+    <!-- Timezone Tab -->
+    <div v-if="activeTab === 'timezone'" class="space-y-6">
+      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Timezone Settings</h3>
+          <button
+            @click="saveTimezoneSettings"
+            class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
+            :disabled="savingTimezoneSettings"
+          >
+            {{ savingTimezoneSettings ? 'Saving...' : 'Save Settings' }}
+          </button>
+        </div>
+
+        <div class="space-y-3 text-sm text-gray-700 dark:text-gray-200">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Application Timezone</label>
+          <select
+            v-model="timezoneSettings.timezone"
+            class="h-11 w-full max-w-md rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          >
+            <option value="America/New_York">Eastern Time (ET)</option>
+            <option value="America/Chicago">Central Time (CT)</option>
+            <option value="America/Denver">Mountain Time (MT)</option>
+            <option value="America/Phoenix">Arizona (MT - No DST)</option>
+            <option value="America/Los_Angeles">Pacific Time (PT)</option>
+            <option value="America/Anchorage">Alaska Time (AKT)</option>
+            <option value="Pacific/Honolulu">Hawaii Time (HST)</option>
+            <option value="UTC">UTC</option>
+          </select>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            This timezone will be used for displaying dates and times throughout the application.
+          </p>
+        </div>
       </div>
     </div>
 
@@ -440,6 +487,8 @@ const showUserModal = ref(false)
 const editingUserEmail = ref<string | null>(null)
 const paymentSettings = ref({ squareFeeAmount: 1 })
 const savingPaymentSettings = ref(false)
+const timezoneSettings = ref({ timezone: 'America/Chicago' })
+const savingTimezoneSettings = ref(false)
 
 const memberTypeForm = ref({
   Name: '',
@@ -491,6 +540,49 @@ const fetchMembers = async () => {
     } else {
       console.error('Error fetching members:', error)
     }
+  }
+}
+
+const fetchTimezoneSettings = async () => {
+  try {
+    const headers = await getAuthHeaders()
+    const response = await apiFetch('/api/settings/timezone', { headers })
+    if (response.ok) {
+      const data = await response.json()
+      timezoneSettings.value.timezone = data.timezone || 'America/Chicago'
+    }
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching timezone settings:', error)
+    }
+  }
+}
+
+const saveTimezoneSettings = async () => {
+  try {
+    savingTimezoneSettings.value = true
+    const headers = await getAuthHeaders()
+    const response = await apiFetch('/api/settings/timezone', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ timezone: timezoneSettings.value.timezone })
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to save timezone settings')
+    }
+    alert('Timezone settings saved')
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error saving timezone settings:', error)
+      alert(error instanceof Error ? error.message : 'Failed to save timezone settings')
+    }
+  } finally {
+    savingTimezoneSettings.value = false
   }
 }
 
@@ -808,5 +900,6 @@ onMounted(() => {
   fetchMembers()
   fetchUsers()
   fetchPaymentSettings()
+  fetchTimezoneSettings()
 })
 </script>

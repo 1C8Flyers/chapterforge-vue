@@ -917,6 +917,29 @@ app.post('/api/settings/payments', async (req, res) => {
   }
 });
 
+// API: Timezone settings
+app.get('/api/settings/timezone', async (req, res) => {
+  try {
+    const timezone = await db.getSetting('timezone');
+    res.json({ timezone: timezone || 'America/Chicago' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings/timezone', async (req, res) => {
+  try {
+    const { timezone } = req.body;
+    if (!timezone || typeof timezone !== 'string') {
+      return res.status(400).json({ error: 'timezone must be a valid string' });
+    }
+    await db.setSetting('timezone', timezone);
+    res.json({ success: true, timezone });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/settings/email-template', async (req, res) => {
   try {
     const { subject, body } = req.body;
