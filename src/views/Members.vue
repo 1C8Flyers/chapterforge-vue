@@ -567,9 +567,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { auth } from '@/firebase'
+import { getAuthHeaders, apiFetch, AuthError } from '@/utils/apiAuth'
+
+const router = useRouter()
 
 const currentPageTitle = ref('Members')
 const members = ref<any[]>([])
@@ -710,41 +714,37 @@ const sortBy = (column: 'name' | 'email' | 'status' | 'lastPaid') => {
   }
 }
 
-const getAuthHeaders = async () => {
-  const user = auth.currentUser
-  if (!user) {
-    throw new Error('No authenticated user')
-  }
-  const token = await user.getIdToken()
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }
-}
-
 const fetchMembers = async () => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/members', { headers })
+    const response = await apiFetch('/api/members', { headers })
     if (response.ok) {
       members.value = await response.json()
     } else {
       console.error('Failed to fetch members:', response.statusText)
     }
   } catch (error) {
-    console.error('Error fetching members:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching members:', error)
+    }
   }
 }
 
 const fetchMemberTypes = async () => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/settings/member-types', { headers })
+    const response = await apiFetch('/api/settings/member-types', { headers })
     if (response.ok) {
       memberTypes.value = await response.json()
     }
   } catch (error) {
-    console.error('Error fetching member types:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching member types:', error)
+    }
   }
 }
 
@@ -902,15 +902,11 @@ const handleFileUpload = async (event: Event) => {
   uploadData.append('file', file)
   
   try {
-    const user = auth.currentUser
-    if (!user) throw new Error('No authenticated user')
-    const token = await user.getIdToken()
+    const headers = await getAuthHeaders()
     
-    const response = await fetch('/api/members/import', {
+    const response = await apiFetch('/api/members/import', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
+      headers,
       body: uploadData,
     })
     
@@ -922,8 +918,12 @@ const handleFileUpload = async (event: Event) => {
       alert(error.error || 'Failed to import members')
     }
   } catch (error) {
-    console.error('Error importing members:', error)
-    alert('Failed to import members')
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error importing members:', error)
+      alert('Failed to import members')
+    }
   }
   
   // Reset file input
@@ -933,7 +933,7 @@ const handleFileUpload = async (event: Event) => {
 const downloadSampleCsv = async () => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/members/import/template', { headers })
+    const response = await apiFetch('/api/members/import/template', { headers })
     if (!response.ok) throw new Error('Failed to download template')
     const blob = await response.blob()
     const url = URL.createObjectURL(blob)
@@ -945,8 +945,12 @@ const downloadSampleCsv = async () => {
     a.remove()
     URL.revokeObjectURL(url)
   } catch (error) {
-    console.error('Error downloading template:', error)
-    alert('Failed to download template')
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error downloading template:', error)
+      alert('Failed to download template')
+    }
   }
 }
 

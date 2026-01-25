@@ -99,9 +99,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
-import { auth } from '@/firebase'
+import { getAuthHeaders, apiFetch, AuthError } from '@/utils/apiAuth'
+
+const router = useRouter()
 
 const currentPageTitle = ref('Renewals')
 const renewals = ref<any[]>([])
@@ -121,22 +124,10 @@ const allSelected = computed(() => {
   return renewals.value.length > 0 && selectedMembers.value.length === renewals.value.length
 })
 
-const getAuthHeaders = async () => {
-  const user = auth.currentUser
-  if (!user) {
-    throw new Error('No authenticated user')
-  }
-  const token = await user.getIdToken()
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }
-}
-
 const fetchRenewals = async () => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch(`/api/renewals?year=${selectedYear.value}`, { headers })
+    const response = await apiFetch(`/api/renewals?year=${selectedYear.value}`, { headers })
     if (response.ok) {
       const data = await response.json()
       renewals.value = data.members || []
@@ -144,14 +135,18 @@ const fetchRenewals = async () => {
       console.error('Failed to fetch renewals:', response.statusText)
     }
   } catch (error) {
-    console.error('Error fetching renewals:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching renewals:', error)
+    }
   }
 }
 
 const sendRenewalNotice = async (memberId: number) => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch(`/api/renewals/send/${memberId}`, {
+    const response = await apiFetch(`/api/renewals/send/${memberId}`, {
       method: 'POST',
       headers
     })
@@ -164,8 +159,12 @@ const sendRenewalNotice = async (memberId: number) => {
       alert(error.error || 'Failed to send renewal notice')
     }
   } catch (error) {
-    console.error('Error sending renewal notice:', error)
-    alert('Failed to send renewal notice')
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error sending renewal notice:', error)
+      alert('Failed to send renewal notice')
+    }
   }
 }
 
@@ -176,7 +175,7 @@ const sendBulkRenewals = async () => {
   
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/renewals/send-bulk', {
+    const response = await apiFetch('/api/renewals/send-bulk', {
       method: 'POST',
       headers,
       body: JSON.stringify({ memberIds: selectedMembers.value })
@@ -192,8 +191,12 @@ const sendBulkRenewals = async () => {
       alert(error.error || 'Failed to send renewal notices')
     }
   } catch (error) {
-    console.error('Error sending bulk renewals:', error)
-    alert('Failed to send renewal notices')
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error sending bulk renewals:', error)
+      alert('Failed to send renewal notices')
+    }
   }
 }
 

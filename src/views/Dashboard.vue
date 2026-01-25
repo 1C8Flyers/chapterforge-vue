@@ -164,11 +164,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { auth } from '@/firebase'
-import { getAuthHeaders, apiFetch } from '@/utils/apiAuth'
+import { getAuthHeaders, apiFetch, AuthError } from '@/utils/apiAuth'
 
+const router = useRouter()
 const currentPageTitle = ref('Dashboard')
 const chapterName = ref(import.meta.env.VITE_CHAPTER_NAME || 'EAA Chapter')
 const chapterEmail = ref('info@eaa22.org')
@@ -185,18 +187,6 @@ const stats = ref({
   youthProtectionExpiring: 0
 })
 
-const getAuthHeaders = async () => {
-  const user = auth.currentUser
-  if (!user) {
-    throw new Error('No authenticated user')
-  }
-  const token = await user.getIdToken()
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }
-}
-
 const fetchStats = async () => {
   try {
     const headers = await getAuthHeaders()
@@ -205,7 +195,11 @@ const fetchStats = async () => {
       stats.value = await response.json()
     }
   } catch (error) {
-    console.error('Error fetching stats:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching stats:', error)
+    }
   }
 }
 
@@ -235,8 +229,12 @@ const loadYPExpiringMembers = async () => {
       ypDetailsError.value = 'Failed to load YP expiring members'
     }
   } catch (error) {
-    ypDetailsError.value = 'Error loading YP details'
-    console.error('Error fetching YP expiring members:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      ypDetailsError.value = 'Error loading YP details'
+      console.error('Error fetching YP expiring members:', error)
+    }
   } finally {
     loadingYPDetails.value = false
   }

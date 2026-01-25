@@ -288,9 +288,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { useAuth } from '@/composables/useAuth'
+import { getAuthHeaders, apiFetch, AuthError } from '@/utils/apiAuth'
+
+const router = useRouter()
 
 interface Payment {
   PaymentID: number
@@ -363,7 +367,7 @@ const getAuthHeaders = async () => {
 const fetchMembers = async () => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/members', { headers })
+    const response = await apiFetch('/api/members', { headers })
     
     if (!response.ok) throw new Error('Failed to fetch members')
     
@@ -377,7 +381,11 @@ const fetchMembers = async () => {
     members.value = memberMap
     console.log('Members loaded:', memberMap.size, 'members')
   } catch (error) {
-    console.error('Error fetching members:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching members:', error)
+    }
   }
 }
 
@@ -385,14 +393,18 @@ const fetchPayments = async () => {
   try {
     loading.value = true
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/payments', { headers })
+    const response = await apiFetch('/api/payments', { headers })
     
     if (!response.ok) throw new Error('Failed to fetch payments')
     
     const data = await response.json()
     payments.value = data
   } catch (error) {
-    console.error('Error fetching payments:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching payments:', error)
+    }
   } finally {
     loading.value = false
   }
@@ -444,7 +456,7 @@ const recordManualPayment = async () => {
     }
 
     const headers = await getAuthHeaders()
-    const response = await fetch(`/api/members/${memberId}/payments`, {
+    const response = await apiFetch(`/api/members/${memberId}/payments`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -468,8 +480,12 @@ const recordManualPayment = async () => {
     }
     await fetchPayments()
   } catch (error) {
-    alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    console.error('Error recording payment:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('Error recording payment:', error)
+    }
   } finally {
     recordingPayment.value = false
   }
@@ -508,7 +524,7 @@ const saveEdit = async () => {
       ProviderLinkId: editForm.value.providerLinkId || null
     }
 
-    const response = await fetch(`/api/payments/${editForm.value.paymentId}`, {
+    const response = await apiFetch(`/api/payments/${editForm.value.paymentId}`, {
       method: 'PUT',
       headers,
       body: JSON.stringify(body)
@@ -522,8 +538,12 @@ const saveEdit = async () => {
     editModalOpen.value = false
     await fetchPayments()
   } catch (error) {
-    alert(`Error updating payment: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    console.error('Error updating payment:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      alert(`Error updating payment: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('Error updating payment:', error)
+    }
   }
 }
 
@@ -532,7 +552,7 @@ const confirmDelete = async (payment: Payment) => {
   if (!ok) return
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch(`/api/payments/${payment.PaymentID}`, {
+    const response = await apiFetch(`/api/payments/${payment.PaymentID}`, {
       method: 'DELETE',
       headers
     })
@@ -542,8 +562,12 @@ const confirmDelete = async (payment: Payment) => {
     }
     await fetchPayments()
   } catch (error) {
-    alert(`Error deleting payment: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    console.error('Error deleting payment:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      alert(`Error deleting payment: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('Error deleting payment:', error)
+    }
   }
 }
 

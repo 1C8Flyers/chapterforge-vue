@@ -1,5 +1,4 @@
 import { auth } from '@/firebase'
-import { useRouter } from 'vue-router'
 
 export async function getAuthHeaders() {
   const user = auth.currentUser
@@ -13,23 +12,31 @@ export async function getAuthHeaders() {
   }
 }
 
+export class AuthError extends Error {
+  constructor(
+    public statusCode: number,
+    message: string
+  ) {
+    super(message)
+    this.name = 'AuthError'
+  }
+}
+
 /**
- * Wrapper around fetch that handles auth errors globally.
- * If 401/403 is returned, redirects to signin.
+ * Wrapper around fetch that throws AuthError on 401/403.
+ * Components should catch AuthError and redirect to signin.
  */
 export async function apiFetch(url: string, init?: RequestInit) {
   const response = await fetch(url, init)
 
-  // Handle auth errors - redirect to signin
-  if (response.status === 401 || response.status === 403) {
-    const router = useRouter()
-    router.push('/signin')
-    throw new Error(
-      response.status === 401
-        ? 'Your session has expired. Please sign in again.'
-        : 'You do not have permission to access this resource.'
-    )
+  // Handle auth errors
+  if (response.status === 401) {
+    throw new AuthError(401, 'Your session has expired. Please sign in again.')
+  }
+  if (response.status === 403) {
+    throw new AuthError(403, 'You do not have permission to access this resource.')
   }
 
   return response
 }
+

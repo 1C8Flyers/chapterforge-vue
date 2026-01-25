@@ -419,11 +419,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
-import { auth } from '@/firebase'
+import { getAuthHeaders, apiFetch, AuthError } from '@/utils/apiAuth'
+
+const router = useRouter()
 
 const currentPageTitle = ref('Settings')
 const activeTab = ref('member-types')
@@ -449,7 +452,6 @@ const userForm = ref({
   role: 'user',
   memberId: null as number | null
 })
-
 const emailTemplate = ref({
   Subject: '',
   HtmlBody: ''
@@ -459,60 +461,61 @@ const previewData = ref({
   Subject: '',
   HtmlBody: ''
 })
-
-const getAuthHeaders = async () => {
-  const user = auth.currentUser
-  if (!user) {
-    throw new Error('No authenticated user')
-  }
-  const token = await user.getIdToken()
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }
 }
 
 const fetchMemberTypes = async () => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/settings/member-types', { headers })
+    const response = await apiFetch('/api/settings/member-types', { headers })
     if (response.ok) {
       memberTypes.value = await response.json()
     }
   } catch (error) {
-    console.error('Error fetching member types:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching member types:', error)
+    }
   }
 }
 
 const fetchMembers = async () => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/members', { headers })
+    const response = await apiFetch('/api/members', { headers })
     if (response.ok) {
       members.value = await response.json()
     }
   } catch (error) {
-    console.error('Error fetching members:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching members:', error)
+    }
   }
 }
 
 const fetchPaymentSettings = async () => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/settings/payments', { headers })
+    const response = await apiFetch('/api/settings/payments', { headers })
     if (response.ok) {
       const data = await response.json()
       paymentSettings.value.squareFeeAmount = Number(data.squareFeeAmount ?? 1)
     }
   } catch (error) {
-    console.error('Error fetching payment settings:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching payment settings:', error)
+    }
   }
 }
 
 const fetchEmailTemplate = async () => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/settings/email-template', { headers })
+    const response = await apiFetch('/api/settings/email-template', { headers })
     if (response.ok) {
       const data = await response.json()
       // Backend returns lowercase keys: subject, body
@@ -522,7 +525,11 @@ const fetchEmailTemplate = async () => {
       }
     }
   } catch (error) {
-    console.error('Error fetching email template:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching email template:', error)
+    }
   }
 }
 
@@ -555,7 +562,7 @@ const saveMemberType = async () => {
       : '/api/settings/member-types'
     const method = editingMemberTypeId.value ? 'PUT' : 'POST'
 
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
       method,
       headers,
       body: JSON.stringify(memberTypeForm.value)
@@ -569,8 +576,12 @@ const saveMemberType = async () => {
       alert(error.error || 'Failed to save member type')
     }
   } catch (error) {
-    console.error('Error saving member type:', error)
-    alert('Failed to save member type')
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error saving member type:', error)
+      alert('Failed to save member type')
+    }
   }
 }
 
@@ -579,7 +590,7 @@ const deleteMemberType = async (id: number) => {
 
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch(`/api/settings/member-types/${id}`, {
+    const response = await apiFetch(`/api/settings/member-types/${id}`, {
       method: 'DELETE',
       headers
     })
@@ -591,8 +602,12 @@ const deleteMemberType = async (id: number) => {
       alert(error.error || 'Failed to delete member type')
     }
   } catch (error) {
-    console.error('Error deleting member type:', error)
-    alert('Failed to delete member type')
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error deleting member type:', error)
+      alert('Failed to delete member type')
+    }
   }
 }
 
@@ -606,7 +621,7 @@ const saveEmailTemplate = async () => {
       .filter(line => line)
       .join('')
     
-    const response = await fetch('/api/settings/email-template', {
+    const response = await apiFetch('/api/settings/email-template', {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -622,8 +637,12 @@ const saveEmailTemplate = async () => {
       alert(error.error || 'Failed to save email template')
     }
   } catch (error) {
-    console.error('Error saving email template:', error)
-    alert('Failed to save email template')
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error saving email template:', error)
+      alert('Failed to save email template')
+    }
   }
 }
 
@@ -631,7 +650,7 @@ const savePaymentSettings = async () => {
   try {
     savingPaymentSettings.value = true
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/settings/payments', {
+    const response = await apiFetch('/api/settings/payments', {
       method: 'POST',
       headers,
       body: JSON.stringify({ squareFeeAmount: paymentSettings.value.squareFeeAmount })
@@ -642,8 +661,12 @@ const savePaymentSettings = async () => {
     }
     alert('Payment settings saved')
   } catch (error) {
-    console.error('Error saving payment settings:', error)
-    alert(error instanceof Error ? error.message : 'Failed to save payment settings')
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error saving payment settings:', error)
+      alert(error instanceof Error ? error.message : 'Failed to save payment settings')
+    }
   } finally {
     savingPaymentSettings.value = false
   }
@@ -652,7 +675,7 @@ const savePaymentSettings = async () => {
 const previewEmailTemplate = async () => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/settings/email-template/preview', {
+    const response = await apiFetch('/api/settings/email-template/preview', {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -673,20 +696,28 @@ const previewEmailTemplate = async () => {
       alert(error.error || 'Failed to preview email template')
     }
   } catch (error) {
-    console.error('Error previewing email template:', error)
-    alert('Failed to preview email template')
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error previewing email template:', error)
+      alert('Failed to preview email template')
+    }
   }
 }
 
 const fetchUsers = async () => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/users', { headers })
+    const response = await apiFetch('/api/users', { headers })
     if (response.ok) {
       users.value = await response.json()
     }
   } catch (error) {
-    console.error('Error fetching users:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching users:', error)
+    }
   }
 }
 
@@ -719,7 +750,7 @@ const saveUser = async () => {
       : '/api/users'
     const method = editingUserEmail.value ? 'PUT' : 'POST'
 
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
       method,
       headers,
       body: JSON.stringify({
@@ -737,8 +768,12 @@ const saveUser = async () => {
       alert(error.error || 'Failed to save user')
     }
   } catch (error) {
-    console.error('Error saving user:', error)
-    alert('Failed to save user')
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error saving user:', error)
+      alert('Failed to save user')
+    }
   }
 }
 
@@ -747,7 +782,7 @@ const deleteUser = async (email: string) => {
 
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch(`/api/users/${encodeURIComponent(email)}`, {
+    const response = await apiFetch(`/api/users/${encodeURIComponent(email)}`, {
       method: 'DELETE',
       headers
     })
@@ -759,8 +794,12 @@ const deleteUser = async (email: string) => {
       alert(error.error || 'Failed to remove user')
     }
   } catch (error) {
-    console.error('Error removing user:', error)
-    alert('Failed to remove user')
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error removing user:', error)
+      alert('Failed to remove user')
+    }
   }
 }
 

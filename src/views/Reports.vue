@@ -122,26 +122,17 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import VueApexCharts from 'vue3-apexcharts'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { useAuth } from '@/composables/useAuth'
+import { getAuthHeaders, apiFetch, AuthError } from '@/utils/apiAuth'
 
 type PaymentsSummaryRow = { Year: number; Category: string; Total: number }
 
+const router = useRouter()
 const { currentUser } = useAuth()
-
-const getAuthHeaders = async () => {
-  const user = currentUser.value
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-  const token = await user.getIdToken()
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }
-}
 
 const tables = [
   { id: 'members', name: 'Members' },
@@ -206,7 +197,7 @@ const exportReport = async (table: { id: string; name: string }) => {
 
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch(`/api/reports/${table.id}`, { headers })
+    const response = await apiFetch(`/api/reports/${table.id}`, { headers })
     if (!response.ok) {
       throw new Error('Failed to fetch report data')
     }
@@ -239,8 +230,12 @@ const exportReport = async (table: { id: string; name: string }) => {
     link.click()
     document.body.removeChild(link)
   } catch (error) {
-    console.error('Error exporting report:', error)
-    errorMessage.value = 'Failed to export report.'
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error exporting report:', error)
+      errorMessage.value = 'Failed to export report.'
+    }
   } finally {
     exporting.value = false
   }
@@ -257,7 +252,7 @@ const exportDuesByMemberYear = async () => {
 
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/reports/payments/by-member-year', { headers })
+    const response = await apiFetch('/api/reports/payments/by-member-year', { headers })
     if (!response.ok) {
       throw new Error('Failed to fetch dues by member report')
     }
@@ -290,8 +285,12 @@ const exportDuesByMemberYear = async () => {
     link.click()
     document.body.removeChild(link)
   } catch (error) {
-    console.error('Error exporting dues by member/year report:', error)
-    errorMessage.value = 'Failed to export report.'
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error exporting dues by member/year report:', error)
+      errorMessage.value = 'Failed to export report.'
+    }
   } finally {
     exporting.value = false
   }
@@ -303,7 +302,7 @@ const loadPaymentsSummary = async () => {
   summaryError.value = ''
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/reports/payments/summary', { headers })
+    const response = await apiFetch('/api/reports/payments/summary', { headers })
     if (!response.ok) {
       throw new Error('Failed to fetch payments summary')
     }
@@ -318,8 +317,12 @@ const loadPaymentsSummary = async () => {
         .filter(row => Number.isFinite(row.Year))
       : []
   } catch (error) {
-    summaryError.value = 'Could not load payments summary.'
-    console.error('Error loading payments summary:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      summaryError.value = 'Could not load payments summary.'
+      console.error('Error loading payments summary:', error)
+    }
   } finally {
     loadingSummary.value = false
   }
@@ -429,14 +432,18 @@ const loadPaymentDetails = async (year: number) => {
   detailsError.value = ''
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch(`/api/reports/payments/year/${year}`, { headers })
+    const response = await apiFetch(`/api/reports/payments/year/${year}`, { headers })
     if (!response.ok) {
       throw new Error('Failed to fetch payment details')
     }
     paymentDetails.value = await response.json()
   } catch (error) {
-    detailsError.value = 'Could not load payment details.'
-    console.error('Error loading payment details:', error)
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      detailsError.value = 'Could not load payment details.'
+      console.error('Error loading payment details:', error)
+    }
   } finally {
     loadingDetails.value = false
   }
