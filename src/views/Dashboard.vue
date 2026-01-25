@@ -167,6 +167,7 @@ import { ref, onMounted } from 'vue'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { auth } from '@/firebase'
+import { getAuthHeaders, apiFetch } from '@/utils/apiAuth'
 
 const currentPageTitle = ref('Dashboard')
 const chapterName = ref(import.meta.env.VITE_CHAPTER_NAME || 'EAA Chapter')
@@ -199,7 +200,7 @@ const getAuthHeaders = async () => {
 const fetchStats = async () => {
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/members/stats', { headers })
+    const response = await apiFetch('/api/members/stats', { headers })
     if (response.ok) {
       stats.value = await response.json()
     }
@@ -227,7 +228,7 @@ const loadYPExpiringMembers = async () => {
   ypDetailsError.value = ''
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/members/yp-expiring', { headers })
+    const response = await apiFetch('/api/members/yp-expiring', { headers })
     if (response.ok) {
       ypExpiringMembers.value = await response.json()
     } else {
