@@ -18,18 +18,22 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - ✅ Member CRUD with instant updates (no page reloads)
 - ✅ Household management with individual family member records
 - ✅ Click-to-expand family members in Members table
-- ✅ Firebase Authentication with Admin/User roles
+- ✅ Firebase Authentication with Google sign-in only
 - ✅ Allowlist-based access control (only approved users can access)
 - ✅ User management in Settings (roles + member linking)
 - ✅ Payments history table with multi-year tracking
+- ✅ Raw payment editor with member reassignment and provider field management
 - ✅ Square payment links + webhook processing (optional)
 - ✅ Configurable member types with dues management
+- ✅ Stacked dues-by-year visualization (Family vs Individual)
+- ✅ Dues by member/year CSV export with member type
 - ✅ Reports export links (CSV)
 - ✅ Real-time dashboard with live statistics
 - ✅ Email renewal system with WYSIWYG editor (Quill.js)
 - ✅ Renewal notice sent tracking
 - ✅ Youth Protection status page
 - ✅ CSV bulk import with validation
+- ✅ Global auth error handling with automatic redirect to signin
 - ✅ TailAdmin layout with dark mode toggle
 - ✅ Smooth client-side navigation
 - ✅ SQLite database with automatic initialization

@@ -15,8 +15,12 @@ ChapterForge now runs as a **Vue 3 + Vite single-page app** with an API-only Exp
 ✅ **Renewal Tracking**: Last notice sent indicators
 ✅ **Youth Protection Page**: Certification status overview
 ✅ **Docker Deployment**: Container build + compose setup
-✅ **Firebase Auth**: Google sign-in with Admin/User roles
+✅ **Firebase Auth**: Google sign-in only (email removed)
 ✅ **Allowlist Access**: Only approved users can access the app
+✅ **Global Auth Error Handling**: Automatic redirect to signin on 401/403 with clear error messages
+✅ **Payment Editor**: Full CRUD modal for editing payments with member reassignment and provider fields
+✅ **Stacked Dues Chart**: Visualize dues by family vs individual member types with totals
+✅ **Dues Export**: CSV export with member type categorization by year
 
 ## Installation
 

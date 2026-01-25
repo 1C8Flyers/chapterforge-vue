@@ -1,6 +1,6 @@
 # ChapterForge Front‑End User Manual
 
-_Last updated: 2026-01-23_
+_Last updated: 2026-01-24_
 
 ## Who this is for
 This guide is for chapter staff using the ChapterForge web app to manage members, renewals, and reports.
@@ -9,9 +9,18 @@ This guide is for chapter staff using the ChapterForge web app to manage members
 
 ## Getting Started
 1. Open the app in your browser.
-2. Sign in with your Google Workspace account.
+2. Sign in with your Google Workspace account (Google sign-in only).
 3. Use the left sidebar to navigate between pages.
 4. Use the top-right toggle to switch light/dark mode.
+5. If you're not authorized to access the app, you'll be redirected to the sign-in page with a clear message.
+
+---
+
+## Authentication & Access Control
+- **Google Sign-In**: Only Google Workspace accounts can sign in.
+- **Allowlist**: Your admin must add you to the Users list in Settings for access to the app.
+- **Session Expiration**: If your session expires or access is revoked, you'll be automatically redirected to sign in again.
+- **Clear Error Messages**: Unauthorized access will show a permission message rather than silent failures.
 
 ---
 
@@ -62,12 +71,18 @@ For each member, you can record:
 
 ### Payments History
 Available for primary members (not household members).
-- Add, edit, or delete payment rows.
-- Each payment includes Year, Amount, and Method.
-- Updating payments automatically updates Last Paid Year.
+- **Add Payment**: Record a new dues payment for a member.
+- **Edit Payment**: Click the **Edit** button to modify any payment:
+  - Change member assignment (if payment was recorded for wrong member)
+  - Update year, amount, and method
+  - Edit provider details (Square payment ID, order ID, invoice ID, etc.)
+  - Provider fields are optional and useful for tracking Square transactions
+- **Delete Payment**: Click the **Delete** button to remove a payment (confirmation required).
+- Updating payments automatically updates Last Paid Year and member balance.
 
 ### Square Payment Links (optional)
 - Renewal emails include a Square payment link when enabled.
+- Payment provider IDs are tracked for reconciliation.
 
 ---
 
@@ -83,7 +98,19 @@ Use this page to manage renewal emails.
 ---
 
 ## Reports
-Use Reports to download CSV exports of raw tables.
+Use Reports to view and download various reports and visualizations.
+
+### Stacked Dues Chart
+- **What it shows**: Total dues collected by year, broken down by member type (Family vs Individual vs Unknown).
+- **Click to see details**: Click any bar to see breakdown details for that year.
+- **Total amount**: Displays total dues above each bar in currency format.
+
+### Dues by Member/Year CSV Export
+- Download a detailed report of all dues paid, with columns:
+  - Member ID, First Name, Last Name, Member Type, Year, Total Paid
+- Useful for reconciliation and member-level analysis.
+
+### Table Exports
 - Exports available: Members, Member Types, Users, Email Templates.
 - Click a report button to download a CSV.
 
