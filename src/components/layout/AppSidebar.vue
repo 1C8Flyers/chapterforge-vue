@@ -252,11 +252,6 @@ const menuGroups = [
         name: "Settings",
         path: "/settings",
       },
-      {
-        icon: HorizontalDots,
-        name: "Audit Log",
-        path: "/audit-log",
-      },
     ],
   },
 ];
