@@ -714,6 +714,11 @@ app.post('/api/payments/square/webhook', async (req, res) => {
     const amount = Number(amountCents) / 100;
     console.log('[WEBHOOK] Amount: $' + amount + ' (' + amountCents + ' cents)');
 
+    // Separate dues from fee
+    const squareFee = await db.getSquareFeeAmount(1);
+    const feeAmount = Number.isFinite(squareFee) ? squareFee : 0;
+    const duesAmount = Math.max(0, amount - feeAmount);
+
     console.log('[WEBHOOK] Creating payment record...');
     // Record payment even if metadata is missing - helps with debugging
     await db.createPayment(memberId, year, amount, 'square', {
@@ -721,7 +726,9 @@ app.post('/api/payments/square/webhook', async (req, res) => {
       ProviderPaymentId: payment.id,
       ProviderOrderId: orderId,
       ProviderInvoiceId: payment.invoice_id || null,
-      ProviderStatus: payment.status
+      ProviderStatus: payment.status,
+      DuesAmount: duesAmount,
+      SquareFee: feeAmount
     });
     console.log('[WEBHOOK] Payment created');
     
@@ -764,7 +771,7 @@ app.get('/api/members/:id/payments', async (req, res) => {
 app.post('/api/members/:id/payments', async (req, res) => {
   try {
     const memberId = Number(req.params.id);
-    const { Year, Amount, Method } = req.body;
+    const { Year, Amount, Method, DuesAmount, SquareFee } = req.body;
     const yearNum = Number(Year);
     const amountNum = Number(Amount);
 
@@ -775,11 +782,13 @@ app.post('/api/members/:id/payments', async (req, res) => {
     // Manual payments are marked as COMPLETED since they represent received payments
     const result = await db.createPayment(memberId, yearNum, Number.isFinite(amountNum) ? amountNum : 0, Method || 'manual', {
       Provider: Method || 'manual',
-      ProviderStatus: 'COMPLETED'
+      ProviderStatus: 'COMPLETED',
+      DuesAmount: DuesAmount !== undefined ? Number(DuesAmount) : 0,
+      SquareFee: SquareFee !== undefined ? Number(SquareFee) : 0
     });
     await db.refreshMemberPaymentSummary(memberId);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
-    await db.logAudit(req.user.email, 'CREATE', 'payments', result.id, null, { MemberID: memberId, Year: yearNum, Amount: amountNum, Method }, ipAddress, 'Created manual payment');
+    await db.logAudit(req.user.email, 'CREATE', 'payments', result.id, null, { MemberID: memberId, Year: yearNum, Amount: amountNum, Method, DuesAmount, SquareFee }, ipAddress, 'Created manual payment');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -789,7 +798,7 @@ app.post('/api/members/:id/payments', async (req, res) => {
 app.put('/api/payments/:id', async (req, res) => {
   try {
     const paymentId = Number(req.params.id);
-    const { Year, Amount, Method, MemberID, Provider, ProviderStatus, ProviderPaymentId, ProviderOrderId, ProviderInvoiceId, ProviderLinkId } = req.body;
+    const { Year, Amount, Method, MemberID, Provider, ProviderStatus, ProviderPaymentId, ProviderOrderId, ProviderInvoiceId, ProviderLinkId, DuesAmount, SquareFee } = req.body;
     const yearNum = Number(Year);
     const amountNum = Number(Amount);
     const memberIdNum = MemberID !== undefined ? Number(MemberID) : null;
@@ -809,7 +818,9 @@ app.put('/api/payments/:id', async (req, res) => {
       ProviderOrderId,
       ProviderInvoiceId,
       ProviderStatus,
-      ProviderLinkId
+      ProviderLinkId,
+      DuesAmount: DuesAmount !== undefined ? Number(DuesAmount) : null,
+      SquareFee: SquareFee !== undefined ? Number(SquareFee) : null
     };
 
     const newMemberId = Number.isFinite(memberIdNum) && memberIdNum > 0 ? memberIdNum : payment.MemberID;

@@ -191,6 +191,8 @@ class Database {
           MemberID INTEGER NOT NULL,
           Year INTEGER NOT NULL,
           Amount REAL DEFAULT 0,
+          DuesAmount REAL DEFAULT 0,
+          SquareFee REAL DEFAULT 0,
           Method TEXT DEFAULT 'manual',
           Provider TEXT DEFAULT 'manual',
           ProviderPaymentId TEXT,
@@ -213,6 +215,10 @@ class Database {
       addPaymentColumn('ProviderPaymentId', 'TEXT');
       addPaymentColumn('ProviderOrderId', 'TEXT');
       addPaymentColumn('ProviderInvoiceId', 'TEXT');
+      addPaymentColumn('ProviderStatus', 'TEXT');
+      addPaymentColumn('ProviderLinkId', 'TEXT');
+      addPaymentColumn('DuesAmount', 'REAL DEFAULT 0');
+      addPaymentColumn('SquareFee', 'REAL DEFAULT 0');
       addPaymentColumn('ProviderStatus', 'TEXT');
       addPaymentColumn('ProviderLinkId', 'TEXT');
 
@@ -615,14 +621,17 @@ class Database {
         ProviderOrderId = null,
         ProviderInvoiceId = null,
         ProviderStatus = null,
-        ProviderLinkId = null
+        ProviderLinkId = null,
+        DuesAmount = 0,
+        SquareFee = 0
       } = provider || {};
       const sql = `
         INSERT INTO payments (
           MemberID, Year, Amount, Method,
-          Provider, ProviderPaymentId, ProviderOrderId, ProviderInvoiceId, ProviderStatus, ProviderLinkId
+          Provider, ProviderPaymentId, ProviderOrderId, ProviderInvoiceId, ProviderStatus, ProviderLinkId,
+          DuesAmount, SquareFee
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       this.db.run(
         sql,
@@ -636,7 +645,9 @@ class Database {
           ProviderOrderId,
           ProviderInvoiceId,
           ProviderStatus,
-          ProviderLinkId
+          ProviderLinkId,
+          DuesAmount,
+          SquareFee
         ],
         function(err) {
         if (err) reject(err);
@@ -1034,7 +1045,9 @@ class Database {
         ProviderOrderId = null,
         ProviderInvoiceId = null,
         ProviderStatus = null,
-        ProviderLinkId = null
+        ProviderLinkId = null,
+        DuesAmount = null,
+        SquareFee = null
       } = provider || {};
       const sql = `
         UPDATE payments
@@ -1045,7 +1058,9 @@ class Database {
             ProviderOrderId = COALESCE(?, ProviderOrderId),
             ProviderInvoiceId = COALESCE(?, ProviderInvoiceId),
             ProviderStatus = COALESCE(?, ProviderStatus),
-            ProviderLinkId = COALESCE(?, ProviderLinkId)
+            ProviderLinkId = COALESCE(?, ProviderLinkId),
+            DuesAmount = COALESCE(?, DuesAmount),
+            SquareFee = COALESCE(?, SquareFee)
         WHERE PaymentID = ?
       `;
       this.db.run(
@@ -1061,6 +1076,8 @@ class Database {
           ProviderInvoiceId,
           ProviderStatus,
           ProviderLinkId,
+          DuesAmount,
+          SquareFee,
           paymentId
         ],
         (err) => {

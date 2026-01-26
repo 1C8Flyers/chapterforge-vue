@@ -132,7 +132,9 @@
               <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Payment ID</th>
               <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Member ID</th>
               <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Year</th>
-              <th class="px-4 py-3 text-right text-sm font-semibold text-gray-800 dark:text-white/90">Amount</th>
+              <th class="px-4 py-3 text-right text-sm font-semibold text-gray-800 dark:text-white/90">Dues</th>
+              <th class="px-4 py-3 text-right text-sm font-semibold text-gray-800 dark:text-white/90">Fee</th>
+              <th class="px-4 py-3 text-right text-sm font-semibold text-gray-800 dark:text-white/90">Total</th>
               <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Provider</th>
               <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Status</th>
               <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Date</th>
@@ -156,6 +158,12 @@
                 <span v-else class="text-gray-400 italic">-</span>
               </td>
               <td class="px-4 py-4 text-right text-sm font-medium text-gray-800 dark:text-white/90">
+                ${{ (payment.DuesAmount || 0).toFixed(2) }}
+              </td>
+              <td class="px-4 py-4 text-right text-sm font-medium text-gray-800 dark:text-white/90">
+                ${{ (payment.SquareFee || 0).toFixed(2) }}
+              </td>
+              <td class="px-4 py-4 text-right text-sm font-semibold text-gray-800 dark:text-white/90">
                 ${{ payment.Amount.toFixed(2) }}
               </td>
               <td class="px-4 py-4">
@@ -230,8 +238,17 @@
             <input v-model="editForm.year" type="number" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Amount</label>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Dues Amount</label>
+            <input v-model="editForm.duesAmount" type="number" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Square Fee</label>
+            <input v-model="editForm.squareFee" type="number" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Total Amount</label>
             <input v-model="editForm.amount" type="number" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ formatTotalAmount() }}</p>
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Method</label>
@@ -308,6 +325,8 @@ interface Payment {
   ProviderOrderId: string | null
   ProviderInvoiceId: string | null
   ProviderLinkId: string | null
+  DuesAmount: number
+  SquareFee: number
   CreatedAt: string
 }
 
@@ -329,6 +348,8 @@ const manualPayment = ref({
   memberId: '',
   year: new Date().getFullYear(),
   amount: '',
+  duesAmount: '',
+  squareFee: '',
   method: 'cash'
 })
 const filters = ref({
@@ -343,6 +364,8 @@ const editForm = ref({
   memberId: '',
   year: new Date().getFullYear().toString(),
   amount: '',
+  duesAmount: '',
+  squareFee: '',
   method: 'manual',
   provider: '',
   providerStatus: '',
@@ -462,6 +485,8 @@ const recordManualPayment = async () => {
       body: JSON.stringify({
         Year: year,
         Amount: amount,
+        DuesAmount: Number(manualPayment.value.duesAmount) || 0,
+        SquareFee: Number(manualPayment.value.squareFee) || 0,
         Method: manualPayment.value.method
       })
     })
@@ -476,6 +501,8 @@ const recordManualPayment = async () => {
       memberId: '',
       year: new Date().getFullYear(),
       amount: '',
+      duesAmount: '',
+      squareFee: '',
       method: 'cash'
     }
     await fetchPayments()
@@ -497,6 +524,8 @@ const openEdit = (payment: Payment) => {
     memberId: payment.MemberID ? payment.MemberID.toString() : '',
     year: payment.Year ? payment.Year.toString() : '',
     amount: payment.Amount?.toString() || '',
+    duesAmount: (payment.DuesAmount || 0).toString(),
+    squareFee: (payment.SquareFee || 0).toString(),
     method: payment.Method || payment.Provider || 'manual',
     provider: payment.Provider || '',
     providerStatus: payment.ProviderStatus || '',
@@ -515,6 +544,8 @@ const saveEdit = async () => {
       MemberID: editForm.value.memberId ? Number(editForm.value.memberId) : null,
       Year: Number(editForm.value.year),
       Amount: Number(editForm.value.amount),
+      DuesAmount: Number(editForm.value.duesAmount) || 0,
+      SquareFee: Number(editForm.value.squareFee) || 0,
       Method: editForm.value.method,
       Provider: editForm.value.provider || null,
       ProviderStatus: editForm.value.providerStatus || null,
@@ -583,6 +614,16 @@ const formatDate = (dateString: string) => {
   if (!dateString) return '-'
   const date = new Date(dateString)
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+const formatTotalAmount = () => {
+  const dues = Number(editForm.value.duesAmount) || 0
+  const fee = Number(editForm.value.squareFee) || 0
+  const total = dues + fee
+  if (total > 0) {
+    return `(calculated: $${total.toFixed(2)})`
+  }
+  return ''
 }
 
 onMounted(async () => {
