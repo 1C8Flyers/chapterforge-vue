@@ -224,6 +224,27 @@ class Database {
         )
       `);
 
+      // Audit log table for tracking user actions
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS audit_logs (
+          ID INTEGER PRIMARY KEY AUTOINCREMENT,
+          UserEmail TEXT NOT NULL,
+          Action TEXT NOT NULL,
+          TableName TEXT,
+          RecordID INTEGER,
+          OldValue TEXT,
+          NewValue TEXT,
+          IPAddress TEXT,
+          Details TEXT,
+          CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(UserEmail)`);
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(Action)`);
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_audit_table ON audit_logs(TableName)`);
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(CreatedAt)`);
+
       // Normalize legacy manual payments without a ProviderStatus
       // Ensure previously recorded manual payments appear as completed in the UI
       this.db.run(`
@@ -1275,6 +1296,67 @@ class Database {
       this.db.all(sql, [], (err, rows) => {
         if (err) reject(err);
         else resolve(rows || []);
+      });
+    });
+  }
+
+  // Audit Logging
+  logAudit(userEmail, action, tableName, recordID, oldValue, newValue, ipAddress, details) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        INSERT INTO audit_logs (UserEmail, Action, TableName, RecordID, OldValue, NewValue, IPAddress, Details)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      const oldVal = oldValue ? JSON.stringify(oldValue) : null;
+      const newVal = newValue ? JSON.stringify(newValue) : null;
+      
+      this.db.run(sql, [userEmail, action, tableName, recordID, oldVal, newVal, ipAddress, details], function(err) {
+        if (err) reject(err);
+        else resolve(this.lastID);
+      });
+    });
+  }
+
+  getAuditLogs(filters = {}) {
+    return new Promise((resolve, reject) => {
+      let sql = 'SELECT * FROM audit_logs WHERE 1=1';
+      const params = [];
+
+      if (filters.userEmail) {
+        sql += ' AND UserEmail = ?';
+        params.push(filters.userEmail);
+      }
+      if (filters.action) {
+        sql += ' AND Action = ?';
+        params.push(filters.action);
+      }
+      if (filters.tableName) {
+        sql += ' AND TableName = ?';
+        params.push(filters.tableName);
+      }
+      if (filters.startDate) {
+        sql += ' AND CreatedAt >= ?';
+        params.push(filters.startDate);
+      }
+      if (filters.endDate) {
+        sql += ' AND CreatedAt <= ?';
+        params.push(filters.endDate);
+      }
+
+      sql += ' ORDER BY CreatedAt DESC LIMIT ?';
+      params.push(filters.limit || 1000);
+
+      this.db.all(sql, params, (err, rows) => {
+        if (err) reject(err);
+        else {
+          // Parse JSON fields
+          const logs = (rows || []).map(row => ({
+            ...row,
+            OldValue: row.OldValue ? JSON.parse(row.OldValue) : null,
+            NewValue: row.NewValue ? JSON.parse(row.NewValue) : null
+          }));
+          resolve(logs);
+        }
       });
     });
   }

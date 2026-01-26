@@ -93,6 +93,13 @@ app.use('/api', async (req, res, next) => {
       || isAdminEnv
       || resolvedRole === 'admin';
     req.user = { uid, email, role: isAdmin ? 'admin' : 'user' };
+    
+    // Log successful login/authentication
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    db.logAudit(email, 'LOGIN', null, null, null, null, ipAddress, `${method} ${req.path}`).catch(err => {
+      console.error('Failed to log audit:', err);
+    });
+    
     const method = req.method.toUpperCase();
     if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
@@ -322,6 +329,8 @@ app.get('/api/members/:id', async (req, res) => {
 app.post('/api/members', async (req, res) => {
   try {
     const result = await db.createMember(req.body);
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'CREATE', 'members', result.id, null, req.body, ipAddress, 'Created new member');
     res.json({ success: true, id: result.id });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -331,7 +340,10 @@ app.post('/api/members', async (req, res) => {
 // API: Update member
 app.put('/api/members/:id', async (req, res) => {
   try {
+    const oldMember = await db.getMemberByID(req.params.id);
     await db.updateMember(req.params.id, req.body);
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'UPDATE', 'members', req.params.id, oldMember, req.body, ipAddress, 'Updated member');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -341,7 +353,10 @@ app.put('/api/members/:id', async (req, res) => {
 // API: Delete member
 app.delete('/api/members/:id', async (req, res) => {
   try {
+    const oldMember = await db.getMemberByID(req.params.id);
     await db.deleteMember(req.params.id);
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'DELETE', 'members', req.params.id, oldMember, null, ipAddress, 'Deleted member');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -757,11 +772,13 @@ app.post('/api/members/:id/payments', async (req, res) => {
     }
 
     // Manual payments are marked as COMPLETED since they represent received payments
-    await db.createPayment(memberId, yearNum, Number.isFinite(amountNum) ? amountNum : 0, Method || 'manual', {
+    const result = await db.createPayment(memberId, yearNum, Number.isFinite(amountNum) ? amountNum : 0, Method || 'manual', {
       Provider: Method || 'manual',
       ProviderStatus: 'COMPLETED'
     });
     await db.refreshMemberPaymentSummary(memberId);
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'CREATE', 'payments', result.id, null, { MemberID: memberId, Year: yearNum, Amount: amountNum, Method }, ipAddress, 'Created manual payment');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -808,6 +825,8 @@ app.put('/api/payments/:id', async (req, res) => {
     if (newMemberId !== payment.MemberID) {
       await db.refreshMemberPaymentSummary(newMemberId);
     }
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'UPDATE', 'payments', paymentId, payment, req.body, ipAddress, 'Updated payment');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -828,6 +847,8 @@ app.delete('/api/payments/:id', async (req, res) => {
 
     await db.deletePayment(paymentId);
     await db.refreshMemberPaymentSummary(payment.MemberID);
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'DELETE', 'payments', paymentId, payment, null, ipAddress, 'Deleted payment');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -851,6 +872,8 @@ app.post('/api/settings/member-types', async (req, res) => {
       return res.status(400).json({ error: 'Name is required' });
     }
     const result = await db.createMemberType({ Name: Name.trim(), DuesRate: Number(DuesRate) || 0, SortOrder: Number(SortOrder) || 0 });
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'CREATE', 'member_types', result.id, null, req.body, ipAddress, 'Created member type');
     res.json({ success: true, id: result.id });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -864,6 +887,8 @@ app.put('/api/settings/member-types/:id', async (req, res) => {
       return res.status(400).json({ error: 'Name is required' });
     }
     await db.updateMemberType(req.params.id, { Name: Name.trim(), DuesRate: Number(DuesRate) || 0, SortOrder: Number(SortOrder) || 0 });
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'UPDATE', 'member_types', req.params.id, null, req.body, ipAddress, 'Updated member type');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -873,6 +898,8 @@ app.put('/api/settings/member-types/:id', async (req, res) => {
 app.delete('/api/settings/member-types/:id', async (req, res) => {
   try {
     await db.deleteMemberType(req.params.id);
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'DELETE', 'member_types', req.params.id, null, null, ipAddress, 'Deleted member type');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -910,7 +937,10 @@ app.post('/api/settings/payments', async (req, res) => {
     if (!Number.isFinite(fee) || fee < 0) {
       return res.status(400).json({ error: 'squareFeeAmount must be a non-negative number' });
     }
+    const oldValue = await db.getSquareFeeAmount(1);
     await db.setSetting('square_fee_amount', fee);
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'UPDATE', 'app_settings', null, { squareFeeAmount: oldValue }, { squareFeeAmount: fee }, ipAddress, 'Updated payment settings');
     res.json({ success: true, squareFeeAmount: fee });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -933,7 +963,10 @@ app.post('/api/settings/timezone', async (req, res) => {
     if (!timezone || typeof timezone !== 'string') {
       return res.status(400).json({ error: 'timezone must be a valid string' });
     }
+    const oldValue = await db.getSetting('timezone');
     await db.setSetting('timezone', timezone);
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'UPDATE', 'app_settings', null, { timezone: oldValue }, { timezone }, ipAddress, 'Updated timezone settings');
     res.json({ success: true, timezone });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -949,7 +982,10 @@ app.post('/api/settings/email-template', async (req, res) => {
     if (!body || !body.trim()) {
       return res.status(400).json({ error: 'HTML body is required' });
     }
+    const oldTemplate = await db.getEmailTemplate('renewal');
     await db.saveEmailTemplate('renewal', subject.trim(), body.trim());
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'UPDATE', 'email_templates', null, oldTemplate, { subject, body }, ipAddress, 'Updated email template');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1008,6 +1044,27 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+// API: Get audit logs (admin only)
+app.get('/api/audit-logs', async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  try {
+    const filters = {
+      userEmail: req.query.userEmail,
+      action: req.query.action,
+      tableName: req.query.tableName,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+      limit: req.query.limit ? Number(req.query.limit) : 1000
+    };
+    const logs = await db.getAuditLogs(filters);
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: Add user to allowlist (admin only)
 app.post('/api/users', async (req, res) => {
   if (req.user.role !== 'admin') {
@@ -1025,6 +1082,8 @@ app.post('/api/users', async (req, res) => {
       role: normalizedRole,
       memberId: memberId ? Number(memberId) : null
     });
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'CREATE', 'user_allowlist', null, null, { email: normalizedEmail, role: normalizedRole, memberId }, ipAddress, 'Added user to allowlist');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1040,10 +1099,13 @@ app.put('/api/users/:email', async (req, res) => {
     const { role, memberId } = req.body;
     const normalizedRole = role === 'admin' ? 'admin' : 'user';
     const normalizedEmail = String(req.params.email).toLowerCase();
+    const oldUser = await db.getUserAllowlistByEmail(normalizedEmail);
     await db.updateUserAllowlist(normalizedEmail, {
       role: normalizedRole,
       memberId: memberId ? Number(memberId) : null
     });
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'UPDATE', 'user_allowlist', null, oldUser, { role: normalizedRole, memberId }, ipAddress, 'Updated user allowlist');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1057,7 +1119,10 @@ app.delete('/api/users/:email', async (req, res) => {
   }
   try {
     const normalizedEmail = String(req.params.email).toLowerCase();
+    const oldUser = await db.getUserAllowlistByEmail(normalizedEmail);
     await db.removeUserAllowlist(normalizedEmail);
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'DELETE', 'user_allowlist', null, oldUser, null, ipAddress, 'Removed user from allowlist');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
