@@ -94,13 +94,14 @@ app.use('/api', async (req, res, next) => {
       || resolvedRole === 'admin';
     req.user = { uid, email, role: isAdmin ? 'admin' : 'user' };
     
+    const method = req.method.toUpperCase();
+    
     // Log successful login/authentication
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     db.logAudit(email, 'LOGIN', null, null, null, null, ipAddress, `${method} ${req.path}`).catch(err => {
       console.error('Failed to log audit:', err);
     });
     
-    const method = req.method.toUpperCase();
     if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
