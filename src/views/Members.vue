@@ -233,9 +233,19 @@
       @click.self="closeModal"
     >
       <div class="w-full max-w-4xl my-8 rounded-xl bg-white p-6 dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
-        <h3 class="mb-6 text-xl font-semibold text-gray-800 dark:text-white/90">
-          {{ isViewOnly ? 'View Member' : (isEditing ? 'Edit Member' : 'Add Member') }}
-        </h3>
+        <div class="mb-6 flex items-center justify-between gap-4">
+          <h3 class="text-xl font-semibold text-gray-800 dark:text-white/90">
+            {{ isViewOnly ? 'View Member' : (isEditing ? 'Edit Member' : 'Add Member') }}
+          </h3>
+          <button
+            v-if="isViewOnly"
+            type="button"
+            @click="isViewOnly = false"
+            class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+          >
+            Edit
+          </button>
+        </div>
         
         <form @submit.prevent="saveMember">
           <!-- Basic Information -->
@@ -529,15 +539,7 @@
               {{ isViewOnly ? 'Close' : 'Cancel' }}
             </button>
             <button
-              v-if="isViewOnly"
-              type="button"
-              @click="isViewOnly = false"
-              class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-            >
-              Edit
-            </button>
-            <button
-              v-else
+              v-if="!isViewOnly"
               type="submit"
               class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
             >
