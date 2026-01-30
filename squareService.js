@@ -220,6 +220,34 @@ async function retrieveBalance() {
   }
 }
 
+async function getCustomer(customerId) {
+  if (!client || !isConfigured()) {
+    throw new Error('Square is not configured');
+  }
+  
+  try {
+    const { result } = await client.customers.retrieveCustomer(customerId);
+    return result.customer;
+  } catch (error) {
+    console.error('[SQUARE] Error retrieving customer:', error);
+    return null;
+  }
+}
+
+async function getOrder(orderId) {
+  if (!client || !isConfigured()) {
+    throw new Error('Square is not configured');
+  }
+  
+  try {
+    const { result } = await client.orders.retrieveOrder(orderId);
+    return result.order;
+  } catch (error) {
+    console.error('[SQUARE] Error retrieving order:', error);
+    return null;
+  }
+}
+
 module.exports = {
   isConfigured,
   getWebhookSignatureKey,
@@ -227,5 +255,7 @@ module.exports = {
   retrieveOrder,
   verifyWebhookSignature,
   listPayments,
-  retrieveBalance
+  retrieveBalance,
+  getCustomer,
+  getOrder
 };

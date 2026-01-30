@@ -1248,10 +1248,51 @@ app.get('/api/square/payments', async (req, res) => {
     
     console.log('[SQUARE] Received payments from API:', payments.length, 'payments');
     
+    // Enrich payment data with customer and order details
+    const enrichedPayments = await Promise.all(payments.map(async (payment) => {
+      let customerName = null;
+      let orderItems = [];
+      
+      // Fetch customer name if customer ID exists
+      if (payment.customerId) {
+        try {
+          const customer = await squareService.getCustomer(payment.customerId);
+          if (customer) {
+            customerName = `${customer.givenName || ''} ${customer.familyName || ''}`.trim() || null;
+          }
+        } catch (error) {
+          console.error('[SQUARE] Error fetching customer:', error);
+        }
+      }
+      
+      // Get cardholder name as fallback
+      if (!customerName && payment.cardDetails?.card?.cardholderName) {
+        customerName = payment.cardDetails.card.cardholderName;
+      }
+      
+      // Fetch order details if order ID exists
+      if (payment.orderId) {
+        try {
+          const order = await squareService.getOrder(payment.orderId);
+          if (order && order.lineItems) {
+            orderItems = order.lineItems.map(item => ({
+              name: item.name,
+              quantity: item.quantity,
+              total: Number(item.totalMoney?.amount || 0)
+            }));
+          }
+        } catch (error) {
+          console.error('[SQUARE] Error fetching order:', error);
+        }
+      }
+      
+      return { payment, customerName, orderItems };
+    }));
+    
     // Transform to include only relevant fields
     // Note: Square SDK v43 uses camelCase property names
     // Convert BigInt values to regular numbers for JSON serialization
-    const transactions = payments.map(payment => {
+    const transactions = enrichedPayments.map(({ payment, customerName, orderItems }) => {
       const amountMoney = payment.amountMoney || payment.amount_money;
       const processingFeeData = payment.processingFee && payment.processingFee.length > 0 
         ? payment.processingFee[0].amountMoney || payment.processingFee[0].amount_money
@@ -1274,7 +1315,9 @@ app.get('/api/square/payments', async (req, res) => {
         receipt_number: payment.receiptNumber || payment.receipt_number,
         receipt_url: payment.receiptUrl || payment.receipt_url,
         order_id: payment.orderId || payment.order_id,
-        customer_id: payment.customerId || payment.customer_id
+        customer_id: payment.customerId || payment.customer_id,
+        customer_name: customerName,
+        order_items: orderItems
       };
     });
     

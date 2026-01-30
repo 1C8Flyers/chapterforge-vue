@@ -68,6 +68,7 @@
                 <tr class="border-b border-gray-200 dark:border-gray-700">
                   <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Date</th>
                   <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Customer</th>
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Items</th>
                   <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Receipt</th>
                   <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Amount</th>
                   <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Square Fee</th>
@@ -80,8 +81,19 @@
                     {{ new Date(txn.created_at).toLocaleDateString() }} {{ new Date(txn.created_at).toLocaleTimeString() }}
                   </td>
                   <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
-                    <div v-if="txn.buyer_email" class="text-sm">
+                    <div v-if="txn.customer_name" class="font-medium text-sm">
+                      {{ txn.customer_name }}
+                    </div>
+                    <div v-if="txn.buyer_email" class="text-xs text-gray-500 dark:text-gray-400">
                       {{ txn.buyer_email }}
+                    </div>
+                    <div v-if="!txn.customer_name && !txn.buyer_email" class="text-gray-500 text-sm">-</div>
+                  </td>
+                  <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
+                    <div v-if="txn.order_items && txn.order_items.length > 0" class="text-sm">
+                      <div v-for="(item, idx) in txn.order_items" :key="idx" class="mb-1">
+                        {{ item.quantity }}x {{ item.name }}
+                      </div>
                     </div>
                     <div v-else class="text-gray-500 text-sm">-</div>
                   </td>
