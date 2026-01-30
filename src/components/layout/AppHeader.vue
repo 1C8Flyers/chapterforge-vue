@@ -48,6 +48,12 @@
           </svg>
         </button>
         <HeaderLogo />
+        <span
+          v-if="currentUser"
+          class="ml-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 dark:border-gray-700 dark:text-gray-300"
+        >
+          {{ userRole }}
+        </span>
         <button
           @click="toggleApplicationMenu"
           class="flex items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
@@ -74,12 +80,6 @@
         class="items-center justify-between w-full gap-4 px-5 py-4 shadow-theme-md lg:flex lg:justify-end lg:px-0 lg:shadow-none"
       >
         <div class="flex items-center gap-2 2xsm:gap-3">
-          <span
-            v-if="currentUser"
-            class="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 dark:border-gray-700 dark:text-gray-300"
-          >
-            {{ userRole }}
-          </span>
           <ThemeToggler />
         </div>
         <UserMenu />
