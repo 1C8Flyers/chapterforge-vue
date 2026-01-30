@@ -124,6 +124,7 @@ async function listPayments(options = {}) {
   }
   
   try {
+    console.log('[SQUARE] listPayments called with options:', options);
     const response = await client.payments.list({
       beginTime: options.begin_time,
       endTime: options.end_time,
@@ -133,10 +134,15 @@ async function listPayments(options = {}) {
       locationId: options.location_id
     });
     
+    console.log('[SQUARE] listPayments response keys:', Object.keys(response));
+    console.log('[SQUARE] listPayments response.result:', response.result ? 'exists' : 'missing');
+    console.log('[SQUARE] listPayments response.payments:', response.payments ? 'exists' : 'missing');
+    
     const payments = response.result?.payments || response.payments || [];
+    console.log('[SQUARE] listPayments returning', payments.length, 'payments');
     return payments;
   } catch (error) {
-    console.error('Error listing payments from Square:', error);
+    console.error('[SQUARE] Error listing payments from Square:', error);
     throw error;
   }
 }
