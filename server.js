@@ -1250,16 +1250,28 @@ app.get('/api/square/payments', async (req, res) => {
     
     // Transform to include only relevant fields
     // Note: Square SDK v43 uses camelCase property names
-    const transactions = payments.map(payment => ({
-      id: payment.id,
-      created_at: payment.createdAt || payment.created_at,
-      amount_money: payment.amountMoney || payment.amount_money,
-      processing_fee: payment.processingFee && payment.processingFee.length > 0 
+    // Convert BigInt values to regular numbers for JSON serialization
+    const transactions = payments.map(payment => {
+      const amountMoney = payment.amountMoney || payment.amount_money;
+      const processingFeeData = payment.processingFee && payment.processingFee.length > 0 
         ? payment.processingFee[0].amountMoney || payment.processingFee[0].amount_money
-        : null,
-      status: payment.status,
-      payment_source_type: payment.sourceType || payment.payment_source?.type || 'unknown'
-    }));
+        : null;
+      
+      return {
+        id: payment.id,
+        created_at: payment.createdAt || payment.created_at,
+        amount_money: amountMoney ? {
+          amount: Number(amountMoney.amount),
+          currency: amountMoney.currency || amountMoney.currencyCode
+        } : null,
+        processing_fee: processingFeeData ? {
+          amount: Number(processingFeeData.amount),
+          currency: processingFeeData.currency || processingFeeData.currencyCode
+        } : null,
+        status: payment.status,
+        payment_source_type: payment.sourceType || payment.payment_source?.type || 'unknown'
+      };
+    });
     
     console.log('[SQUARE] Transformed transactions, sending', transactions.length, 'records');
     res.json(transactions);
