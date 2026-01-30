@@ -196,7 +196,7 @@ app.get('/api/members/import/template', (req, res) => {
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="members-template.csv"');
   const header = [
-    'FirstName','LastName','Email','Phone','MemberType','Status','DuesRate','EAANumber','Notes','HouseholdID','LastPaidYear','AmountDue',
+    'FirstName','LastName','Email','Phone','Street','City','State','Zip','MemberType','Status','DuesRate','EAANumber','Notes','HouseholdID','LastPaidYear','AmountDue',
     'YouthProtectionExpiration','BackgroundCheckExpiration','YoungEaglePilot','YoungEagleVolunteer','EaglePilot','EagleFlightVolunteer',
     'BoardMember','Officer','Payments'
   ].join(',');
@@ -242,6 +242,10 @@ app.post('/api/members/import', upload.single('file'), async (req, res) => {
       const LastName = r.LastName?.trim();
       const Email = r.Email?.trim();
       const Phone = r.Phone?.trim() || null;
+      const Street = r.Street?.trim() || null;
+      const City = r.City?.trim() || null;
+      const State = r.State?.trim() || null;
+      const Zip = r.Zip?.trim() || null;
       const MemberType = r.MemberType?.trim() || 'Individual';
       const Status = r.Status?.trim() || 'Active';
       const DuesRate = r.DuesRate !== undefined && r.DuesRate !== '' ? Number(r.DuesRate) : 0;
@@ -273,6 +277,10 @@ app.post('/api/members/import', upload.single('file'), async (req, res) => {
           EAANumber,
           Phone,
           Email,
+          Street,
+          City,
+          State,
+          Zip,
           MemberType,
           Status,
           DuesRate,

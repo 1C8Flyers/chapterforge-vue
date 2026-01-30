@@ -68,6 +68,10 @@ class Database {
       addMemberColumn('Officer', 'INTEGER DEFAULT 0');
       addMemberColumn('RenewalNoticeSentAt', 'DATETIME');
       addMemberColumn('RenewalNoticeSentYear', 'INTEGER');
+      addMemberColumn('Street', 'TEXT');
+      addMemberColumn('City', 'TEXT');
+      addMemberColumn('State', 'TEXT');
+      addMemberColumn('Zip', 'TEXT');
 
       // Remove legacy AdditionalFamilyMembers column if present
       this.db.all('PRAGMA table_info(members)', [], (err, columns) => {

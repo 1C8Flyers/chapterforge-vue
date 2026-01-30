@@ -315,6 +315,58 @@
                 />
               </div>
               
+              <div class="sm:col-span-2">
+                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                  Street Address
+                </label>
+                <input
+                  v-model="formData.Street"
+                  type="text"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
+                />
+              </div>
+              
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                  City
+                </label>
+                <input
+                  v-model="formData.City"
+                  type="text"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
+                />
+              </div>
+              
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                  State
+                </label>
+                <input
+                  v-model="formData.State"
+                  type="text"
+                  maxlength="2"
+                  placeholder="TX"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
+                />
+              </div>
+              
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                  ZIP Code
+                </label>
+                <input
+                  v-model="formData.Zip"
+                  type="text"
+                  maxlength="10"
+                  placeholder="75001"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
+                />
+              </div>
+              
               <div>
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
                   Household ID
@@ -628,6 +680,10 @@ const formData = ref({
   Email: '',
   Phone: '',
   EAANumber: '',
+  Street: '',
+  City: '',
+  State: '',
+  Zip: '',
   MemberType: 'Individual',
   Status: 'Active',
   DuesRate: 0,
@@ -798,6 +854,10 @@ const openAddModal = () => {
     Email: '',
     Phone: '',
     EAANumber: '',
+    Street: '',
+    City: '',
+    State: '',
+    Zip: '',
     MemberType: 'Individual',
     Status: 'Active',
     DuesRate: 0,
@@ -826,6 +886,10 @@ const openAddFamilyModal = (primaryMember: any) => {
     Email: '',
     Phone: '',
     EAANumber: '',
+    Street: '',
+    City: '',
+    State: '',
+    Zip: '',
     MemberType: 'Family Member',
     Status: 'Active',
     DuesRate: 0,
@@ -869,6 +933,10 @@ const closeModal = () => {
     Email: '',
     Phone: '',
     EAANumber: '',
+    Street: '',
+    City: '',
+    State: '',
+    Zip: '',
     MemberType: 'Individual',
     Status: 'Active',
     DuesRate: 0,
