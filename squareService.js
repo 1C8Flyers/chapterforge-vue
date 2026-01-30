@@ -144,34 +144,36 @@ async function retrieveBalance() {
   }
   
   try {
-    // Get recent payments and calculate totals
-    // Note: This provides an estimate based on recent payments, not actual account balance
-    const paymentsResponse = await client.payments.list({
+    // Get recent payouts to show pending vs transferred amounts
+    const payoutsResponse = await client.payouts.list({
       locationId,
-      limit: 100,
+      limit: 10,
       sortOrder: 'DESC'
     });
     
-    const payments = paymentsResponse.result.payments || [];
+    const payouts = payoutsResponse.result.payouts || [];
     
-    // Calculate total from completed payments
-    let totalAmount = 0;
+    // Calculate available (paid out) and pending amounts
+    let availableAmount = 0;
+    let pendingAmount = 0;
     
-    for (const payment of payments) {
-      if (payment.status === 'COMPLETED') {
-        totalAmount += Number(payment.amountMoney?.amount || 0);
+    for (const payout of payouts) {
+      if (payout.status === 'SENT' || payout.status === 'PAID') {
+        availableAmount += Number(payout.amountMoney?.amount || 0);
+      } else if (payout.status === 'PENDING') {
+        pendingAmount += Number(payout.amountMoney?.amount || 0);
       }
     }
     
     return {
-      available_amount: totalAmount,
-      pending_amount: 0,
-      details: [{
-        currency: 'USD',
-        amount: totalAmount,
-        status: 'Calculated from recent payments',
-        note: 'This is a sum of recent completed payments, not actual account balance'
-      }]
+      available_amount: availableAmount,
+      pending_amount: pendingAmount,
+      details: payouts.map(p => ({
+        currency: p.amountMoney?.currencyCode || 'USD',
+        amount: Number(p.amountMoney?.amount || 0),
+        status: p.status,
+        created_at: p.createdAt
+      }))
     };
   } catch (error) {
     console.error('Error retrieving balance from Square:', error);
