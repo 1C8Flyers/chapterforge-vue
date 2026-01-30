@@ -173,7 +173,7 @@
 import { ref, onMounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
-import PageBreadcrumb from '@/components/PageBreadcrumb.vue'
+import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 
 interface Transaction {
   id: string
