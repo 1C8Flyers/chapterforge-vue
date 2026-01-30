@@ -16,7 +16,7 @@ let client = null;
 if (accessToken) {
   try {
     client = new SquareClient({
-      accessToken: accessToken,
+      token: accessToken,
       environment: environment
     });
     console.log(`[SQUARE] Client initialized for ${process.env.SQUARE_ENV || 'sandbox'} environment`);
