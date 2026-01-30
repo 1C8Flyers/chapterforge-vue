@@ -1274,7 +1274,7 @@ class Database {
             WHEN LOWER(COALESCE(m.MemberType, '')) = '' THEN 'Unknown'
             ELSE 'Individual'
           END AS Category,
-          SUM(p.Amount) AS Total
+          SUM(COALESCE(p.DuesAmount, p.Amount)) AS Total
         FROM payments p
         LEFT JOIN members m ON p.MemberID = m.MemberID
         GROUP BY p.Year, Category
