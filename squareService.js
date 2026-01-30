@@ -107,7 +107,7 @@ async function verifyWebhookSignature({ signature, body, url }) {
 }
 
 async function listPayments(options = {}) {
-  if (!isConfigured()) {
+  if (!client || !isConfigured()) {
     throw new Error('Square is not configured');
   }
   
@@ -129,7 +129,7 @@ async function listPayments(options = {}) {
 }
 
 async function retrieveBalance() {
-  if (!isConfigured()) {
+  if (!client || !isConfigured()) {
     throw new Error('Square is not configured');
   }
   
