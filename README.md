@@ -4,6 +4,8 @@ Professional EAA Chapter Management System - Modern SPA Architecture
 
 **Status**: ✅ Production-ready with Vue 3 + Vite frontend, headless API backend, TailAdmin UI
 
+_Last updated: 2026-01-30_
+
 ---
 
 ## Overview
@@ -24,8 +26,12 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - ✅ Payments history table with multi-year tracking
 - ✅ Raw payment editor with member reassignment and provider field management
 - ✅ Square payment links + webhook processing (optional)
+- ✅ **Dues/Fee separation** - Tracks dues amount and Square processing fees separately per transaction
+- ✅ **Square Analytics page** - Admin view of Square transactions with per-transaction fees and account balance
+- ✅ **Payment fee configuration** - Configurable in Settings → Payment Settings
 - ✅ Configurable member types with dues management
 - ✅ Stacked dues-by-year visualization (Family vs Individual)
+- ✅ **Dues chart excludes fees** - Reports "Dues collected by year" shows dues only
 - ✅ Dues by member/year CSV export with member type
 - ✅ Reports export links (CSV)
 - ✅ Real-time dashboard with live statistics
@@ -280,7 +286,7 @@ CREATE TABLE user_accounts (
   SQUARE_WEBHOOK_SIGNATURE_KEY=your-square-webhook-signature-key
   SQUARE_WEBHOOK_URL=https://your-domain.example.com/api/payments/square/webhook
   SQUARE_ENV=sandbox
-  SQUARE_FEE_AMOUNT=1.00
+  # Note: Processing fee configured in Settings → Payment Settings
 
   # Firebase Auth
   VITE_FIREBASE_API_KEY=your-firebase-api-key

@@ -79,7 +79,7 @@ SQUARE_LOCATION_ID=your-location-id
 SQUARE_WEBHOOK_SIGNATURE_KEY=your-webhook-key
 SQUARE_WEBHOOK_URL=https://chapterforge.eaa22.org/api/payments/square/webhook
 SQUARE_ENV=production
-SQUARE_FEE_AMOUNT=1.00
+# Processing fee configured in Settings → Payment Settings
 
 # Firebase Auth (REQUIRED)
 VITE_FIREBASE_API_KEY=your-api-key

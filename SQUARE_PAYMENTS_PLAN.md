@@ -1,6 +1,6 @@
 # Square Payments Integration Plan (Implemented)
 
-_Last updated: 2026-01-23_
+_Last updated: 2026-01-30_
 
 ## Goals
 - Accept payments via Square (card + optionally ACH) for membership dues.
@@ -98,7 +98,7 @@ Response:
    - `SQUARE_WEBHOOK_SIGNATURE_KEY`
    - `SQUARE_WEBHOOK_URL`
    - `SQUARE_ENV` (sandbox or production)
-   - `SQUARE_FEE_AMOUNT`
+- Fee amount configured in Settings → Payment Settings (no longer in .env)
 - Never expose tokens to client.
 
 ---
@@ -124,8 +124,15 @@ Response:
 
 ---
 
+## Recent Enhancements (January 2026)
+- ✅ **Dues/Fee Separation**: Payments now split into DuesAmount and SquareFee columns
+- ✅ **Fee Configuration**: Processing fee now managed in Settings → Payment Settings (not .env)
+- ✅ **Dues Chart Fix**: Reports "Dues collected by year" now excludes fees (sums DuesAmount only)
+- ✅ **Square Analytics**: New admin-only page showing Square transactions with per-transaction processing fees and account balance
+- ✅ **Payment Recording**: Webhook now correctly stores DuesAmount and SquareFee when creating payment records
+
 ## Future Enhancements
 - Subscriptions for auto-renewal.
 - Receipt emails from ChapterForge.
 - Refund / void flows.
-- Admin payment reconciliation screen.
+- Historical transaction fee reconciliation.

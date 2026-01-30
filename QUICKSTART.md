@@ -117,7 +117,7 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
    SQUARE_WEBHOOK_SIGNATURE_KEY=your-square-webhook-signature-key
    SQUARE_WEBHOOK_URL=https://your-domain.example.com/api/payments/square/webhook
    SQUARE_ENV=sandbox
-   SQUARE_FEE_AMOUNT=1.00
+   # Processing fee configured in Settings → Payment Settings
 
    # Firebase Auth
    VITE_FIREBASE_API_KEY=your-firebase-api-key
