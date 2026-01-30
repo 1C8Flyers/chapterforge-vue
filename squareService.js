@@ -118,8 +118,6 @@ async function verifyWebhookSignature({ signature, body, url }) {
 }
 
 async function listPayments(options = {}) {
-  console.log('[SQUARE] listPayments called. client type:', typeof client, 'client:', client ? 'exists' : 'null/undefined');
-  console.log('[SQUARE] client.payments:', client?.payments, 'typeof:', typeof client?.payments);
   if (!client || !isConfigured()) {
     console.error('[SQUARE] Client not configured. client:', client, 'isConfigured:', isConfigured());
     throw new Error('Square is not configured');
@@ -135,7 +133,6 @@ async function listPayments(options = {}) {
       locationId: options.location_id
     });
     
-    console.log('[SQUARE] Payments response:', JSON.stringify(response, null, 2));
     const payments = response.result?.payments || response.payments || [];
     return payments;
   } catch (error) {
@@ -145,8 +142,6 @@ async function listPayments(options = {}) {
 }
 
 async function retrieveBalance() {
-  console.log('[SQUARE] retrieveBalance called. client type:', typeof client, 'client:', client ? 'exists' : 'null/undefined');
-  console.log('[SQUARE] client.payouts:', client?.payouts, 'typeof:', typeof client?.payouts);
   if (!client || !isConfigured()) {
     console.error('[SQUARE] Client not configured. client:', client, 'isConfigured:', isConfigured());
     throw new Error('Square is not configured');
@@ -160,7 +155,7 @@ async function retrieveBalance() {
       sortOrder: 'DESC'
     });
     
-    console.log('[SQUARE] Payouts response:', JSON.stringify(payoutsResponse, null, 2));
+    console.log('[SQUARE] Payouts response received with', payoutsResponse.result?.payouts?.length || payoutsResponse.payouts?.length || 0, 'payouts');
     const payouts = payoutsResponse.result?.payouts || payoutsResponse.payouts || [];
     
     // Calculate available (paid out) and pending amounts
