@@ -162,7 +162,7 @@
                     @click="openEditModal(item.type === 'individual' ? item.member : item.primary)"
                     class="mr-3 text-brand-500 hover:text-brand-600 dark:text-brand-400"
                   >
-                    Edit
+                    View
                   </button>
                   <button
                     @click="deleteMember(item.type === 'individual' ? item.member.MemberID : item.primary.MemberID)"
@@ -209,7 +209,7 @@
                       @click="openEditModal(familyMember)"
                       class="mr-3 text-brand-500 hover:text-brand-600 dark:text-brand-400"
                     >
-                      Edit
+                      View
                     </button>
                     <button
                       @click="deleteMember(familyMember.MemberID)"
