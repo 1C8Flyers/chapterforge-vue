@@ -248,6 +248,11 @@ const menuGroups = [
         path: "/payments",
       },
       {
+        icon: PieChartIcon,
+        name: "Square Analytics",
+        path: "/square-analytics",
+      },
+      {
         icon: SettingsIcon,
         name: "Settings",
         path: "/settings",

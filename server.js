@@ -1225,6 +1225,52 @@ app.get('/api/reports/payments/by-member-year', async (req, res) => {
   }
 });
 
+// Square Analytics - Get transactions with processing fees
+app.get('/api/square/payments', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  try {
+    // Fetch recent payments from Square API
+    const payments = await squareService.listPayments({
+      begin_time: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(), // Last 90 days
+      sort_order: 'DESC',
+      limit: 100
+    });
+    
+    // Transform to include only relevant fields
+    const transactions = payments.map(payment => ({
+      id: payment.id,
+      created_at: payment.created_at,
+      amount_money: payment.amount_money,
+      processing_fee: payment.processing_fee || null,
+      status: payment.status,
+      payment_source_type: payment.payment_source?.type || 'unknown'
+    }));
+    
+    res.json(transactions);
+  } catch (error) {
+    console.error('Error fetching Square payments:', error);
+    res.status(500).json({ error: 'Failed to fetch payments from Square' });
+  }
+});
+
+// Square Analytics - Get account balance
+app.get('/api/square/balance', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  try {
+    const balance = await squareService.retrieveBalance();
+    res.json(balance);
+  } catch (error) {
+    console.error('Error fetching Square balance:', error);
+    res.status(500).json({ error: 'Failed to fetch balance from Square' });
+  }
+});
+
 // Reports endpoint - return raw database table data
 app.get('/api/reports/:table', async (req, res) => {
   if (!req.user) {

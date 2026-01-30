@@ -62,6 +62,15 @@ const router = createRouter({
       },
     },
     {
+      path: '/square-analytics',
+      name: 'Square Analytics',
+      component: () => import('../views/SquareAnalytics.vue'),
+      meta: {
+        title: 'Square Analytics',
+        requiresAuth: true
+      },
+    },
+    {
       path: '/form-elements',
       name: 'Form Elements',
       component: () => import('../views/Forms/FormElements.vue'),

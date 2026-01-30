@@ -106,10 +106,69 @@ async function verifyWebhookSignature({ signature, body, url }) {
   });
 }
 
+async function listPayments(options = {}) {
+  if (!isConfigured()) {
+    throw new Error('Square is not configured');
+  }
+  
+  try {
+    const response = await client.paymentsApi.listPayments(
+      options.begin_time,
+      options.end_time,
+      options.sort_order || 'DESC',
+      options.cursor,
+      options.limit || 100,
+      options.location_id
+    );
+    
+    return response.result.payments || [];
+  } catch (error) {
+    console.error('Error listing payments from Square:', error);
+    throw error;
+  }
+}
+
+async function retrieveBalance() {
+  if (!isConfigured()) {
+    throw new Error('Square is not configured');
+  }
+  
+  try {
+    const response = await client.balancesApi.listBalances();
+    
+    const balances = response.result.balances || [];
+    
+    // Calculate total available and pending amounts
+    let availableAmount = 0;
+    let pendingAmount = 0;
+    const details = [];
+    
+    for (const balance of balances) {
+      if (balance.type === 'CASH') {
+        availableAmount += balance.amount || 0;
+        details.push({
+          currency: balance.currency || 'USD',
+          amount: balance.amount || 0
+        });
+      }
+    }
+    
+    return {
+      available_amount: availableAmount,
+      pending_amount: pendingAmount,
+      details: details
+    };
+  } catch (error) {
+    console.error('Error retrieving balance from Square:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   isConfigured,
   getWebhookSignatureKey,
   createPaymentLink,
   retrieveOrder,
-  verifyWebhookSignature
-};
+  verifyWebhookSignature,
+  listPayments,
+  retrieveBalance
