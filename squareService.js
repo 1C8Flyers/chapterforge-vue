@@ -6,10 +6,11 @@ const accessToken = process.env.SQUARE_ACCESS_TOKEN;
 const locationId = process.env.SQUARE_LOCATION_ID;
 const webhookSignatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
 
-// Determine environment
+// Determine environment using Square SDK constants
+const Environment = square.Environment;
 const environment = process.env.SQUARE_ENV === 'production'
-  ? 'production'
-  : 'sandbox';
+  ? Environment.Production
+  : Environment.Sandbox;
 
 // Initialize Square client
 let client = null;
@@ -19,7 +20,7 @@ if (accessToken) {
       accessToken: accessToken,
       environment: environment
     });
-    console.log(`[SQUARE] Client initialized for ${environment} environment`);
+    console.log(`[SQUARE] Client initialized for ${process.env.SQUARE_ENV || 'sandbox'} environment`);
   } catch (error) {
     console.error('[SQUARE] Failed to initialize client:', error);
   }
