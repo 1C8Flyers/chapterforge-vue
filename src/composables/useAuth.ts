@@ -7,10 +7,12 @@ import {
 } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useRouter } from 'vue-router'
+import { getAuthHeaders as buildAuthHeaders } from '@/utils/apiAuth'
 
 const currentUser = ref<User | null>(null)
 const userRole = ref<string>('user')
 const isLoading = ref(true)
+let authInitialized = false
 
 export function useAuth() {
   const router = useRouter()
@@ -20,18 +22,16 @@ export function useAuth() {
 
   const fetchUserRole = async () => {
     if (!currentUser.value) return
-    
+
     try {
-      const token = await currentUser.value.getIdToken()
-      const response = await fetch('/api/users/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      
+      const headers = await buildAuthHeaders()
+      const response = await fetch('/api/users/me', { headers })
+
       if (response.ok) {
         const userData = await response.json()
         userRole.value = userData.role || 'user'
+      } else {
+        userRole.value = 'user'
       }
     } catch (error) {
       console.error('Error fetching user role:', error)
@@ -42,6 +42,7 @@ export function useAuth() {
   const signIn = async (email: string, password: string) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      currentUser.value = userCredential.user
       await fetchUserRole()
       return userCredential.user
     } catch (error: any) {
@@ -62,6 +63,9 @@ export function useAuth() {
   }
 
   const initAuth = () => {
+    if (authInitialized) return
+    authInitialized = true
+
     onAuthStateChanged(auth, async (user) => {
       currentUser.value = user
       if (user) {
@@ -74,9 +78,7 @@ export function useAuth() {
   }
 
   onMounted(() => {
-    if (isLoading.value) {
-      initAuth()
-    }
+    initAuth()
   })
 
   return {
@@ -85,6 +87,7 @@ export function useAuth() {
     isAdmin,
     userRole,
     isLoading,
+    getAuthHeaders: buildAuthHeaders,
     signIn,
     signOut,
     initAuth
