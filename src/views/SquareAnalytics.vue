@@ -83,7 +83,7 @@
                     ${{ (txn.amount_money.amount / 100).toFixed(2) }}
                   </td>
                   <td class="px-4 py-3 text-right font-semibold text-gray-800 dark:text-gray-300">
-                    <span v-if="txn.processing_fee" class="text-orange-600 dark:text-orange-400">
+                    <span v-if="txn.processing_fee && txn.processing_fee.amount" class="text-orange-600 dark:text-orange-400">
                       -${{ (txn.processing_fee.amount / 100).toFixed(2) }}
                     </span>
                     <span v-else class="text-gray-500">-</span>

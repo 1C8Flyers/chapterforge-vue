@@ -1244,7 +1244,9 @@ app.get('/api/square/payments', async (req, res) => {
       id: payment.id,
       created_at: payment.created_at,
       amount_money: payment.amount_money,
-      processing_fee: payment.processing_fee || null,
+      processing_fee: payment.processing_fee && payment.processing_fee.length > 0 
+        ? payment.processing_fee[0].amount_money 
+        : null,
       status: payment.status,
       payment_source_type: payment.payment_source?.type || 'unknown'
     }));
