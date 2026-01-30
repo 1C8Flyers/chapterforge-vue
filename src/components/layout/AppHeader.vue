@@ -48,11 +48,6 @@
           </svg>
         </button>
         <HeaderLogo />
-        <span
-          class="ml-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 dark:border-gray-700 dark:text-gray-300"
-        >
-          {{ authLabel }}
-        </span>
         <button
           @click="toggleApplicationMenu"
           class="flex items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
@@ -88,20 +83,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useSidebar } from '@/composables/useSidebar'
-import { useAuth } from '@/composables/useAuth'
 import ThemeToggler from '../common/ThemeToggler.vue'
 import HeaderLogo from './header/HeaderLogo.vue'
 import UserMenu from './header/UserMenu.vue'
 
 const { toggleSidebar, toggleMobileSidebar, isMobileOpen } = useSidebar()
-const { currentUser, userRole } = useAuth()
-const authLabel = computed(() => {
-  if (!currentUser.value) return 'SIGNED OUT'
-  const email = currentUser.value.email || 'SIGNED IN'
-  return `${email} • ${userRole.value}`
-})
 
 const handleToggle = () => {
   if (window.innerWidth >= 1024) {
