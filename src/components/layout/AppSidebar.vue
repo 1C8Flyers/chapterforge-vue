@@ -213,53 +213,63 @@ import {
   PieChartIcon,
 } from "../../icons";
 import { useSidebar } from "@/composables/useSidebar";
+import { useAuth } from "@/composables/useAuth";
 
 const route = useRoute();
+const { isAdmin } = useAuth();
 
 const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar();
 
-const menuGroups = [
+const allMenuItems = [
   {
-    title: "Main",
-    items: [
-      {
-        icon: GridIcon,
-        name: "Dashboard",
-        path: "/",
-      },
-      {
-        icon: UserCircleIcon,
-        name: "Members",
-        path: "/members",
-      },
-      {
-        icon: CalenderIcon,
-        name: "Renewals",
-        path: "/renewals",
-      },
-      {
-        icon: PieChartIcon,
-        name: "Reports",
-        path: "/reports",
-      },
-      {
-        icon: PieChartIcon,
-        name: "Payments",
-        path: "/payments",
-      },
-      {
-        icon: PieChartIcon,
-        name: "Square Analytics",
-        path: "/square-analytics",
-      },
-      {
-        icon: SettingsIcon,
-        name: "Settings",
-        path: "/settings",
-      },
-    ],
+    icon: GridIcon,
+    name: "Dashboard",
+    path: "/",
+  },
+  {
+    icon: UserCircleIcon,
+    name: "Members",
+    path: "/members",
+    adminOnly: true,
+  },
+  {
+    icon: CalenderIcon,
+    name: "Renewals",
+    path: "/renewals",
+    adminOnly: true,
+  },
+  {
+    icon: PieChartIcon,
+    name: "Reports",
+    path: "/reports",
+    adminOnly: true,
+  },
+  {
+    icon: PieChartIcon,
+    name: "Payments",
+    path: "/payments",
+    adminOnly: true,
+  },
+  {
+    icon: PieChartIcon,
+    name: "Square Analytics",
+    path: "/square-analytics",
+    adminOnly: true,
+  },
+  {
+    icon: SettingsIcon,
+    name: "Settings",
+    path: "/settings",
+    adminOnly: true,
   },
 ];
+
+const menuGroups = computed(() => [
+  {
+    title: "Main",
+    items: allMenuItems.filter(item => !item.adminOnly || isAdmin.value),
+  },
+]);
 
 const isActive = (path) => route.path === path;
 
@@ -269,7 +279,7 @@ const toggleSubmenu = (groupIndex, itemIndex) => {
 };
 
 const isAnySubmenuRouteActive = computed(() => {
-  return menuGroups.some((group) =>
+  return menuGroups.value.some((group) =>
     group.items.some(
       (item) =>
         item.subItems && item.subItems.some((subItem) => isActive(subItem.path))
@@ -282,7 +292,7 @@ const isSubmenuOpen = (groupIndex, itemIndex) => {
   return (
     openSubmenu.value === key ||
     (isAnySubmenuRouteActive.value &&
-      menuGroups[groupIndex].items[itemIndex].subItems?.some((subItem) =>
+      menuGroups.value[groupIndex].items[itemIndex].subItems?.some((subItem) =>
         isActive(subItem.path)
       ))
   );
