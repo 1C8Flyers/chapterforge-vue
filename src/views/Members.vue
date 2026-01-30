@@ -159,7 +159,7 @@
                     Add Family
                   </button>
                   <button
-                    @click="openEditModal(item.type === 'individual' ? item.member : item.primary)"
+                    @click="openViewModal(item.type === 'individual' ? item.member : item.primary)"
                     class="mr-3 text-brand-500 hover:text-brand-600 dark:text-brand-400"
                   >
                     View
@@ -206,7 +206,7 @@
                   </td>
                   <td class="px-4 py-4 text-right text-sm">
                     <button
-                      @click="openEditModal(familyMember)"
+                      @click="openViewModal(familyMember)"
                       class="mr-3 text-brand-500 hover:text-brand-600 dark:text-brand-400"
                     >
                       View
@@ -234,7 +234,7 @@
     >
       <div class="w-full max-w-4xl my-8 rounded-xl bg-white p-6 dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
         <h3 class="mb-6 text-xl font-semibold text-gray-800 dark:text-white/90">
-          {{ isEditing ? 'Edit Member' : 'Add Member' }}
+          {{ isViewOnly ? 'View Member' : (isEditing ? 'Edit Member' : 'Add Member') }}
         </h3>
         
         <form @submit.prevent="saveMember">
@@ -250,7 +250,8 @@
                   v-model="formData.FirstName"
                   type="text"
                   required
-                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 />
               </div>
               
@@ -262,7 +263,8 @@
                   v-model="formData.LastName"
                   type="text"
                   required
-                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 />
               </div>
               
@@ -274,7 +276,8 @@
                   v-model="formData.Email"
                   type="email"
                   required
-                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 />
               </div>
               
@@ -285,7 +288,8 @@
                 <input
                   v-model="formData.Phone"
                   type="tel"
-                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 />
               </div>
               
@@ -296,7 +300,8 @@
                 <input
                   v-model="formData.EAANumber"
                   type="text"
-                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 />
               </div>
               
@@ -328,7 +333,8 @@
                 </label>
                 <select
                   v-model="formData.MemberType"
-                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 >
                   <option value="Individual">Individual</option>
                   <option value="Family">Family</option>
@@ -342,7 +348,8 @@
                 </label>
                 <select
                   v-model="formData.Status"
-                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
@@ -359,7 +366,8 @@
                   type="number"
                   min="2000"
                   max="2030"
-                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 />
               </div>
               
@@ -371,7 +379,8 @@
                   v-model.number="formData.DuesRate"
                   type="number"
                   step="0.01"
-                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 />
               </div>
               
@@ -383,7 +392,8 @@
                   v-model.number="formData.AmountDue"
                   type="number"
                   step="0.01"
-                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 />
               </div>
               
@@ -401,7 +411,8 @@
                 <input
                   v-model="formData.YouthProtectionExpiration"
                   type="date"
-                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 />
               </div>
               
@@ -412,7 +423,8 @@
                 <input
                   v-model="formData.BackgroundCheckExpiration"
                   type="date"
-                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  :disabled="isViewOnly"
+                  class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 />
               </div>
             </div>
@@ -428,7 +440,8 @@
                   type="checkbox"
                   :true-value="1"
                   :false-value="0"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                  :disabled="isViewOnly"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
                 Young Eagle Pilot
               </label>
@@ -439,7 +452,8 @@
                   type="checkbox"
                   :true-value="1"
                   :false-value="0"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                  :disabled="isViewOnly"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
                 YE Volunteer
               </label>
@@ -450,7 +464,8 @@
                   type="checkbox"
                   :true-value="1"
                   :false-value="0"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                  :disabled="isViewOnly"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
                 Eagle Pilot
               </label>
@@ -461,7 +476,8 @@
                   type="checkbox"
                   :true-value="1"
                   :false-value="0"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                  :disabled="isViewOnly"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
                 Eagle Flight Volunteer
               </label>
@@ -472,7 +488,8 @@
                   type="checkbox"
                   :true-value="1"
                   :false-value="0"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                  :disabled="isViewOnly"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
                 Board Member
               </label>
@@ -483,7 +500,8 @@
                   type="checkbox"
                   :true-value="1"
                   :false-value="0"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                  :disabled="isViewOnly"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
                 Officer
               </label>
@@ -496,7 +514,8 @@
             <textarea
               v-model="formData.Notes"
               rows="3"
-              class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              :disabled="isViewOnly"
+              class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
               placeholder="Additional notes about this member..."
             ></textarea>
           </div>
@@ -507,9 +526,18 @@
               @click="closeModal"
               class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
-              Cancel
+              {{ isViewOnly ? 'Close' : 'Cancel' }}
             </button>
             <button
+              v-if="isViewOnly"
+              type="button"
+              @click="isViewOnly = false"
+              class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+            >
+              Edit
+            </button>
+            <button
+              v-else
               type="submit"
               class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
             >
@@ -580,6 +608,7 @@ const members = ref<any[]>([])
 const showModal = ref(false)
 const showImportHelp = ref(false)
 const isEditing = ref(false)
+const isViewOnly = ref(false)
 const searchQuery = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const expandedHouseholds = ref<Set<number>>(new Set())
@@ -815,12 +844,21 @@ const openAddFamilyModal = (primaryMember: any) => {
 
 const openEditModal = (member: any) => {
   isEditing.value = true
+  isViewOnly.value = false
+  formData.value = { ...member }
+  showModal.value = true
+}
+
+const openViewModal = (member: any) => {
+  isEditing.value = false
+  isViewOnly.value = true
   formData.value = { ...member }
   showModal.value = true
 }
 
 const closeModal = () => {
   showModal.value = false
+  isViewOnly.value = false
   formData.value = {
     MemberID: null,
     HouseholdID: null,
