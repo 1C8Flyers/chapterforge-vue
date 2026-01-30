@@ -151,6 +151,16 @@ async function listPayments(options = {}) {
     } else if (response.data) {
       console.log('[SQUARE] Using response.data');
       payments = response.data;
+      
+      // Filter out refunds - they have IDs starting with 'r' and are not payments
+      const originalCount = payments.length;
+      payments = payments.filter(p => !p.id || !p.id.startsWith('r'));
+      const filteredCount = originalCount - payments.length;
+      
+      if (filteredCount > 0) {
+        console.log('[SQUARE] Filtered out', filteredCount, 'refunds from payments list');
+      }
+      
       if (payments.length > 0) {
         console.log('[SQUARE] First payment keys:', Object.keys(payments[0]));
         console.log('[SQUARE] First payment sample:', {
@@ -159,22 +169,6 @@ async function listPayments(options = {}) {
           amount_money: payments[0].amount_money,
           status: payments[0].status
         });
-        
-        // Check for refunds in the list (IDs starting with 'r')
-        const refundCount = payments.filter(p => p.id && p.id.startsWith('r')).length;
-        console.log('[SQUARE] Found', refundCount, 'potential refunds (IDs starting with "r")');
-        
-        // Log a refund example if found
-        const refundExample = payments.find(p => p.id && p.id.startsWith('r'));
-        if (refundExample) {
-          console.log('[SQUARE] Refund example keys:', Object.keys(refundExample));
-          console.log('[SQUARE] Refund example:', {
-            id: refundExample.id,
-            payment_id: refundExample.paymentId,
-            amount: refundExample.amountMoney,
-            status: refundExample.status
-          });
-        }
       }
     } else if (typeof response.getItems === 'function') {
       console.log('[SQUARE] Using response.getItems()');
