@@ -1249,15 +1249,16 @@ app.get('/api/square/payments', async (req, res) => {
     console.log('[SQUARE] Received payments from API:', payments.length, 'payments');
     
     // Transform to include only relevant fields
+    // Note: Square SDK v43 uses camelCase property names
     const transactions = payments.map(payment => ({
       id: payment.id,
-      created_at: payment.created_at,
-      amount_money: payment.amount_money,
-      processing_fee: payment.processing_fee && payment.processing_fee.length > 0 
-        ? payment.processing_fee[0].amount_money 
+      created_at: payment.createdAt || payment.created_at,
+      amount_money: payment.amountMoney || payment.amount_money,
+      processing_fee: payment.processingFee && payment.processingFee.length > 0 
+        ? payment.processingFee[0].amountMoney || payment.processingFee[0].amount_money
         : null,
       status: payment.status,
-      payment_source_type: payment.payment_source?.type || 'unknown'
+      payment_source_type: payment.sourceType || payment.payment_source?.type || 'unknown'
     }));
     
     console.log('[SQUARE] Transformed transactions, sending', transactions.length, 'records');
