@@ -137,16 +137,24 @@ async function listPayments(options = {}) {
     console.log('[SQUARE] listPayments response keys:', Object.keys(response));
     console.log('[SQUARE] listPayments response.result:', response.result ? 'exists' : 'missing');
     console.log('[SQUARE] listPayments response.payments:', response.payments ? 'exists' : 'missing');
+    console.log('[SQUARE] listPayments response.data:', response.data ? `exists (${Array.isArray(response.data) ? response.data.length : 'not array'})` : 'missing');
+    console.log('[SQUARE] listPayments typeof getItems:', typeof response.getItems);
     
     // Try different ways to get payments based on SDK version
     let payments = [];
     if (response.result?.payments) {
+      console.log('[SQUARE] Using response.result.payments');
       payments = response.result.payments;
     } else if (response.payments) {
+      console.log('[SQUARE] Using response.payments');
       payments = response.payments;
     } else if (typeof response.getItems === 'function') {
-      payments = response.getItems();
+      console.log('[SQUARE] Using response.getItems()');
+      const items = response.getItems();
+      console.log('[SQUARE] getItems() returned:', items ? `${items.length} items` : 'null/undefined');
+      payments = items || [];
     } else if (response.data) {
+      console.log('[SQUARE] Using response.data');
       payments = response.data;
     }
     
