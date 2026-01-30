@@ -474,6 +474,7 @@
                   v-model="formData.YouthProtectionExpiration"
                   type="date"
                   :disabled="isViewOnly"
+                  :value="formData.YouthProtectionExpiration || ''"
                   class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 />
               </div>
@@ -486,6 +487,7 @@
                   v-model="formData.BackgroundCheckExpiration"
                   type="date"
                   :disabled="isViewOnly"
+                  :value="formData.BackgroundCheckExpiration || ''"
                   class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:disabled:bg-gray-800"
                 />
               </div>
