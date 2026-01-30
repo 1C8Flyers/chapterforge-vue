@@ -67,7 +67,8 @@
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-700">
                   <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Date</th>
-                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Payment ID</th>
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Customer</th>
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Receipt</th>
                   <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Amount</th>
                   <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Square Fee</th>
                   <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Status</th>
@@ -78,7 +79,18 @@
                   <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
                     {{ new Date(txn.created_at).toLocaleDateString() }} {{ new Date(txn.created_at).toLocaleTimeString() }}
                   </td>
-                  <td class="px-4 py-3 text-gray-800 dark:text-gray-300 font-mono text-xs">{{ txn.id.substring(0, 12) }}...</td>
+                  <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
+                    <div v-if="txn.buyer_email" class="text-sm">
+                      {{ txn.buyer_email }}
+                    </div>
+                    <div v-else class="text-gray-500 text-sm">-</div>
+                  </td>
+                  <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
+                    <a v-if="txn.receipt_url" :href="txn.receipt_url" target="_blank" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm">
+                      #{{ txn.receipt_number || txn.id.substring(0, 8) }}
+                    </a>
+                    <span v-else class="text-gray-500 text-sm">-</span>
+                  </td>
                   <td class="px-4 py-3 text-right text-gray-800 dark:text-gray-300">
                     <span v-if="txn.amount_money && txn.amount_money.amount">
                       ${{ (txn.amount_money.amount / 100).toFixed(2) }}

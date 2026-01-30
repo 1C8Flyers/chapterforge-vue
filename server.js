@@ -1269,7 +1269,12 @@ app.get('/api/square/payments', async (req, res) => {
           currency: processingFeeData.currency || processingFeeData.currencyCode
         } : null,
         status: payment.status,
-        payment_source_type: payment.sourceType || payment.payment_source?.type || 'unknown'
+        payment_source_type: payment.sourceType || payment.payment_source?.type || 'unknown',
+        buyer_email: payment.buyerEmailAddress || payment.buyer_email_address,
+        receipt_number: payment.receiptNumber || payment.receipt_number,
+        receipt_url: payment.receiptUrl || payment.receipt_url,
+        order_id: payment.orderId || payment.order_id,
+        customer_id: payment.customerId || payment.customer_id
       };
     });
     
