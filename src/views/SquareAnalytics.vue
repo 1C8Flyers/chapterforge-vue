@@ -80,7 +80,10 @@
                   </td>
                   <td class="px-4 py-3 text-gray-800 dark:text-gray-300 font-mono text-xs">{{ txn.id.substring(0, 12) }}...</td>
                   <td class="px-4 py-3 text-right text-gray-800 dark:text-gray-300">
-                    ${{ (txn.amount_money.amount / 100).toFixed(2) }}
+                    <span v-if="txn.amount_money && txn.amount_money.amount">
+                      ${{ (txn.amount_money.amount / 100).toFixed(2) }}
+                    </span>
+                    <span v-else class="text-gray-500">-</span>
                   </td>
                   <td class="px-4 py-3 text-right font-semibold text-gray-800 dark:text-gray-300">
                     <span v-if="txn.processing_fee && txn.processing_fee.amount" class="text-orange-600 dark:text-orange-400">
