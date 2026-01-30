@@ -5,17 +5,27 @@ const { SquareClient, SquareEnvironment, WebhooksHelper } = square;
 const accessToken = process.env.SQUARE_ACCESS_TOKEN;
 const locationId = process.env.SQUARE_LOCATION_ID;
 const webhookSignatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
-const resolvedEnvironment = SquareEnvironment || { Production: 'production', Sandbox: 'sandbox' };
-const environment = process.env.SQUARE_ENV === 'production'
-  ? resolvedEnvironment.Production
-  : resolvedEnvironment.Sandbox;
 
-const client = accessToken
-  ? new SquareClient({
-      token: accessToken,
-      environment
-    })
-  : null;
+// Determine environment
+const environment = process.env.SQUARE_ENV === 'production'
+  ? 'production'
+  : 'sandbox';
+
+// Initialize Square client
+let client = null;
+if (accessToken) {
+  try {
+    client = new SquareClient({
+      accessToken: accessToken,
+      environment: environment
+    });
+    console.log(`[SQUARE] Client initialized for ${environment} environment`);
+  } catch (error) {
+    console.error('[SQUARE] Failed to initialize client:', error);
+  }
+} else {
+  console.warn('[SQUARE] No access token provided, Square features disabled');
+}
 
 function isConfigured() {
   return Boolean(accessToken && locationId);
