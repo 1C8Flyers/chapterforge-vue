@@ -148,14 +148,14 @@ async function listPayments(options = {}) {
     } else if (response.payments) {
       console.log('[SQUARE] Using response.payments');
       payments = response.payments;
+    } else if (response.data) {
+      console.log('[SQUARE] Using response.data');
+      payments = response.data;
     } else if (typeof response.getItems === 'function') {
       console.log('[SQUARE] Using response.getItems()');
       const items = response.getItems();
       console.log('[SQUARE] getItems() returned:', items ? `${items.length} items` : 'null/undefined');
       payments = items || [];
-    } else if (response.data) {
-      console.log('[SQUARE] Using response.data');
-      payments = response.data;
     }
     
     console.log('[SQUARE] listPayments returning', payments.length, 'payments');
