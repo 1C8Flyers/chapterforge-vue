@@ -136,7 +136,8 @@ async function listPayments(options = {}) {
     });
     
     console.log('[SQUARE] Payments response:', JSON.stringify(response, null, 2));
-    return response.result.payments || [];
+    const payments = response.result?.payments || response.payments || [];
+    return payments;
   } catch (error) {
     console.error('Error listing payments from Square:', error);
     throw error;
@@ -160,7 +161,7 @@ async function retrieveBalance() {
     });
     
     console.log('[SQUARE] Payouts response:', JSON.stringify(payoutsResponse, null, 2));
-    const payouts = payoutsResponse.result.payouts || [];
+    const payouts = payoutsResponse.result?.payouts || payoutsResponse.payouts || [];
     
     // Calculate available (paid out) and pending amounts
     let availableAmount = 0;
