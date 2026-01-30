@@ -20,6 +20,7 @@ if (accessToken) {
       environment: environment
     });
     console.log(`[SQUARE] Client initialized for ${process.env.SQUARE_ENV || 'sandbox'} environment`);
+    console.log('[SQUARE] Client instance:', typeof client, 'Has payments:', !!client?.payments, 'Has payouts:', !!client?.payouts);
   } catch (error) {
     console.error('[SQUARE] Failed to initialize client:', error);
   }
@@ -118,6 +119,7 @@ async function verifyWebhookSignature({ signature, body, url }) {
 
 async function listPayments(options = {}) {
   if (!client || !isConfigured()) {
+    console.error('[SQUARE] Client not configured. client:', client, 'isConfigured:', isConfigured());
     throw new Error('Square is not configured');
   }
   
@@ -140,6 +142,7 @@ async function listPayments(options = {}) {
 
 async function retrieveBalance() {
   if (!client || !isConfigured()) {
+    console.error('[SQUARE] Client not configured. client:', client, 'isConfigured:', isConfigured());
     throw new Error('Square is not configured');
   }
   
