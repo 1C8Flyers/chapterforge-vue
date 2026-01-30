@@ -151,6 +151,15 @@ async function listPayments(options = {}) {
     } else if (response.data) {
       console.log('[SQUARE] Using response.data');
       payments = response.data;
+      if (payments.length > 0) {
+        console.log('[SQUARE] First payment keys:', Object.keys(payments[0]));
+        console.log('[SQUARE] First payment sample:', {
+          id: payments[0].id,
+          created_at: payments[0].created_at,
+          amount_money: payments[0].amount_money,
+          status: payments[0].status
+        });
+      }
     } else if (typeof response.getItems === 'function') {
       console.log('[SQUARE] Using response.getItems()');
       const items = response.getItems();
