@@ -112,14 +112,14 @@ async function listPayments(options = {}) {
   }
   
   try {
-    const response = await client.paymentsApi.listPayments(
-      options.begin_time,
-      options.end_time,
-      options.sort_order || 'DESC',
-      options.cursor,
-      options.limit || 100,
-      options.location_id
-    );
+    const response = await client.payments.list({
+      beginTime: options.begin_time,
+      endTime: options.end_time,
+      sortOrder: options.sort_order || 'DESC',
+      cursor: options.cursor,
+      limit: options.limit || 100,
+      locationId: options.location_id
+    });
     
     return response.result.payments || [];
   } catch (error) {
@@ -134,29 +134,36 @@ async function retrieveBalance() {
   }
   
   try {
-    const response = await client.balancesApi.listBalances();
+    // Get recent payouts to show pending vs transferred amounts
+    const payoutsResponse = await client.payouts.list({
+      locationId,
+      limit: 10,
+      sortOrder: 'DESC'
+    });
     
-    const balances = response.result.balances || [];
+    const payouts = payoutsResponse.result.payouts || [];
     
-    // Calculate total available and pending amounts
+    // Calculate available (paid out) and pending amounts
     let availableAmount = 0;
     let pendingAmount = 0;
-    const details = [];
     
-    for (const balance of balances) {
-      if (balance.type === 'CASH') {
-        availableAmount += balance.amount || 0;
-        details.push({
-          currency: balance.currency || 'USD',
-          amount: balance.amount || 0
-        });
+    for (const payout of payouts) {
+      if (payout.status === 'SENT' || payout.status === 'PAID') {
+        availableAmount += Number(payout.amountMoney?.amount || 0);
+      } else if (payout.status === 'PENDING') {
+        pendingAmount += Number(payout.amountMoney?.amount || 0);
       }
     }
     
     return {
       available_amount: availableAmount,
       pending_amount: pendingAmount,
-      details: details
+      details: payouts.map(p => ({
+        currency: p.amountMoney?.currency || 'USD',
+        amount: Number(p.amountMoney?.amount || 0),
+        status: p.status,
+        created_at: p.createdAt
+      }))
     };
   } catch (error) {
     console.error('Error retrieving balance from Square:', error);
