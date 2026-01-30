@@ -49,10 +49,9 @@
         </button>
         <HeaderLogo />
         <span
-          v-if="currentUser"
           class="ml-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 dark:border-gray-700 dark:text-gray-300"
         >
-          {{ userRole }}
+          {{ authLabel }}
         </span>
         <button
           @click="toggleApplicationMenu"
@@ -89,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuth } from '@/composables/useAuth'
 import ThemeToggler from '../common/ThemeToggler.vue'
@@ -98,6 +97,11 @@ import UserMenu from './header/UserMenu.vue'
 
 const { toggleSidebar, toggleMobileSidebar, isMobileOpen } = useSidebar()
 const { currentUser, userRole } = useAuth()
+const authLabel = computed(() => {
+  if (!currentUser.value) return 'SIGNED OUT'
+  const email = currentUser.value.email || 'SIGNED IN'
+  return `${email} • ${userRole.value}`
+})
 
 const handleToggle = () => {
   if (window.innerWidth >= 1024) {
