@@ -138,7 +138,18 @@ async function listPayments(options = {}) {
     console.log('[SQUARE] listPayments response.result:', response.result ? 'exists' : 'missing');
     console.log('[SQUARE] listPayments response.payments:', response.payments ? 'exists' : 'missing');
     
-    const payments = response.result?.payments || response.payments || [];
+    // Try different ways to get payments based on SDK version
+    let payments = [];
+    if (response.result?.payments) {
+      payments = response.result.payments;
+    } else if (response.payments) {
+      payments = response.payments;
+    } else if (typeof response.getItems === 'function') {
+      payments = response.getItems();
+    } else if (response.data) {
+      payments = response.data;
+    }
+    
     console.log('[SQUARE] listPayments returning', payments.length, 'payments');
     return payments;
   } catch (error) {
