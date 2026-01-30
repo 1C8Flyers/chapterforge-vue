@@ -1,4 +1,4 @@
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { 
   signInWithEmailAndPassword, 
   signOut as firebaseSignOut,
@@ -68,14 +68,21 @@ export function useAuth() {
 
     onAuthStateChanged(auth, async (user) => {
       currentUser.value = user
+      isLoading.value = false
+    })
+  }
+
+  watch(
+    currentUser,
+    async (user) => {
       if (user) {
         await fetchUserRole()
       } else {
         userRole.value = 'user'
       }
-      isLoading.value = false
-    })
-  }
+    },
+    { immediate: true }
+  )
 
   onMounted(() => {
     initAuth()
