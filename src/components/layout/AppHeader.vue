@@ -74,6 +74,12 @@
         class="items-center justify-between w-full gap-4 px-5 py-4 shadow-theme-md lg:flex lg:justify-end lg:px-0 lg:shadow-none"
       >
         <div class="flex items-center gap-2 2xsm:gap-3">
+          <span
+            v-if="currentUser"
+            class="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-600 dark:border-gray-700 dark:text-gray-300"
+          >
+            {{ userRole }}
+          </span>
           <ThemeToggler />
         </div>
         <UserMenu />
@@ -85,11 +91,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useSidebar } from '@/composables/useSidebar'
+import { useAuth } from '@/composables/useAuth'
 import ThemeToggler from '../common/ThemeToggler.vue'
 import HeaderLogo from './header/HeaderLogo.vue'
 import UserMenu from './header/UserMenu.vue'
 
 const { toggleSidebar, toggleMobileSidebar, isMobileOpen } = useSidebar()
+const { currentUser, userRole } = useAuth()
 
 const handleToggle = () => {
   if (window.innerWidth >= 1024) {
