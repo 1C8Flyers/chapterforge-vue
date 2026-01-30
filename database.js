@@ -1011,14 +1011,17 @@ class Database {
         ProviderOrderId = null,
         ProviderInvoiceId = null,
         ProviderStatus = null,
-        ProviderLinkId = null
+        ProviderLinkId = null,
+        DuesAmount = null,
+        SquareFee = null
       } = provider || {};
       const sql = `
         INSERT INTO payments (
           MemberID, Year, Amount, Method,
-          Provider, ProviderPaymentId, ProviderOrderId, ProviderInvoiceId, ProviderStatus, ProviderLinkId
+          Provider, ProviderPaymentId, ProviderOrderId, ProviderInvoiceId, ProviderStatus, ProviderLinkId,
+          DuesAmount, SquareFee
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       this.db.run(
         sql,
@@ -1032,7 +1035,9 @@ class Database {
           ProviderOrderId,
           ProviderInvoiceId,
           ProviderStatus,
-          ProviderLinkId
+          ProviderLinkId,
+          DuesAmount,
+          SquareFee
         ],
         function(err) {
         if (err) reject(err);
