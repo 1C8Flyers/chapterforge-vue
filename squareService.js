@@ -7,10 +7,9 @@ const locationId = process.env.SQUARE_LOCATION_ID;
 const webhookSignatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
 
 // Determine environment using Square SDK constants
-const Environment = square.Environment;
 const environment = process.env.SQUARE_ENV === 'production'
-  ? Environment.Production
-  : Environment.Sandbox;
+  ? SquareEnvironment.Production
+  : SquareEnvironment.Sandbox;
 
 // Initialize Square client
 let client = null;
