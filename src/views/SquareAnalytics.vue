@@ -104,9 +104,12 @@
                     <span v-else class="text-gray-500 text-sm">-</span>
                   </td>
                   <td class="px-4 py-3 text-right text-gray-800 dark:text-gray-300">
-                    <span v-if="txn.amount_money && txn.amount_money.amount">
-                      ${{ (txn.amount_money.amount / 100).toFixed(2) }}
-                    </span>
+                    <div v-if="txn.amount_money && txn.amount_money.amount">
+                      <div>${{ (txn.amount_money.amount / 100).toFixed(2) }}</div>
+                      <div v-if="txn.refunds && txn.refunds.length > 0" class="text-xs text-red-600 dark:text-red-400 mt-1">
+                        Refunded: -${{ (txn.total_refunded / 100).toFixed(2) }}
+                      </div>
+                    </div>
                     <span v-else class="text-gray-500">-</span>
                   </td>
                   <td class="px-4 py-3 text-right font-semibold text-gray-800 dark:text-gray-300">

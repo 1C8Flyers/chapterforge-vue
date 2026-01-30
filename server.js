@@ -1252,6 +1252,7 @@ app.get('/api/square/payments', async (req, res) => {
     const enrichedPayments = await Promise.all(payments.map(async (payment) => {
       let customerName = null;
       let orderItems = [];
+      let refunds = [];
       
       // Fetch customer name if customer ID exists
       if (payment.customerId) {
@@ -1286,13 +1287,35 @@ app.get('/api/square/payments', async (req, res) => {
         }
       }
       
-      return { payment, customerName, orderItems };
+      // Fetch refund details if refund IDs exist
+      if (payment.refundIds && payment.refundIds.length > 0) {
+        try {
+          const refundPromises = payment.refundIds.map(refundId => 
+            squareService.getRefund(refundId)
+          );
+          const refundResults = await Promise.all(refundPromises);
+          refunds = refundResults
+            .filter(r => r !== null)
+            .map(refund => ({
+              id: refund.id,
+              amount: Number(refund.amountMoney?.amount || 0),
+              currency: refund.amountMoney?.currencyCode || 'USD',
+              status: refund.status,
+              reason: refund.reason,
+              created_at: refund.createdAt
+            }));
+        } catch (error) {
+          console.error('[SQUARE] Error fetching refunds:', error);
+        }
+      }
+      
+      return { payment, customerName, orderItems, refunds };
     }));
     
     // Transform to include only relevant fields
     // Note: Square SDK v43 uses camelCase property names
     // Convert BigInt values to regular numbers for JSON serialization
-    const transactions = enrichedPayments.map(({ payment, customerName, orderItems }) => {
+    const transactions = enrichedPayments.map(({ payment, customerName, orderItems, refunds }) => {
       const amountMoney = payment.amountMoney || payment.amount_money;
       const processingFeeData = payment.processingFee && payment.processingFee.length > 0 
         ? payment.processingFee[0].amountMoney || payment.processingFee[0].amount_money
@@ -1317,7 +1340,9 @@ app.get('/api/square/payments', async (req, res) => {
         order_id: payment.orderId || payment.order_id,
         customer_id: payment.customerId || payment.customer_id,
         customer_name: customerName,
-        order_items: orderItems
+        order_items: orderItems,
+        refunds: refunds,
+        total_refunded: refunds.reduce((sum, r) => sum + r.amount, 0)
       };
     });
     
