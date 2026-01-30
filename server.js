@@ -1232,12 +1232,15 @@ app.get('/api/square/payments', async (req, res) => {
   }
   
   try {
+    console.log('[SQUARE] /api/square/payments endpoint called');
     // Fetch recent payments from Square API
     const payments = await squareService.listPayments({
       begin_time: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(), // Last 90 days
       sort_order: 'DESC',
       limit: 100
     });
+    
+    console.log('[SQUARE] Received payments from API:', payments.length, 'payments');
     
     // Transform to include only relevant fields
     const transactions = payments.map(payment => ({
@@ -1251,9 +1254,10 @@ app.get('/api/square/payments', async (req, res) => {
       payment_source_type: payment.payment_source?.type || 'unknown'
     }));
     
+    console.log('[SQUARE] Transformed transactions, sending', transactions.length, 'records');
     res.json(transactions);
   } catch (error) {
-    console.error('Error fetching Square payments:', error);
+    console.error('[SQUARE] Error fetching Square payments:', error);
     res.status(500).json({ error: 'Failed to fetch payments from Square' });
   }
 });
