@@ -50,6 +50,12 @@ app.use(bodyParser.json({
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
+// Log all requests
+app.use((req, res, next) => {
+  console.log(`[REQUEST] ${req.method} ${req.path}`);
+  next();
+});
+
 // Auth middleware for API routes
 app.use('/api', async (req, res, next) => {
   const publicPaths = ['/payments/square/webhook'];
