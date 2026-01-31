@@ -154,14 +154,31 @@ async function listPayments(options = {}) {
       
       if (payments.length > 0) {
         const refundCount = payments.filter(p => p.id && p.id.startsWith('r')).length;
-        console.log('[SQUARE] Found', refundCount, 'refunds in the list');
+        console.log('[SQUARE] Found', refundCount, 'refunds with IDs starting with "r"');
         console.log('[SQUARE] First payment keys:', Object.keys(payments[0]));
         console.log('[SQUARE] First payment sample:', {
           id: payments[0].id,
+          sourceType: payments[0].sourceType,
           created_at: payments[0].created_at,
           amount_money: payments[0].amount_money,
           status: payments[0].status
         });
+        
+        // Log all unique sourceTypes
+        const sourceTypes = [...new Set(payments.map(p => p.sourceType))];
+        console.log('[SQUARE] All sourceTypes found:', sourceTypes);
+        
+        // Check if there are any with negative amounts
+        const negativeAmounts = payments.filter(p => p.amountMoney && p.amountMoney.amount < 0);
+        console.log('[SQUARE] Transactions with negative amounts:', negativeAmounts.length);
+        if (negativeAmounts.length > 0) {
+          console.log('[SQUARE] Negative amount example:', {
+            id: negativeAmounts[0].id,
+            sourceType: negativeAmounts[0].sourceType,
+            amount: negativeAmounts[0].amountMoney?.amount,
+            status: negativeAmounts[0].status
+          });
+        }
       }
     } else if (typeof response.getItems === 'function') {
       console.log('[SQUARE] Using response.getItems()');
