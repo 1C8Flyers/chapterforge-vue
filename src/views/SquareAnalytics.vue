@@ -33,6 +33,16 @@
             <div class="flex items-center gap-2">
               <div class="flex items-center gap-2 mr-2">
                 <select
+                  v-model="statusFilter"
+                  class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                >
+                  <option value="COMPLETED">Completed</option>
+                  <option value="FAILED">Failed</option>
+                  <option value="ALL">All</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-2 mr-2">
+                <select
                   v-model="datePreset"
                   @change="applyDatePreset"
                   class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
@@ -109,7 +119,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="txn in transactions" :key="txn.id" 
+                <tr v-for="txn in filteredTransactions" :key="txn.id" 
                     :class="[
                       'border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50',
                       txn.transaction_type === 'refund' ? 'bg-red-50 dark:bg-red-900/10' : ''
@@ -190,7 +200,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -227,6 +237,7 @@ const activeTab = ref<'transactions'>('transactions')
 const transactions = ref<Transaction[]>([])
 const loadingTransactions = ref(false)
 const transactionsError = ref('')
+const statusFilter = ref<'COMPLETED' | 'FAILED' | 'ALL'>('COMPLETED')
 const datePreset = ref<'this_month' | 'last_month' | 'this_year' | 'last_year' | 'custom'>('this_month')
 const customStart = ref('')
 const customEnd = ref('')
@@ -316,7 +327,7 @@ const loadTransactions = async () => {
 
 
 const exportTransactions = () => {
-  if (transactions.value.length === 0) return
+  if (filteredTransactions.value.length === 0) return
 
   const headers = [
     'Type',
@@ -335,7 +346,7 @@ const exportTransactions = () => {
     'Card Last4'
   ]
 
-  const rows = transactions.value.map((txn) => {
+  const rows = filteredTransactions.value.map((txn) => {
     const createdAt = txn.created_at ? new Date(txn.created_at).toISOString() : ''
     const amount = txn.amount_money?.amount ? (txn.amount_money.amount / 100).toFixed(2) : ''
     const fee = txn.processing_fee?.amount ? (txn.processing_fee.amount / 100).toFixed(2) : ''
@@ -384,6 +395,11 @@ const exportTransactions = () => {
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
+
+const filteredTransactions = computed(() => {
+  if (statusFilter.value === 'ALL') return transactions.value
+  return transactions.value.filter((txn) => txn.status === statusFilter.value)
+})
 
 
 onMounted(() => {
