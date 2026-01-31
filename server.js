@@ -1398,12 +1398,27 @@ app.get('/api/square/payments', async (req, res) => {
     });
     
     console.log('[SQUARE] Transformed transactions, sending', transactions.length, 'records');
-    res.json(transactions);
+    const safeTransactions = sanitizeForJson(transactions);
+    res.json(safeTransactions);
   } catch (error) {
     console.error('[SQUARE] Error fetching Square payments:', error);
     res.status(500).json({ error: 'Failed to fetch payments from Square' });
   }
 });
+
+function sanitizeForJson(value) {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'bigint') return value.toString();
+  if (Array.isArray(value)) return value.map(sanitizeForJson);
+  if (typeof value === 'object') {
+    const result = {};
+    for (const [key, val] of Object.entries(value)) {
+      result[key] = sanitizeForJson(val);
+    }
+    return result;
+  }
+  return value;
+}
 
 // Square Analytics - Get account balance
 app.get('/api/square/balance', async (req, res) => {
