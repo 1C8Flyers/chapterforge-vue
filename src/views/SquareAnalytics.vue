@@ -1,6 +1,6 @@
 <template>
   <AdminLayout>
-    <PageBreadcrumb pageTitle="Square Analytics" />
+    <PageBreadcrumb pageTitle="Square Payment Data" />
 
     <div class="w-full max-w-full space-y-4">
       <!-- Tabs -->
@@ -36,7 +36,7 @@
         <div v-if="activeTab === 'transactions'" class="p-6">
           <div class="flex items-center justify-between mb-6">
             <div>
-              <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Square Transactions</h3>
+              <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Square Payment Data</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 View Square processing fees per transaction
               </p>
