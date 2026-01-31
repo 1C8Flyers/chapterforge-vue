@@ -667,14 +667,14 @@ app.post('/api/payments/square/webhook', async (req, res) => {
       // The payment ID will be in the invoice's payments array or we need to use the invoice itself
       payment = {
         id: invoice.id, // Use invoice ID as payment ID for tracking
-        order_id: invoice.order_id,
-        amount_money: invoice.total_money,
+        order_id: invoice.orderId || invoice.order_id,
+        amount_money: invoice.totalMoney || invoice.total_money,
         status: 'COMPLETED',
         invoice_id: invoice.id
       };
     }
 
-    console.log('[WEBHOOK] Payment ID:', payment?.id, 'Status:', payment?.status, 'Order ID:', payment?.order_id);
+    console.log('[WEBHOOK] Payment ID:', payment?.id, 'Status:', payment?.status, 'Order ID:', payment?.order_id || payment?.orderId);
 
     if (!payment) {
       console.log('[WEBHOOK] Ignoring: no payment object found');
@@ -698,7 +698,7 @@ app.post('/api/payments/square/webhook', async (req, res) => {
       return res.json({ received: true });
     }
 
-    const orderId = payment.order_id;
+    const orderId = payment.orderId || payment.order_id;
     console.log('[WEBHOOK] Order ID:', orderId);
     if (!orderId) {
       console.log('[WEBHOOK] Ignoring: no order_id on payment');
@@ -724,7 +724,12 @@ app.post('/api/payments/square/webhook', async (req, res) => {
       console.log('[WEBHOOK] Metadata object keys:', Object.keys(metadata));
     }
 
-    const amountCents = payment.amount_money?.amount || order?.total_money?.amount || 0;
+    const amountCents =
+      payment.amountMoney?.amount ||
+      payment.amount_money?.amount ||
+      order?.totalMoney?.amount ||
+      order?.total_money?.amount ||
+      0;
     const amount = Number(amountCents) / 100;
     console.log('[WEBHOOK] Amount: $' + amount + ' (' + amountCents + ' cents)');
 
