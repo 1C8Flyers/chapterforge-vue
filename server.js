@@ -1253,7 +1253,9 @@ app.get('/api/square/payments', async (req, res) => {
       let customerName = null;
       let orderItems = [];
       let refunds = [];
-      const isRefund = payment.id && payment.id.startsWith('r');
+      
+      // Check if this is a refund by looking for negative amount
+      const isRefund = payment.amountMoney && payment.amountMoney.amount < 0;
       
       // For refunds, we don't need to fetch customer/order details
       if (isRefund) {

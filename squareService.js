@@ -153,8 +153,6 @@ async function listPayments(options = {}) {
       payments = response.data;
       
       if (payments.length > 0) {
-        const refundCount = payments.filter(p => p.id && p.id.startsWith('r')).length;
-        console.log('[SQUARE] Found', refundCount, 'refunds with IDs starting with "r"');
         console.log('[SQUARE] First payment keys:', Object.keys(payments[0]));
         console.log('[SQUARE] First payment sample:', {
           id: payments[0].id,
