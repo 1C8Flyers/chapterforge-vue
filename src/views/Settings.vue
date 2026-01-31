@@ -50,6 +50,17 @@
           Payment Settings
         </button>
         <button
+          @click="activeTab = 'scheduled-reports'"
+          :class="[
+            'px-4 py-3 text-sm font-medium border-b-2 transition',
+            activeTab === 'scheduled-reports'
+              ? 'border-brand-500 text-brand-500 dark:text-brand-400'
+              : 'border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+          ]"
+        >
+          Scheduled Reports
+        </button>
+        <button
           @click="activeTab = 'timezone'"
           :class="[
             'px-4 py-3 text-sm font-medium border-b-2 transition',
@@ -315,6 +326,144 @@
           />
           <p class="text-xs text-gray-500 dark:text-gray-400">
             This fee is added to Square payment links sent in renewal emails and manual link generation.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scheduled Reports Tab -->
+    <div v-if="activeTab === 'scheduled-reports'" class="space-y-6">
+      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Scheduled Report Emails</h3>
+          <button
+            @click="saveReportScheduleSettings"
+            class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
+            :disabled="savingReportScheduleSettings"
+          >
+            {{ savingReportScheduleSettings ? 'Saving...' : 'Save Settings' }}
+          </button>
+        </div>
+
+        <div class="space-y-6 text-sm text-gray-700 dark:text-gray-200">
+          <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <input
+              v-model="reportSchedule.enabled"
+              type="checkbox"
+              class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+            />
+            Enable scheduled report emails
+          </label>
+
+          <div class="space-y-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Recipients</label>
+            <input
+              v-model="reportSchedule.recipients"
+              type="text"
+              placeholder="email1@example.com, email2@example.com"
+              class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Reports</label>
+            <div class="grid gap-2 sm:grid-cols-2">
+              <label
+                v-for="report in reportScheduleReports"
+                :key="report.id"
+                class="flex items-start gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200"
+              >
+                <input
+                  v-model="reportSchedule.reports"
+                  type="checkbox"
+                  :value="report.id"
+                  class="mt-1 h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                />
+                <span>
+                  <span class="font-medium">{{ report.name }}</span>
+                  <span v-if="report.description" class="block text-xs text-gray-500 dark:text-gray-400">{{ report.description }}</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Date Range</label>
+              <select
+                v-model="reportSchedule.datePreset"
+                class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option value="last_7_days">Last 7 Days</option>
+                <option value="last_30_days">Last 30 Days</option>
+                <option value="this_month">This Month</option>
+                <option value="last_month">Last Month</option>
+                <option value="this_year">This Year</option>
+                <option value="last_year">Last Year</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status Filter</label>
+              <select
+                v-model="reportSchedule.status"
+                class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option value="COMPLETED">Completed</option>
+                <option value="FAILED">Failed</option>
+                <option value="ALL">All</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Time</label>
+              <input
+                v-model="reportSchedule.time"
+                type="time"
+                class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Frequency</label>
+              <select
+                v-model="reportSchedule.frequency"
+                class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            <div v-if="reportSchedule.frequency === 'weekly'">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Day of Week</label>
+              <select
+                v-model.number="reportSchedule.dayOfWeek"
+                class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option :value="0">Sunday</option>
+                <option :value="1">Monday</option>
+                <option :value="2">Tuesday</option>
+                <option :value="3">Wednesday</option>
+                <option :value="4">Thursday</option>
+                <option :value="5">Friday</option>
+                <option :value="6">Saturday</option>
+              </select>
+            </div>
+            <div v-if="reportSchedule.frequency === 'monthly'">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Day of Month</label>
+              <input
+                v-model.number="reportSchedule.dayOfMonth"
+                type="number"
+                min="1"
+                max="31"
+                class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+          </div>
+
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            Cron preview: {{ reportScheduleCron }}
           </p>
         </div>
       </div>
@@ -656,7 +805,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
@@ -693,6 +842,19 @@ const paymentSettings = ref({ squareFeeAmount: 1 })
 const savingPaymentSettings = ref(false)
 const timezoneSettings = ref({ timezone: 'America/Chicago' })
 const savingTimezoneSettings = ref(false)
+const reportSchedule = ref({
+  enabled: false,
+  recipients: '',
+  reports: [] as string[],
+  datePreset: 'last_month',
+  status: 'COMPLETED',
+  frequency: 'monthly',
+  time: '08:00',
+  dayOfWeek: 1,
+  dayOfMonth: 1
+})
+const reportScheduleReports = ref<Array<{ id: string; name: string; description?: string }>>([])
+const savingReportScheduleSettings = ref(false)
 
 // Audit Log state
 const auditLogs = ref<AuditLog[]>([])
@@ -703,6 +865,20 @@ const auditFilters = ref({
   action: '',
   tableName: '',
   limit: '1000'
+})
+
+const reportScheduleCron = computed(() => {
+  const [hour, minute] = reportSchedule.value.time.split(':').map(Number)
+  const safeMinute = Number.isFinite(minute) ? minute : 0
+  const safeHour = Number.isFinite(hour) ? hour : 8
+
+  if (reportSchedule.value.frequency === 'weekly') {
+    return `${safeMinute} ${safeHour} * * ${reportSchedule.value.dayOfWeek}`
+  }
+  if (reportSchedule.value.frequency === 'monthly') {
+    return `${safeMinute} ${safeHour} ${reportSchedule.value.dayOfMonth} * *`
+  }
+  return `${safeMinute} ${safeHour} * * *`
 })
 
 const memberTypeForm = ref({
@@ -772,6 +948,72 @@ const fetchTimezoneSettings = async () => {
     } else {
       console.error('Error fetching timezone settings:', error)
     }
+  }
+}
+
+const fetchReportScheduleSettings = async () => {
+  try {
+    const headers = await getAuthHeaders()
+    const response = await apiFetch('/api/settings/report-schedule', { headers })
+    if (response.ok) {
+      const data = await response.json()
+      const config = data.config || {}
+      reportSchedule.value = {
+        enabled: Boolean(config.enabled),
+        recipients: Array.isArray(config.recipients) ? config.recipients.join(', ') : (config.recipients || ''),
+        reports: Array.isArray(config.reports) ? config.reports : [],
+        datePreset: config.datePreset || 'last_month',
+        status: config.status || 'COMPLETED',
+        frequency: config.frequency || 'monthly',
+        time: config.time || '08:00',
+        dayOfWeek: Number.isFinite(config.dayOfWeek) ? config.dayOfWeek : 1,
+        dayOfMonth: Number.isFinite(config.dayOfMonth) ? config.dayOfMonth : 1
+      }
+      reportScheduleReports.value = Array.isArray(data.availableReports) ? data.availableReports : []
+    }
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching report schedule settings:', error)
+    }
+  }
+}
+
+const saveReportScheduleSettings = async () => {
+  try {
+    savingReportScheduleSettings.value = true
+    const headers = await getAuthHeaders()
+    const payload = {
+      enabled: reportSchedule.value.enabled,
+      recipients: reportSchedule.value.recipients,
+      reports: reportSchedule.value.reports,
+      datePreset: reportSchedule.value.datePreset,
+      status: reportSchedule.value.status,
+      frequency: reportSchedule.value.frequency,
+      time: reportSchedule.value.time,
+      dayOfWeek: reportSchedule.value.dayOfWeek,
+      dayOfMonth: reportSchedule.value.dayOfMonth
+    }
+    const response = await apiFetch('/api/settings/report-schedule', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to save report schedule settings')
+    }
+    alert('Scheduled report settings saved')
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error saving report schedule settings:', error)
+      alert(error instanceof Error ? error.message : 'Failed to save report schedule settings')
+    }
+  } finally {
+    savingReportScheduleSettings.value = false
   }
 }
 
@@ -1152,5 +1394,6 @@ onMounted(() => {
   fetchUsers()
   fetchPaymentSettings()
   fetchTimezoneSettings()
+  fetchReportScheduleSettings()
 })
 </script>

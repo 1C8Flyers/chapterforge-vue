@@ -4,6 +4,7 @@ const path = require('path');
 const multer = require('multer');
 const { parse } = require('csv-parse/sync');
 const admin = require('firebase-admin');
+const cron = require('node-cron');
 require('dotenv').config();
 
 const db = require('./database');
@@ -116,6 +117,274 @@ app.use('/api', async (req, res, next) => {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 });
+
+  const AVAILABLE_SCHEDULED_REPORTS = [
+    {
+      id: 'square_payments',
+      name: 'Square Payment Data',
+      description: 'Square payment export with items, fees, and status'
+    }
+  ];
+
+  const REPORT_SCHEDULE_SETTING_KEY = 'report_schedule_config';
+  const DEFAULT_REPORT_SCHEDULE = {
+    enabled: false,
+    recipients: [],
+    reports: ['square_payments'],
+    datePreset: 'last_month',
+    status: 'COMPLETED',
+    frequency: 'monthly',
+    time: '08:00',
+    dayOfWeek: 1,
+    dayOfMonth: 1
+  };
+
+  const VALID_DATE_PRESETS = ['last_7_days', 'last_30_days', 'this_month', 'last_month', 'this_year', 'last_year'];
+  const VALID_STATUSES = ['COMPLETED', 'FAILED', 'ALL'];
+  const VALID_FREQUENCIES = ['daily', 'weekly', 'monthly'];
+
+  const normalizeReportSchedule = (input = {}) => {
+    const merged = { ...DEFAULT_REPORT_SCHEDULE, ...(input || {}) };
+    const allowedReports = new Set(AVAILABLE_SCHEDULED_REPORTS.map(r => r.id));
+    const recipients = Array.isArray(merged.recipients)
+      ? merged.recipients
+      : String(merged.recipients || '').split(',');
+
+    return {
+      enabled: Boolean(merged.enabled),
+      recipients: recipients.map(r => String(r).trim()).filter(Boolean),
+      reports: Array.isArray(merged.reports)
+        ? merged.reports.filter(r => allowedReports.has(r))
+        : DEFAULT_REPORT_SCHEDULE.reports,
+      datePreset: VALID_DATE_PRESETS.includes(merged.datePreset) ? merged.datePreset : DEFAULT_REPORT_SCHEDULE.datePreset,
+      status: VALID_STATUSES.includes(merged.status) ? merged.status : DEFAULT_REPORT_SCHEDULE.status,
+      frequency: VALID_FREQUENCIES.includes(merged.frequency) ? merged.frequency : DEFAULT_REPORT_SCHEDULE.frequency,
+      time: typeof merged.time === 'string' && merged.time.includes(':') ? merged.time : DEFAULT_REPORT_SCHEDULE.time,
+      dayOfWeek: Number.isFinite(Number(merged.dayOfWeek)) ? Number(merged.dayOfWeek) : DEFAULT_REPORT_SCHEDULE.dayOfWeek,
+      dayOfMonth: Number.isFinite(Number(merged.dayOfMonth)) ? Number(merged.dayOfMonth) : DEFAULT_REPORT_SCHEDULE.dayOfMonth
+    };
+  };
+
+  const buildReportCron = (config) => {
+    const [hourStr, minuteStr] = String(config.time || '08:00').split(':');
+    const hour = Number(hourStr);
+    const minute = Number(minuteStr);
+    const safeHour = Number.isFinite(hour) ? hour : 8;
+    const safeMinute = Number.isFinite(minute) ? minute : 0;
+
+    if (config.frequency === 'weekly') {
+      return `${safeMinute} ${safeHour} * * ${config.dayOfWeek}`;
+    }
+    if (config.frequency === 'monthly') {
+      return `${safeMinute} ${safeHour} ${config.dayOfMonth} * *`;
+    }
+    return `${safeMinute} ${safeHour} * * *`;
+  };
+
+  const getNowInTimeZone = (timeZone) => {
+    return new Date(new Date().toLocaleString('en-US', { timeZone }));
+  };
+
+  const getPresetRange = (preset, timeZone) => {
+    const now = getNowInTimeZone(timeZone);
+    const start = new Date(now);
+    const end = new Date(now);
+
+    switch (preset) {
+      case 'last_7_days':
+        start.setDate(start.getDate() - 7);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'last_30_days':
+        start.setDate(start.getDate() - 30);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'this_month':
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'last_month':
+        start.setMonth(start.getMonth() - 1, 1);
+        start.setHours(0, 0, 0, 0);
+        end.setDate(0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'this_year':
+        start.setMonth(0, 1);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'last_year':
+        start.setFullYear(start.getFullYear() - 1, 0, 1);
+        start.setHours(0, 0, 0, 0);
+        end.setFullYear(end.getFullYear() - 1, 11, 31);
+        end.setHours(23, 59, 59, 999);
+        break;
+      default:
+        start.setDate(start.getDate() - 30);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+    }
+
+    return { start, end };
+  };
+
+  const buildSquarePaymentsCsv = (transactions) => {
+    const headers = [
+      'Type',
+      'Date',
+      'Status',
+      'Amount',
+      'Fee',
+      'Refunded',
+      'Customer Name',
+      'Customer Email',
+      'Items',
+      'Refund Reason',
+      'Receipt Number',
+      'Receipt URL',
+      'Card Brand',
+      'Card Last4'
+    ];
+
+    const rows = transactions.map((txn) => {
+      const createdAt = txn.created_at ? new Date(txn.created_at).toISOString() : '';
+      const amount = txn.amount_money?.amount ? (txn.amount_money.amount / 100).toFixed(2) : '';
+      const fee = txn.processing_fee?.amount ? (txn.processing_fee.amount / 100).toFixed(2) : '';
+      const refunded = txn.total_refunded ? (txn.total_refunded / 100).toFixed(2) : '';
+      const items = txn.order_items && txn.order_items.length > 0
+        ? txn.order_items.map((item) => `${item.quantity || ''}x ${item.name || ''}`.trim()).join(' | ')
+        : '';
+
+      return [
+        txn.transaction_type || 'payment',
+        createdAt,
+        txn.status || '',
+        amount,
+        fee,
+        refunded,
+        txn.customer_name || '',
+        txn.buyer_email || '',
+        items,
+        txn.refund_reason || '',
+        txn.receipt_number || '',
+        txn.receipt_url || '',
+        txn.card_details?.brand || '',
+        txn.card_details?.last4 || ''
+      ];
+    });
+
+    const escapeCell = (value) => {
+      const safeValue = value ?? '';
+      const stringValue = String(safeValue);
+      if (stringValue.includes('"') || stringValue.includes(',') || stringValue.includes('\n')) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => escapeCell(cell)).join(','))
+      .join('\n');
+
+    return { csvContent, rowCount: rows.length };
+  };
+
+  const getReportScheduleConfig = async () => {
+    const stored = await db.getSetting(REPORT_SCHEDULE_SETTING_KEY);
+    if (!stored) {
+      return normalizeReportSchedule(DEFAULT_REPORT_SCHEDULE);
+    }
+
+    try {
+      const parsed = JSON.parse(stored);
+      return normalizeReportSchedule(parsed);
+    } catch (error) {
+      return normalizeReportSchedule(DEFAULT_REPORT_SCHEDULE);
+    }
+  };
+
+  let reportScheduleTask = null;
+
+  const scheduleReportJob = async () => {
+    if (reportScheduleTask) {
+      reportScheduleTask.stop();
+      reportScheduleTask = null;
+    }
+
+    const config = await getReportScheduleConfig();
+    if (!config.enabled || config.recipients.length === 0 || config.reports.length === 0) {
+      return;
+    }
+
+    const timezone = (await db.getSetting('timezone')) || 'America/Chicago';
+    const cronExpression = buildReportCron(config);
+
+    reportScheduleTask = cron.schedule(cronExpression, async () => {
+      try {
+        await runScheduledReports(config, timezone);
+      } catch (error) {
+        console.error('[REPORTS] Scheduled report error:', error);
+      }
+    }, { timezone });
+  };
+
+  const runScheduledReports = async (config, timezone) => {
+    if (!config.enabled || config.recipients.length === 0 || config.reports.length === 0) {
+      return;
+    }
+
+    const range = getPresetRange(config.datePreset, timezone);
+    const attachments = [];
+    const summaryLines = [];
+
+    for (const reportId of config.reports) {
+      if (reportId === 'square_payments') {
+        if (!squareService.isConfigured()) {
+          console.warn('[REPORTS] Square is not configured; skipping Square report');
+          continue;
+        }
+        const transactions = await fetchSquareTransactions({
+          beginTime: range.start.toISOString(),
+          endTime: range.end.toISOString()
+        });
+
+        const filtered = config.status === 'ALL'
+          ? transactions
+          : transactions.filter(txn => txn.status === config.status);
+
+        const { csvContent, rowCount } = buildSquarePaymentsCsv(filtered);
+        attachments.push({
+          filename: `square-payments-${config.datePreset}.csv`,
+          content: csvContent,
+          contentType: 'text/csv'
+        });
+        summaryLines.push(`<li>Square Payment Data: ${rowCount} rows</li>`);
+      }
+    }
+
+    if (attachments.length === 0) {
+      return;
+    }
+
+    const subject = `Scheduled Reports (${config.datePreset.replace(/_/g, ' ')})`;
+    const html = `
+      <p>Attached are your scheduled reports for ${config.datePreset.replace(/_/g, ' ')}.</p>
+      <ul>${summaryLines.join('')}</ul>
+      <p>Range: ${range.start.toISOString()} to ${range.end.toISOString()}</p>
+    `;
+
+    await emailService.sendReportEmail({
+      recipients: config.recipients,
+      subject,
+      html,
+      attachments
+    });
+  };
 
 // Serve Vue app in production
 if (process.env.NODE_ENV === 'production') {
@@ -1004,6 +1273,39 @@ app.post('/api/settings/timezone', async (req, res) => {
   }
 });
 
+// API: Scheduled report settings
+app.get('/api/settings/report-schedule', async (req, res) => {
+  try {
+    const config = await getReportScheduleConfig();
+    res.json({ config, availableReports: AVAILABLE_SCHEDULED_REPORTS });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings/report-schedule', async (req, res) => {
+  try {
+    const normalized = normalizeReportSchedule(req.body || {});
+    const cronExpression = buildReportCron(normalized);
+
+    if (!cron.validate(cronExpression)) {
+      return res.status(400).json({ error: 'Invalid schedule settings' });
+    }
+
+    const oldValue = await db.getSetting(REPORT_SCHEDULE_SETTING_KEY);
+    await db.setSetting(REPORT_SCHEDULE_SETTING_KEY, JSON.stringify(normalized));
+
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(req.user.email, 'UPDATE', 'app_settings', null, { reportSchedule: oldValue }, { reportSchedule: normalized }, ipAddress, 'Updated report schedule settings');
+
+    await scheduleReportJob();
+
+    res.json({ success: true, config: normalized, cron: cronExpression });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/settings/email-template', async (req, res) => {
   try {
     const { subject, body } = req.body;
@@ -1306,6 +1608,160 @@ app.post('/api/square/backfill-dues', async (req, res) => {
   }
 });
 
+const fetchSquareTransactions = async ({ beginTime, endTime }) => {
+  const defaultBegin = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+  const payments = await squareService.listPayments({
+    begin_time: beginTime || defaultBegin,
+    end_time: endTime || undefined,
+    sort_order: 'DESC',
+    limit: 100
+  });
+
+  console.log('[SQUARE] Received payments from API:', payments.length, 'payments');
+
+  const enrichedPayments = await Promise.all(payments.map(async (payment) => {
+    let customerName = null;
+    let orderItems = [];
+    let refunds = [];
+
+    const isRefund = payment.amountMoney && payment.amountMoney.amount < 0;
+    if (isRefund) {
+      return { payment, customerName, orderItems, refunds, isRefund };
+    }
+
+    if (payment.customerId) {
+      try {
+        const customer = await squareService.getCustomer(payment.customerId);
+        if (customer) {
+          customerName = `${customer.givenName || ''} ${customer.familyName || ''}`.trim() || null;
+        }
+      } catch (error) {
+        console.error('[SQUARE] Error fetching customer:', error);
+      }
+    }
+
+    if (!customerName && payment.cardDetails?.card?.cardholderName) {
+      customerName = payment.cardDetails.card.cardholderName;
+    }
+
+    if (payment.orderId) {
+      try {
+        const order = await squareService.getOrder(payment.orderId);
+        if (order && order.lineItems) {
+          orderItems = order.lineItems.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            total: Number(item.totalMoney?.amount || 0)
+          }));
+        }
+      } catch (error) {
+        console.error('[SQUARE] Error fetching order:', error);
+      }
+    }
+
+    if (payment.refundIds && payment.refundIds.length > 0) {
+      try {
+        const refundPromises = payment.refundIds.map(refundId =>
+          squareService.getRefund(refundId)
+        );
+        const refundResults = await Promise.all(refundPromises);
+        refunds = refundResults
+          .filter(r => r !== null)
+          .map(refund => ({
+            id: refund.id,
+            amount: Number(refund.amountMoney?.amount || 0),
+            currency: refund.amountMoney?.currencyCode || 'USD',
+            status: refund.status,
+            reason: refund.reason,
+            created_at: refund.createdAt
+          }));
+      } catch (error) {
+        console.error('[SQUARE] Error fetching refunds:', error);
+      }
+    }
+
+    return { payment, customerName, orderItems, refunds, isRefund };
+  }));
+
+  const transactions = enrichedPayments.map(({ payment, customerName, orderItems, refunds, isRefund }) => {
+    const amountMoney = payment.amountMoney || payment.amount_money;
+    const tipMoney = payment.tipMoney || payment.tip_money;
+    const totalMoney = payment.totalMoney || payment.total_money;
+    const approvedMoney = payment.approvedMoney || payment.approved_money;
+    const processingFeeData = payment.processingFee && payment.processingFee.length > 0
+      ? payment.processingFee[0].amountMoney || payment.processingFee[0].amount_money
+      : null;
+    const card = payment.cardDetails?.card;
+    const cardDetails = card ? {
+      brand: card.cardBrand || card.brand,
+      last4: card.last4,
+      exp_month: card.expMonth,
+      exp_year: card.expYear,
+      cardholder_name: card.cardholderName,
+      entry_method: payment.cardDetails?.entryMethod,
+      card_type: card.cardType
+    } : null;
+    const risk = payment.riskEvaluation || payment.risk_evaluation;
+
+    return {
+      id: payment.id,
+      transaction_type: isRefund ? 'refund' : 'payment',
+      created_at: payment.createdAt || payment.created_at,
+      updated_at: payment.updatedAt || payment.updated_at,
+      amount_money: amountMoney ? {
+        amount: Number(amountMoney.amount),
+        currency: amountMoney.currency || amountMoney.currencyCode
+      } : null,
+      tip_money: tipMoney ? {
+        amount: Number(tipMoney.amount),
+        currency: tipMoney.currency || tipMoney.currencyCode
+      } : null,
+      total_money: totalMoney ? {
+        amount: Number(totalMoney.amount),
+        currency: totalMoney.currency || totalMoney.currencyCode
+      } : null,
+      approved_money: approvedMoney ? {
+        amount: Number(approvedMoney.amount),
+        currency: approvedMoney.currency || approvedMoney.currencyCode
+      } : null,
+      processing_fee: processingFeeData ? {
+        amount: Number(processingFeeData.amount),
+        currency: processingFeeData.currency || processingFeeData.currencyCode
+      } : null,
+      status: payment.status,
+      payment_source_type: payment.sourceType || payment.payment_source?.type || 'unknown',
+      location_id: payment.locationId || payment.location_id,
+      buyer_email: payment.buyerEmailAddress || payment.buyer_email_address,
+      receipt_number: payment.receiptNumber || payment.receipt_number,
+      receipt_url: payment.receiptUrl || payment.receipt_url,
+      order_id: payment.orderId || payment.order_id,
+      customer_id: payment.customerId || payment.customer_id,
+      customer_name: customerName,
+      order_items: orderItems,
+      refunds: refunds,
+      total_refunded: refunds.reduce((sum, r) => sum + r.amount, 0),
+      refund_reason: isRefund ? payment.reason : null,
+      payment_id: isRefund ? payment.paymentId : null,
+      delay_duration: payment.delayDuration || payment.delay_duration,
+      delay_action: payment.delayAction || payment.delay_action,
+      delayed_until: payment.delayedUntil || payment.delayed_until,
+      billing_address: payment.billingAddress || payment.billing_address || null,
+      shipping_address: payment.shippingAddress || payment.shipping_address || null,
+      card_details: cardDetails,
+      risk_evaluation: risk ? {
+        risk_level: risk.riskLevel || risk.risk_level,
+        created_at: risk.createdAt || risk.created_at
+      } : null,
+      application_details: payment.applicationDetails || payment.application_details || null,
+      version_token: payment.versionToken || payment.version_token || null
+    };
+  });
+
+  console.log('[SQUARE] Transformed transactions, sending', transactions.length, 'records');
+  return sanitizeForJson(transactions);
+};
+
 // Square Analytics - Get transactions with processing fees
 app.get('/api/square/payments', async (req, res) => {
   if (!req.user) {
@@ -1316,170 +1772,8 @@ app.get('/api/square/payments', async (req, res) => {
     console.log('[SQUARE] /api/square/payments endpoint called');
     const beginTime = typeof req.query.begin_time === 'string' ? req.query.begin_time : null;
     const endTime = typeof req.query.end_time === 'string' ? req.query.end_time : null;
-    const defaultBegin = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-
-    // Fetch payments from Square API with optional date filters
-    const payments = await squareService.listPayments({
-      begin_time: beginTime || defaultBegin,
-      end_time: endTime || undefined,
-      sort_order: 'DESC',
-      limit: 100
-    });
-    
-    console.log('[SQUARE] Received payments from API:', payments.length, 'payments');
-    
-    // Enrich payment data with customer and order details
-    const enrichedPayments = await Promise.all(payments.map(async (payment) => {
-      let customerName = null;
-      let orderItems = [];
-      let refunds = [];
-      
-      // Check if this is a refund by looking for negative amount
-      const isRefund = payment.amountMoney && payment.amountMoney.amount < 0;
-      
-      // For refunds, we don't need to fetch customer/order details
-      if (isRefund) {
-        return { payment, customerName, orderItems, refunds, isRefund };
-      }
-      
-      // Fetch customer name if customer ID exists
-      if (payment.customerId) {
-        try {
-          const customer = await squareService.getCustomer(payment.customerId);
-          if (customer) {
-            customerName = `${customer.givenName || ''} ${customer.familyName || ''}`.trim() || null;
-          }
-        } catch (error) {
-          console.error('[SQUARE] Error fetching customer:', error);
-        }
-      }
-      
-      // Get cardholder name as fallback
-      if (!customerName && payment.cardDetails?.card?.cardholderName) {
-        customerName = payment.cardDetails.card.cardholderName;
-      }
-      
-      // Fetch order details if order ID exists
-      if (payment.orderId) {
-        try {
-          const order = await squareService.getOrder(payment.orderId);
-          if (order && order.lineItems) {
-            orderItems = order.lineItems.map(item => ({
-              name: item.name,
-              quantity: item.quantity,
-              total: Number(item.totalMoney?.amount || 0)
-            }));
-          }
-        } catch (error) {
-          console.error('[SQUARE] Error fetching order:', error);
-        }
-      }
-      
-      // Fetch refund details if refund IDs exist
-      if (payment.refundIds && payment.refundIds.length > 0) {
-        try {
-          const refundPromises = payment.refundIds.map(refundId => 
-            squareService.getRefund(refundId)
-          );
-          const refundResults = await Promise.all(refundPromises);
-          refunds = refundResults
-            .filter(r => r !== null)
-            .map(refund => ({
-              id: refund.id,
-              amount: Number(refund.amountMoney?.amount || 0),
-              currency: refund.amountMoney?.currencyCode || 'USD',
-              status: refund.status,
-              reason: refund.reason,
-              created_at: refund.createdAt
-            }));
-        } catch (error) {
-          console.error('[SQUARE] Error fetching refunds:', error);
-        }
-      }
-      
-      return { payment, customerName, orderItems, refunds, isRefund };
-    }));
-    
-    // Transform to include only relevant fields
-    // Note: Square SDK v43 uses camelCase property names
-    // Convert BigInt values to regular numbers for JSON serialization
-    const transactions = enrichedPayments.map(({ payment, customerName, orderItems, refunds, isRefund }) => {
-      const amountMoney = payment.amountMoney || payment.amount_money;
-      const tipMoney = payment.tipMoney || payment.tip_money;
-      const totalMoney = payment.totalMoney || payment.total_money;
-      const approvedMoney = payment.approvedMoney || payment.approved_money;
-      const processingFeeData = payment.processingFee && payment.processingFee.length > 0 
-        ? payment.processingFee[0].amountMoney || payment.processingFee[0].amount_money
-        : null;
-      const card = payment.cardDetails?.card;
-      const cardDetails = card ? {
-        brand: card.cardBrand || card.brand,
-        last4: card.last4,
-        exp_month: card.expMonth,
-        exp_year: card.expYear,
-        cardholder_name: card.cardholderName,
-        entry_method: payment.cardDetails?.entryMethod,
-        card_type: card.cardType
-      } : null;
-      const risk = payment.riskEvaluation || payment.risk_evaluation;
-      
-      return {
-        id: payment.id,
-        transaction_type: isRefund ? 'refund' : 'payment',
-        created_at: payment.createdAt || payment.created_at,
-        updated_at: payment.updatedAt || payment.updated_at,
-        amount_money: amountMoney ? {
-          amount: Number(amountMoney.amount),
-          currency: amountMoney.currency || amountMoney.currencyCode
-        } : null,
-        tip_money: tipMoney ? {
-          amount: Number(tipMoney.amount),
-          currency: tipMoney.currency || tipMoney.currencyCode
-        } : null,
-        total_money: totalMoney ? {
-          amount: Number(totalMoney.amount),
-          currency: totalMoney.currency || totalMoney.currencyCode
-        } : null,
-        approved_money: approvedMoney ? {
-          amount: Number(approvedMoney.amount),
-          currency: approvedMoney.currency || approvedMoney.currencyCode
-        } : null,
-        processing_fee: processingFeeData ? {
-          amount: Number(processingFeeData.amount),
-          currency: processingFeeData.currency || processingFeeData.currencyCode
-        } : null,
-        status: payment.status,
-        payment_source_type: payment.sourceType || payment.payment_source?.type || 'unknown',
-        location_id: payment.locationId || payment.location_id,
-        buyer_email: payment.buyerEmailAddress || payment.buyer_email_address,
-        receipt_number: payment.receiptNumber || payment.receipt_number,
-        receipt_url: payment.receiptUrl || payment.receipt_url,
-        order_id: payment.orderId || payment.order_id,
-        customer_id: payment.customerId || payment.customer_id,
-        customer_name: customerName,
-        order_items: orderItems,
-        refunds: refunds,
-        total_refunded: refunds.reduce((sum, r) => sum + r.amount, 0),
-        refund_reason: isRefund ? payment.reason : null,
-        payment_id: isRefund ? payment.paymentId : null,
-        delay_duration: payment.delayDuration || payment.delay_duration,
-        delay_action: payment.delayAction || payment.delay_action,
-        delayed_until: payment.delayedUntil || payment.delayed_until,
-        billing_address: payment.billingAddress || payment.billing_address || null,
-        shipping_address: payment.shippingAddress || payment.shipping_address || null,
-        card_details: cardDetails,
-        risk_evaluation: risk ? {
-          risk_level: risk.riskLevel || risk.risk_level,
-          created_at: risk.createdAt || risk.created_at
-        } : null,
-        application_details: payment.applicationDetails || payment.application_details || null,
-        version_token: payment.versionToken || payment.version_token || null
-      };
-    });
-    
-    console.log('[SQUARE] Transformed transactions, sending', transactions.length, 'records');
-    const safeTransactions = sanitizeForJson(transactions);
-    res.json(safeTransactions);
+    const transactions = await fetchSquareTransactions({ beginTime, endTime });
+    res.json(transactions);
   } catch (error) {
     console.error('[SQUARE] Error fetching Square payments:', error);
     res.status(500).json({ error: 'Failed to fetch payments from Square' });
@@ -1549,4 +1843,7 @@ if (process.env.NODE_ENV === 'production') {
 // Start server
 app.listen(PORT, () => {
   console.log(`ChapterForge server running on http://localhost:${PORT}`);
+  scheduleReportJob().catch(error => {
+    console.error('[REPORTS] Failed to initialize schedule:', error);
+  });
 });

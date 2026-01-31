@@ -182,6 +182,36 @@ class EmailService {
     
     return results;
   }
+
+  async sendReportEmail({ recipients, subject, html, attachments = [] }) {
+    const normalizedRecipients = Array.isArray(recipients)
+      ? recipients.map(r => String(r).trim()).filter(Boolean)
+      : String(recipients || '')
+        .split(',')
+        .map(r => r.trim())
+        .filter(Boolean);
+
+    if (normalizedRecipients.length === 0) {
+      return { success: false, error: 'No recipients provided' };
+    }
+
+    const mailOptions = {
+      from: `"${process.env.CHAPTER_NAME}" <${process.env.CHAPTER_EMAIL}>`,
+      to: normalizedRecipients.join(', '),
+      subject,
+      html,
+      attachments
+    };
+
+    try {
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log(`Report email sent to ${normalizedRecipients.join(', ')}:`, info.messageId);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('Error sending report email:', error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 module.exports = new EmailService();
