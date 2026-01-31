@@ -407,11 +407,15 @@ const exportTransactions = () => {
 }
 
 const totalAmount = computed(() =>
-  transactions.value.reduce((sum, txn) => sum + (txn.amount_money?.amount || 0), 0)
+  transactions.value
+    .filter((txn) => txn.transaction_type !== 'refund' && txn.status === 'COMPLETED')
+    .reduce((sum, txn) => sum + (txn.amount_money?.amount || 0), 0)
 )
 
 const totalFees = computed(() =>
-  transactions.value.reduce((sum, txn) => sum + (txn.processing_fee?.amount || 0), 0)
+  transactions.value
+    .filter((txn) => txn.transaction_type !== 'refund' && txn.status === 'COMPLETED')
+    .reduce((sum, txn) => sum + (txn.processing_fee?.amount || 0), 0)
 )
 
 const totalDeposit = computed(() => totalAmount.value - totalFees.value)
