@@ -1239,9 +1239,14 @@ app.get('/api/square/payments', async (req, res) => {
   
   try {
     console.log('[SQUARE] /api/square/payments endpoint called');
-    // Fetch recent payments from Square API
+    const beginTime = typeof req.query.begin_time === 'string' ? req.query.begin_time : null;
+    const endTime = typeof req.query.end_time === 'string' ? req.query.end_time : null;
+    const defaultBegin = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Fetch payments from Square API with optional date filters
     const payments = await squareService.listPayments({
-      begin_time: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(), // Last 90 days
+      begin_time: beginTime || defaultBegin,
+      end_time: endTime || undefined,
       sort_order: 'DESC',
       limit: 100
     });

@@ -42,6 +42,39 @@
               </p>
             </div>
             <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 mr-2">
+                <select
+                  v-model="datePreset"
+                  @change="applyDatePreset"
+                  class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                >
+                  <option value="this_month">This Month</option>
+                  <option value="last_month">Last Month</option>
+                  <option value="this_year">This Year</option>
+                  <option value="last_year">Last Year</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <input
+                  v-if="datePreset === 'custom'"
+                  v-model="customStart"
+                  type="date"
+                  class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                />
+                <input
+                  v-if="datePreset === 'custom'"
+                  v-model="customEnd"
+                  type="date"
+                  class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                />
+                <button
+                  v-if="datePreset === 'custom'"
+                  @click="loadTransactions"
+                  :disabled="loadingTransactions || !customStart || !customEnd"
+                  class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                >
+                  Apply
+                </button>
+              </div>
               <button
                 @click="exportTransactions"
                 :disabled="loadingTransactions || transactions.length === 0"
@@ -284,6 +317,55 @@ const loadingTransactions = ref(false)
 const loadingBalance = ref(false)
 const transactionsError = ref('')
 const balanceError = ref('')
+const datePreset = ref<'this_month' | 'last_month' | 'this_year' | 'last_year' | 'custom'>('this_month')
+const customStart = ref('')
+const customEnd = ref('')
+
+const getPresetRange = () => {
+  const now = new Date()
+  const start = new Date(now)
+  const end = new Date(now)
+
+  switch (datePreset.value) {
+    case 'this_month':
+      start.setDate(1)
+      start.setHours(0, 0, 0, 0)
+      end.setHours(23, 59, 59, 999)
+      break
+    case 'last_month':
+      start.setMonth(start.getMonth() - 1, 1)
+      start.setHours(0, 0, 0, 0)
+      end.setDate(0)
+      end.setHours(23, 59, 59, 999)
+      break
+    case 'this_year':
+      start.setMonth(0, 1)
+      start.setHours(0, 0, 0, 0)
+      end.setHours(23, 59, 59, 999)
+      break
+    case 'last_year':
+      start.setFullYear(start.getFullYear() - 1, 0, 1)
+      start.setHours(0, 0, 0, 0)
+      end.setFullYear(end.getFullYear() - 1, 11, 31)
+      end.setHours(23, 59, 59, 999)
+      break
+    case 'custom':
+      return null
+  }
+
+  return { start, end }
+}
+
+const applyDatePreset = () => {
+  if (datePreset.value !== 'custom') {
+    const range = getPresetRange()
+    if (range) {
+      customStart.value = range.start.toISOString().slice(0, 10)
+      customEnd.value = range.end.toISOString().slice(0, 10)
+    }
+    loadTransactions()
+  }
+}
 
 const loadTransactions = async () => {
   if (!currentUser.value) return
@@ -293,7 +375,21 @@ const loadTransactions = async () => {
   
   try {
     const headers = await getAuthHeaders()
-    const response = await fetch('/api/square/payments', { headers })
+    const params = new URLSearchParams()
+    const range = datePreset.value === 'custom'
+      ? (customStart.value && customEnd.value ? {
+          start: new Date(`${customStart.value}T00:00:00`).toISOString(),
+          end: new Date(`${customEnd.value}T23:59:59`).toISOString()
+        } : null)
+      : getPresetRange()
+
+    if (range) {
+      params.set('begin_time', range.start.toISOString())
+      params.set('end_time', range.end.toISOString())
+    }
+
+    const url = params.toString() ? `/api/square/payments?${params.toString()}` : '/api/square/payments'
+    const response = await fetch(url, { headers })
     
     if (!response.ok) {
       throw new Error('Failed to fetch transactions')
@@ -406,6 +502,7 @@ const exportTransactions = () => {
 }
 
 onMounted(() => {
+  applyDatePreset()
   loadTransactions()
   loadBalance()
 })
