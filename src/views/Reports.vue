@@ -208,6 +208,32 @@ const exportReport = async (table: { id: string; name: string }) => {
       return
     }
 
+    if (table.id === 'members') {
+      const duesResponse = await apiFetch('/api/reports/payments/by-member-year', { headers })
+      if (duesResponse.ok) {
+        const duesRows = await duesResponse.json()
+        const duesByMember = new Map<number, Record<number, number>>()
+        for (const row of Array.isArray(duesRows) ? duesRows : []) {
+          const memberId = Number(row.MemberID)
+          const year = Number(row.Year)
+          const totalPaid = Number(row.TotalPaid) || 0
+          if (!Number.isFinite(memberId) || !Number.isFinite(year)) continue
+          if (!duesByMember.has(memberId)) {
+            duesByMember.set(memberId, {})
+          }
+          duesByMember.get(memberId)[year] = totalPaid
+        }
+
+        for (const row of rows) {
+          const memberId = Number(row.MemberID)
+          const memberDues = duesByMember.get(memberId) || {}
+          Object.entries(memberDues).forEach(([year, total]) => {
+            row[`Dues_${year}`] = total
+          })
+        }
+      }
+    }
+
     const headersOrder = getColumnsForTable(table.id, rows)
     const csvContent = [
       headersOrder.map(h => `"${h}"`).join(','),
