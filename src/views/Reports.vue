@@ -3,6 +3,9 @@
     <PageBreadcrumb pageTitle="Reports" />
 
     <div class="w-full max-w-full overflow-hidden space-y-4">
+      <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+        This page is in active development and may not be accurate.
+      </div>
       <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
         <h3 class="text-base font-semibold text-gray-800 dark:text-white">Export Reports</h3>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
