@@ -222,6 +222,7 @@ interface Transaction {
   transaction_type?: string
   created_at: string
   amount_money?: { amount: number; currency: string }
+  total_money?: { amount: number; currency: string }
   processing_fee?: { amount: number; currency: string }
   status: string
   customer_name?: string
@@ -409,7 +410,10 @@ const exportTransactions = () => {
 const totalAmount = computed(() =>
   transactions.value
     .filter((txn) => txn.transaction_type !== 'refund' && txn.status === 'COMPLETED')
-    .reduce((sum, txn) => sum + (txn.amount_money?.amount || 0), 0)
+    .reduce((sum, txn) => {
+      const gross = txn.total_money?.amount ?? txn.amount_money?.amount ?? 0
+      return sum + gross
+    }, 0)
 )
 
 const totalFees = computed(() =>
