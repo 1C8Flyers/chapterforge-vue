@@ -279,6 +279,20 @@ async function getRefund(refundId) {
   }
 }
 
+async function getPayment(paymentId) {
+  if (!client || !isConfigured()) {
+    throw new Error('Square is not configured');
+  }
+
+  try {
+    const result = await client.payments.get({ paymentId });
+    return result?.data?.payment || result?.result?.payment || result?.payment || null;
+  } catch (error) {
+    console.error('[SQUARE] Error retrieving payment:', error);
+    return null;
+  }
+}
+
 module.exports = {
   isConfigured,
   getWebhookSignatureKey,
@@ -289,5 +303,6 @@ module.exports = {
   retrieveBalance,
   getCustomer,
   getOrder,
-  getRefund
+  getRefund,
+  getPayment
 };

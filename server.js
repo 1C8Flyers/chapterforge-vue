@@ -1236,6 +1236,76 @@ app.get('/api/reports/payments/by-member-year', async (req, res) => {
   }
 });
 
+// Admin: Backfill Square payments amounts/metadata for reports
+app.post('/api/square/backfill-dues', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  try {
+    if (!squareService.isConfigured()) {
+      return res.status(400).json({ error: 'Square is not configured' });
+    }
+
+    const rows = await db.getSquarePaymentsNeedingBackfill();
+    const squareFee = await db.getSquareFeeAmount(1);
+    const feeAmount = Number.isFinite(squareFee) ? squareFee : 0;
+
+    const results = [];
+    for (const row of rows) {
+      const payment = await squareService.getPayment(row.ProviderPaymentId);
+      if (!payment) {
+        results.push({ paymentId: row.ProviderPaymentId, status: 'missing' });
+        continue;
+      }
+
+      if (payment.status !== 'COMPLETED' && payment.status !== 'APPROVED') {
+        results.push({ paymentId: row.ProviderPaymentId, status: 'skipped', reason: payment.status });
+        continue;
+      }
+
+      const amountCents =
+        payment.amountMoney?.amount ||
+        payment.amount_money?.amount ||
+        0;
+      const amount = Number(amountCents) / 100;
+      const duesAmount = Math.max(0, amount - feeAmount);
+
+      let memberId = row.MemberID;
+      let year = row.Year;
+      const orderId = payment.orderId || payment.order_id;
+      if (orderId) {
+        const order = await squareService.retrieveOrder(orderId);
+        const metadata = order?.metadata || {};
+        const metaMemberId = Number(metadata.memberId) || 0;
+        const metaYear = Number(metadata.year) || 0;
+        if (metaMemberId) memberId = metaMemberId;
+        if (metaYear) year = metaYear;
+      }
+
+      await db.updatePayment(row.PaymentID, memberId, year, amount, 'square', {
+        Provider: 'square',
+        ProviderPaymentId: row.ProviderPaymentId,
+        ProviderOrderId: orderId || null,
+        ProviderStatus: payment.status,
+        DuesAmount: duesAmount,
+        SquareFee: feeAmount
+      });
+
+      if (memberId > 0) {
+        await db.refreshMemberPaymentSummary(memberId);
+      }
+
+      results.push({ paymentId: row.ProviderPaymentId, status: 'updated', amount });
+    }
+
+    res.json({ updated: results.filter(r => r.status === 'updated').length, results });
+  } catch (error) {
+    console.error('[SQUARE] Backfill error:', error);
+    res.status(500).json({ error: 'Failed to backfill Square payments' });
+  }
+});
+
 // Square Analytics - Get transactions with processing fees
 app.get('/api/square/payments', async (req, res) => {
   if (!req.user) {

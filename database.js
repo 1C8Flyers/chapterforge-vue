@@ -1003,6 +1003,23 @@ class Database {
     });
   }
 
+  getSquarePaymentsNeedingBackfill() {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT PaymentID, MemberID, Year, Amount, DuesAmount, SquareFee, ProviderPaymentId
+        FROM payments
+        WHERE Provider = 'square'
+          AND ProviderPaymentId IS NOT NULL
+          AND (Amount IS NULL OR Amount = 0 OR DuesAmount IS NULL OR DuesAmount = 0)
+        ORDER BY PaymentID ASC
+      `;
+      this.db.all(sql, [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
+
   createPayment(memberId, year, amount, method = 'manual', provider = {}) {
     return new Promise((resolve, reject) => {
       const {
