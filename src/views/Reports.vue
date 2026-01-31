@@ -169,7 +169,11 @@ const detailsError = ref('')
 
 const getColumnsForTable = (tableId: string, rows: any[]) => {
   if (rows.length === 0) return []
-  const allColumns = Object.keys(rows[0])
+  const columnSet = new Set<string>()
+  rows.forEach(row => {
+    Object.keys(row || {}).forEach(key => columnSet.add(key))
+  })
+  const allColumns = Array.from(columnSet)
   const schemaOrder = schemaColumnOrder[tableId] || []
   return [
     ...schemaOrder.filter(col => allColumns.includes(col)),
