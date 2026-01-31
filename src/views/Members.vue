@@ -240,7 +240,7 @@
           <button
             v-if="isViewOnly"
             type="button"
-            @click="isViewOnly = false"
+            @click="enterEditMode"
             class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
           >
             Edit
@@ -927,6 +927,7 @@ const openViewModal = (member: any) => {
 const closeModal = () => {
   showModal.value = false
   isViewOnly.value = false
+  isEditing.value = false
   formData.value = {
     MemberID: null,
     HouseholdID: null,
@@ -954,6 +955,11 @@ const closeModal = () => {
     Officer: 0,
     Notes: ''
   }
+}
+
+const enterEditMode = () => {
+  isViewOnly.value = false
+  isEditing.value = Boolean(formData.value.MemberID)
 }
 
 const saveMember = async () => {
