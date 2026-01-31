@@ -81,7 +81,7 @@
             </div>
           </div>
 
-          <div v-if="transactions.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div v-if="transactions.length > 0" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div class="rounded-lg border border-gray-200 bg-gradient-to-br from-blue-50 to-blue-100 p-6 dark:border-gray-700 dark:from-blue-900/20 dark:to-blue-900/10">
               <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total</p>
               <p class="text-3xl font-bold text-blue-700 dark:text-blue-400 mt-2">
@@ -97,9 +97,16 @@
             </div>
 
             <div class="rounded-lg border border-gray-200 bg-gradient-to-br from-green-50 to-green-100 p-6 dark:border-gray-700 dark:from-green-900/20 dark:to-green-900/10">
-              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Deposit</p>
+              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Gross</p>
               <p class="text-3xl font-bold text-green-700 dark:text-green-400 mt-2">
-                ${{ formatCurrency(totalDeposit) }}
+                ${{ formatCurrency(totalGross) }}
+              </p>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-gradient-to-br from-purple-50 to-purple-100 p-6 dark:border-gray-700 dark:from-purple-900/20 dark:to-purple-900/10">
+              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Net</p>
+              <p class="text-3xl font-bold text-purple-700 dark:text-purple-400 mt-2">
+                ${{ formatCurrency(totalNet) }}
               </p>
             </div>
           </div>
@@ -422,7 +429,15 @@ const totalFees = computed(() =>
     .reduce((sum, txn) => sum + (txn.processing_fee?.amount || 0), 0)
 )
 
-const totalDeposit = computed(() => totalAmount.value - totalFees.value)
+const totalGross = computed(() => totalAmount.value - totalFees.value)
+
+const totalRefunds = computed(() =>
+  transactions.value
+    .filter((txn) => txn.transaction_type === 'refund' && txn.status === 'COMPLETED')
+    .reduce((sum, txn) => sum + (txn.amount_money?.amount || 0), 0)
+)
+
+const totalNet = computed(() => totalGross.value - totalRefunds.value)
 
 const formatCurrency = (amount: number): string => {
   return (amount / 100).toFixed(2)
