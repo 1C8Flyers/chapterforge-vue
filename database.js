@@ -1330,10 +1330,9 @@ class Database {
           m.LastName,
           COALESCE(m.MemberType, 'Unknown') AS MemberType,
           p.Year,
-          SUM(COALESCE(p.DuesAmount, p.Amount)) AS TotalPaid
+          SUM(p.Amount) AS TotalPaid
         FROM payments p
         LEFT JOIN members m ON p.MemberID = m.MemberID
-        WHERE (p.Provider != 'square' OR p.ProviderStatus IN ('COMPLETED', 'APPROVED'))
         GROUP BY m.MemberID, p.Year
         ORDER BY p.Year DESC, m.LastName, m.FirstName
       `;
