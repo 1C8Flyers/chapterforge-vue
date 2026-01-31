@@ -244,8 +244,8 @@ async function getCustomer(customerId) {
   }
   
   try {
-    const { result } = await client.customers.retrieveCustomer(customerId);
-    return result.customer;
+    const result = await client.customers.get({ customerId });
+    return result?.data?.customer || result?.result?.customer || result?.customer || null;
   } catch (error) {
     console.error('[SQUARE] Error retrieving customer:', error);
     return null;
@@ -258,8 +258,7 @@ async function getOrder(orderId) {
   }
   
   try {
-    const { result } = await client.orders.retrieveOrder(orderId);
-    return result.order;
+    return await retrieveOrder(orderId);
   } catch (error) {
     console.error('[SQUARE] Error retrieving order:', error);
     return null;
@@ -272,8 +271,8 @@ async function getRefund(refundId) {
   }
   
   try {
-    const { result } = await client.refunds.getPaymentRefund(refundId);
-    return result.refund;
+    const result = await client.refunds.get({ refundId });
+    return result?.data?.refund || result?.result?.refund || result?.refund || null;
   } catch (error) {
     console.error('[SQUARE] Error retrieving refund:', error);
     return null;

@@ -1325,17 +1325,44 @@ app.get('/api/square/payments', async (req, res) => {
     // Convert BigInt values to regular numbers for JSON serialization
     const transactions = enrichedPayments.map(({ payment, customerName, orderItems, refunds, isRefund }) => {
       const amountMoney = payment.amountMoney || payment.amount_money;
+      const tipMoney = payment.tipMoney || payment.tip_money;
+      const totalMoney = payment.totalMoney || payment.total_money;
+      const approvedMoney = payment.approvedMoney || payment.approved_money;
       const processingFeeData = payment.processingFee && payment.processingFee.length > 0 
         ? payment.processingFee[0].amountMoney || payment.processingFee[0].amount_money
         : null;
+      const card = payment.cardDetails?.card;
+      const cardDetails = card ? {
+        brand: card.cardBrand || card.brand,
+        last4: card.last4,
+        exp_month: card.expMonth,
+        exp_year: card.expYear,
+        cardholder_name: card.cardholderName,
+        entry_method: payment.cardDetails?.entryMethod,
+        card_type: card.cardType
+      } : null;
+      const risk = payment.riskEvaluation || payment.risk_evaluation;
       
       return {
         id: payment.id,
         transaction_type: isRefund ? 'refund' : 'payment',
         created_at: payment.createdAt || payment.created_at,
+        updated_at: payment.updatedAt || payment.updated_at,
         amount_money: amountMoney ? {
           amount: Number(amountMoney.amount),
           currency: amountMoney.currency || amountMoney.currencyCode
+        } : null,
+        tip_money: tipMoney ? {
+          amount: Number(tipMoney.amount),
+          currency: tipMoney.currency || tipMoney.currencyCode
+        } : null,
+        total_money: totalMoney ? {
+          amount: Number(totalMoney.amount),
+          currency: totalMoney.currency || totalMoney.currencyCode
+        } : null,
+        approved_money: approvedMoney ? {
+          amount: Number(approvedMoney.amount),
+          currency: approvedMoney.currency || approvedMoney.currencyCode
         } : null,
         processing_fee: processingFeeData ? {
           amount: Number(processingFeeData.amount),
@@ -1343,6 +1370,7 @@ app.get('/api/square/payments', async (req, res) => {
         } : null,
         status: payment.status,
         payment_source_type: payment.sourceType || payment.payment_source?.type || 'unknown',
+        location_id: payment.locationId || payment.location_id,
         buyer_email: payment.buyerEmailAddress || payment.buyer_email_address,
         receipt_number: payment.receiptNumber || payment.receipt_number,
         receipt_url: payment.receiptUrl || payment.receipt_url,
@@ -1353,7 +1381,19 @@ app.get('/api/square/payments', async (req, res) => {
         refunds: refunds,
         total_refunded: refunds.reduce((sum, r) => sum + r.amount, 0),
         refund_reason: isRefund ? payment.reason : null,
-        payment_id: isRefund ? payment.paymentId : null
+        payment_id: isRefund ? payment.paymentId : null,
+        delay_duration: payment.delayDuration || payment.delay_duration,
+        delay_action: payment.delayAction || payment.delay_action,
+        delayed_until: payment.delayedUntil || payment.delayed_until,
+        billing_address: payment.billingAddress || payment.billing_address || null,
+        shipping_address: payment.shippingAddress || payment.shipping_address || null,
+        card_details: cardDetails,
+        risk_evaluation: risk ? {
+          risk_level: risk.riskLevel || risk.risk_level,
+          created_at: risk.createdAt || risk.created_at
+        } : null,
+        application_details: payment.applicationDetails || payment.application_details || null,
+        version_token: payment.versionToken || payment.version_token || null
       };
     });
     
