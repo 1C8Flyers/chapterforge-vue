@@ -66,6 +66,7 @@
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-700">
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Type</th>
                   <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Date</th>
                   <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Customer</th>
                   <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Items</th>
@@ -76,7 +77,21 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="txn in transactions" :key="txn.id" class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <tr v-for="txn in transactions" :key="txn.id" 
+                    :class="[
+                      'border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                      txn.transaction_type === 'refund' ? 'bg-red-50 dark:bg-red-900/10' : ''
+                    ]">
+                  <td class="px-4 py-3">
+                    <span :class="[
+                      'inline-block px-2 py-1 rounded text-xs font-medium',
+                      txn.transaction_type === 'refund' 
+                        ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' 
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                    ]">
+                      {{ txn.transaction_type === 'refund' ? 'REFUND' : 'PAYMENT' }}
+                    </span>
+                  </td>
                   <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
                     {{ new Date(txn.created_at).toLocaleDateString() }} {{ new Date(txn.created_at).toLocaleTimeString() }}
                   </td>
@@ -90,7 +105,10 @@
                     <div v-if="!txn.customer_name && !txn.buyer_email" class="text-gray-500 text-sm">-</div>
                   </td>
                   <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
-                    <div v-if="txn.order_items && txn.order_items.length > 0" class="text-sm">
+                    <div v-if="txn.transaction_type === 'refund' && txn.refund_reason" class="text-sm text-red-600 dark:text-red-400">
+                      {{ txn.refund_reason }}
+                    </div>
+                    <div v-else-if="txn.order_items && txn.order_items.length > 0" class="text-sm">
                       <div v-for="(item, idx) in txn.order_items" :key="idx" class="mb-1">
                         {{ item.quantity }}x {{ item.name }}
                       </div>
@@ -105,8 +123,10 @@
                   </td>
                   <td class="px-4 py-3 text-right text-gray-800 dark:text-gray-300">
                     <div v-if="txn.amount_money && txn.amount_money.amount">
-                      <div>${{ (txn.amount_money.amount / 100).toFixed(2) }}</div>
-                      <div v-if="txn.refunds && txn.refunds.length > 0" class="text-xs text-red-600 dark:text-red-400 mt-1">
+                      <div :class="txn.transaction_type === 'refund' ? 'text-red-600 dark:text-red-400 font-semibold' : ''">
+                        {{ txn.transaction_type === 'refund' ? '-' : '' }}${{ (txn.amount_money.amount / 100).toFixed(2) }}
+                      </div>
+                      <div v-if="txn.refunds && txn.refunds.length > 0 && txn.transaction_type !== 'refund'" class="text-xs text-red-600 dark:text-red-400 mt-1">
                         Refunded: -${{ (txn.total_refunded / 100).toFixed(2) }}
                       </div>
                     </div>
@@ -121,7 +141,7 @@
                   <td class="px-4 py-3">
                     <span :class="[
                       'inline-block px-2 py-1 rounded text-xs font-medium',
-                      txn.status === 'COMPLETED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                      txn.status === 'COMPLETED' || txn.status === 'APPROVED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
                     ]">
                       {{ txn.status }}
                     </span>

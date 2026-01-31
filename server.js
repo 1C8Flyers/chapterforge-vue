@@ -1253,6 +1253,12 @@ app.get('/api/square/payments', async (req, res) => {
       let customerName = null;
       let orderItems = [];
       let refunds = [];
+      const isRefund = payment.id && payment.id.startsWith('r');
+      
+      // For refunds, we don't need to fetch customer/order details
+      if (isRefund) {
+        return { payment, customerName, orderItems, refunds, isRefund };
+      }
       
       // Fetch customer name if customer ID exists
       if (payment.customerId) {
@@ -1309,13 +1315,13 @@ app.get('/api/square/payments', async (req, res) => {
         }
       }
       
-      return { payment, customerName, orderItems, refunds };
+      return { payment, customerName, orderItems, refunds, isRefund };
     }));
     
     // Transform to include only relevant fields
     // Note: Square SDK v43 uses camelCase property names
     // Convert BigInt values to regular numbers for JSON serialization
-    const transactions = enrichedPayments.map(({ payment, customerName, orderItems, refunds }) => {
+    const transactions = enrichedPayments.map(({ payment, customerName, orderItems, refunds, isRefund }) => {
       const amountMoney = payment.amountMoney || payment.amount_money;
       const processingFeeData = payment.processingFee && payment.processingFee.length > 0 
         ? payment.processingFee[0].amountMoney || payment.processingFee[0].amount_money
@@ -1323,6 +1329,7 @@ app.get('/api/square/payments', async (req, res) => {
       
       return {
         id: payment.id,
+        transaction_type: isRefund ? 'refund' : 'payment',
         created_at: payment.createdAt || payment.created_at,
         amount_money: amountMoney ? {
           amount: Number(amountMoney.amount),
@@ -1342,7 +1349,9 @@ app.get('/api/square/payments', async (req, res) => {
         customer_name: customerName,
         order_items: orderItems,
         refunds: refunds,
-        total_refunded: refunds.reduce((sum, r) => sum + r.amount, 0)
+        total_refunded: refunds.reduce((sum, r) => sum + r.amount, 0),
+        refund_reason: isRefund ? payment.reason : null,
+        payment_id: isRefund ? payment.paymentId : null
       };
     });
     

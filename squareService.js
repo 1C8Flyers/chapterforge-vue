@@ -152,16 +152,9 @@ async function listPayments(options = {}) {
       console.log('[SQUARE] Using response.data');
       payments = response.data;
       
-      // Filter out refunds - they have IDs starting with 'r' and are not payments
-      const originalCount = payments.length;
-      payments = payments.filter(p => !p.id || !p.id.startsWith('r'));
-      const filteredCount = originalCount - payments.length;
-      
-      if (filteredCount > 0) {
-        console.log('[SQUARE] Filtered out', filteredCount, 'refunds from payments list');
-      }
-      
       if (payments.length > 0) {
+        const refundCount = payments.filter(p => p.id && p.id.startsWith('r')).length;
+        console.log('[SQUARE] Found', refundCount, 'refunds in the list');
         console.log('[SQUARE] First payment keys:', Object.keys(payments[0]));
         console.log('[SQUARE] First payment sample:', {
           id: payments[0].id,
