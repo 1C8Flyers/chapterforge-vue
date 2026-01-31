@@ -624,7 +624,7 @@ app.post('/api/members', async (req, res) => {
 // API: Update member
 app.put('/api/members/:id', async (req, res) => {
   try {
-    const oldMember = await db.getMemberByID(req.params.id);
+    const oldMember = await db.getMemberById(req.params.id);
     await db.updateMember(req.params.id, req.body);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'members', req.params.id, oldMember, req.body, ipAddress, 'Updated member');
@@ -637,7 +637,7 @@ app.put('/api/members/:id', async (req, res) => {
 // API: Delete member
 app.delete('/api/members/:id', async (req, res) => {
   try {
-    const oldMember = await db.getMemberByID(req.params.id);
+    const oldMember = await db.getMemberById(req.params.id);
     await db.deleteMember(req.params.id);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'DELETE', 'members', req.params.id, oldMember, null, ipAddress, 'Deleted member');
