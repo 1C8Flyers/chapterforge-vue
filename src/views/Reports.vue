@@ -147,7 +147,7 @@ const duesByMemberReport = {
 }
 
 const schemaColumnOrder = {
-  'members': ['MemberID', 'HouseholdID', 'FirstName', 'LastName', 'EAANumber', 'Phone', 'Email', 'MemberType', 'Status', 'DuesRate', 'LastPaidYear', 'AmountDue', 'YouthProtectionExpiration', 'BackgroundCheckExpiration', 'YoungEaglePilot', 'YoungEagleVolunteer', 'EaglePilot', 'EagleFlightVolunteer', 'BoardMember', 'Officer', 'RenewalNoticeSentAt', 'RenewalNoticeSentYear', 'Notes', 'CreatedAt', 'UpdatedAt'],
+  'members': ['MemberID', 'HouseholdID', 'FirstName', 'LastName', 'EAANumber', 'Phone', 'Email', 'MemberType', 'Status', 'DuesRate', 'LastPaidYear', 'AmountDue', 'Dues_2026', 'Dues_2025', 'Dues_2024', 'Dues_2023', 'Dues_2022', 'Dues_2021', 'Dues_2020', 'Dues_2019', 'Dues_2018', 'YouthProtectionExpiration', 'BackgroundCheckExpiration', 'YoungEaglePilot', 'YoungEagleVolunteer', 'EaglePilot', 'EagleFlightVolunteer', 'BoardMember', 'Officer', 'RenewalNoticeSentAt', 'RenewalNoticeSentYear', 'Notes', 'CreatedAt', 'UpdatedAt'],
   'member_types': ['MemberTypeID', 'Name', 'DuesRate', 'SortOrder'],
   'user_allowlist': ['Email', 'Role', 'MemberID'],
   'email_templates': ['TemplateKey', 'Subject', 'HtmlBody', 'UpdatedAt']
