@@ -42,6 +42,14 @@
                 </select>
               </div>
               <div class="flex items-center gap-2 mr-2">
+                <input
+                  v-model="itemFilter"
+                  type="text"
+                  placeholder="Filter items"
+                  class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                />
+              </div>
+              <div class="flex items-center gap-2 mr-2">
                 <select
                   v-model="datePreset"
                   @change="applyDatePreset"
@@ -241,6 +249,7 @@ const statusFilter = ref<'COMPLETED' | 'FAILED' | 'ALL'>('COMPLETED')
 const datePreset = ref<'this_month' | 'last_month' | 'this_year' | 'last_year' | 'custom'>('this_month')
 const customStart = ref('')
 const customEnd = ref('')
+const itemFilter = ref('')
 
 const getPresetRange = () => {
   const now = new Date()
@@ -397,8 +406,21 @@ const exportTransactions = () => {
 }
 
 const filteredTransactions = computed(() => {
-  if (statusFilter.value === 'ALL') return transactions.value
-  return transactions.value.filter((txn) => txn.status === statusFilter.value)
+  let results = transactions.value
+
+  if (statusFilter.value !== 'ALL') {
+    results = results.filter((txn) => txn.status === statusFilter.value)
+  }
+
+  const normalizedFilter = itemFilter.value.trim().toLowerCase()
+  if (normalizedFilter) {
+    results = results.filter((txn) => {
+      const items = txn.order_items || []
+      return items.some((item) => (item.name || '').toLowerCase().includes(normalizedFilter))
+    })
+  }
+
+  return results
 })
 
 
