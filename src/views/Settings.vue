@@ -336,13 +336,22 @@
       <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Scheduled Report Emails</h3>
-          <button
-            @click="saveReportScheduleSettings"
-            class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
-            :disabled="savingReportScheduleSettings"
-          >
-            {{ savingReportScheduleSettings ? 'Saving...' : 'Save Settings' }}
-          </button>
+          <div class="flex flex-wrap gap-2">
+            <button
+              @click="sendReportNow"
+              class="rounded-lg border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-100 disabled:opacity-60 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300"
+              :disabled="sendingReportNow"
+            >
+              {{ sendingReportNow ? 'Sending...' : 'Send Report Now' }}
+            </button>
+            <button
+              @click="saveReportScheduleSettings"
+              class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
+              :disabled="savingReportScheduleSettings"
+            >
+              {{ savingReportScheduleSettings ? 'Saving...' : 'Save Settings' }}
+            </button>
+          </div>
         </div>
 
         <div class="space-y-6 text-sm text-gray-700 dark:text-gray-200">
@@ -855,6 +864,7 @@ const reportSchedule = ref({
 })
 const reportScheduleReports = ref<Array<{ id: string; name: string; description?: string }>>([])
 const savingReportScheduleSettings = ref(false)
+const sendingReportNow = ref(false)
 
 // Audit Log state
 const auditLogs = ref<AuditLog[]>([])
@@ -1014,6 +1024,39 @@ const saveReportScheduleSettings = async () => {
     }
   } finally {
     savingReportScheduleSettings.value = false
+  }
+}
+
+const sendReportNow = async () => {
+  try {
+    sendingReportNow.value = true
+    const headers = await getAuthHeaders()
+    const payload = {
+      recipients: reportSchedule.value.recipients,
+      reports: reportSchedule.value.reports,
+      datePreset: reportSchedule.value.datePreset,
+      status: reportSchedule.value.status
+    }
+    const response = await apiFetch('/api/settings/report-schedule/send-now', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to send report')
+    }
+    const result = await response.json()
+    alert(result.message || 'Report sent successfully')
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error sending report now:', error)
+      alert(error instanceof Error ? error.message : 'Failed to send report')
+    }
+  } finally {
+    sendingReportNow.value = false
   }
 }
 

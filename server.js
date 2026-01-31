@@ -1306,6 +1306,32 @@ app.post('/api/settings/report-schedule', async (req, res) => {
   }
 });
 
+app.post('/api/settings/report-schedule/send-now', async (req, res) => {
+  try {
+    const storedConfig = await getReportScheduleConfig();
+    const override = req.body || {};
+    const config = normalizeReportSchedule({
+      ...storedConfig,
+      recipients: override.recipients ?? storedConfig.recipients,
+      reports: override.reports ?? storedConfig.reports,
+      datePreset: override.datePreset ?? storedConfig.datePreset,
+      status: override.status ?? storedConfig.status,
+      enabled: true
+    });
+
+    if (config.recipients.length === 0 || config.reports.length === 0) {
+      return res.status(400).json({ error: 'Recipients and reports are required to send now' });
+    }
+
+    const timezone = (await db.getSetting('timezone')) || 'America/Chicago';
+    await runScheduledReports(config, timezone);
+
+    res.json({ success: true, message: 'Report sent successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/settings/email-template', async (req, res) => {
   try {
     const { subject, body } = req.body;
