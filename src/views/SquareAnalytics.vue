@@ -41,13 +41,22 @@
                 View Square processing fees per transaction
               </p>
             </div>
-            <button
-              @click="loadTransactions"
-              :disabled="loadingTransactions"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {{ loadingTransactions ? 'Loading...' : 'Refresh' }}
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                @click="exportTransactions"
+                :disabled="loadingTransactions || transactions.length === 0"
+                class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                Export CSV
+              </button>
+              <button
+                @click="loadTransactions"
+                :disabled="loadingTransactions"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                {{ loadingTransactions ? 'Loading...' : 'Refresh' }}
+              </button>
+            </div>
           </div>
 
           <div v-if="transactionsError" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800">
@@ -227,10 +236,27 @@ import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 
 interface Transaction {
   id: string
+  transaction_type?: string
   created_at: string
-  amount_money: { amount: number; currency: string }
+  amount_money?: { amount: number; currency: string }
   processing_fee?: { amount: number; currency: string }
   status: string
+  customer_name?: string
+  buyer_email?: string
+  receipt_number?: string
+  receipt_url?: string
+  order_items?: Array<{ name?: string; quantity?: string; total?: number }>
+  refund_reason?: string | null
+  total_refunded?: number
+  card_details?: {
+    brand?: string
+    last4?: string
+    exp_month?: number
+    exp_year?: number
+    cardholder_name?: string
+    entry_method?: string
+    card_type?: string
+  } | null
 }
 
 interface BalanceAmount {
@@ -307,6 +333,76 @@ const loadBalance = async () => {
 
 const formatBalance = (amount: number): string => {
   return (amount / 100).toFixed(2)
+}
+
+const exportTransactions = () => {
+  if (transactions.value.length === 0) return
+
+  const headers = [
+    'Type',
+    'Date',
+    'Status',
+    'Amount',
+    'Fee',
+    'Refunded',
+    'Customer Name',
+    'Customer Email',
+    'Items',
+    'Refund Reason',
+    'Receipt Number',
+    'Receipt URL',
+    'Card Brand',
+    'Card Last4'
+  ]
+
+  const rows = transactions.value.map((txn) => {
+    const createdAt = txn.created_at ? new Date(txn.created_at).toISOString() : ''
+    const amount = txn.amount_money?.amount ? (txn.amount_money.amount / 100).toFixed(2) : ''
+    const fee = txn.processing_fee?.amount ? (txn.processing_fee.amount / 100).toFixed(2) : ''
+    const refunded = txn.total_refunded ? (txn.total_refunded / 100).toFixed(2) : ''
+    const items = txn.order_items && txn.order_items.length > 0
+      ? txn.order_items.map((item) => `${item.quantity || ''}x ${item.name || ''}`.trim()).join(' | ')
+      : ''
+
+    return [
+      txn.transaction_type || 'payment',
+      createdAt,
+      txn.status || '',
+      amount,
+      fee,
+      refunded,
+      txn.customer_name || '',
+      txn.buyer_email || '',
+      items,
+      txn.refund_reason || '',
+      txn.receipt_number || '',
+      txn.receipt_url || '',
+      txn.card_details?.brand || '',
+      txn.card_details?.last4 || ''
+    ]
+  })
+
+  const escapeCell = (value: string) => {
+    const safeValue = value ?? ''
+    if (safeValue.includes('"') || safeValue.includes(',') || safeValue.includes('\n')) {
+      return `"${safeValue.replace(/"/g, '""')}"`
+    }
+    return safeValue
+  }
+
+  const csvContent = [headers, ...rows]
+    .map((row) => row.map((cell) => escapeCell(String(cell))).join(','))
+    .join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `square-transactions-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
 onMounted(() => {
