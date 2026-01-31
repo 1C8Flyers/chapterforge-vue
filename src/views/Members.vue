@@ -708,11 +708,24 @@ const filteredMembers = computed(() => {
   
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(member => 
+    const isMatch = (member: any) =>
       member.FirstName?.toLowerCase().includes(query) ||
       member.LastName?.toLowerCase().includes(query) ||
       member.Email?.toLowerCase().includes(query)
+
+    const matchingMembers = members.value.filter(isMatch)
+    const matchingHouseholds = new Set(
+      matchingMembers
+        .filter(member => member.HouseholdID)
+        .map(member => Number(member.HouseholdID))
     )
+
+    filtered = members.value.filter(member => {
+      if (member.HouseholdID && matchingHouseholds.has(Number(member.HouseholdID))) {
+        return true
+      }
+      return isMatch(member)
+    })
   }
 
   // Apply sorting
@@ -809,7 +822,14 @@ const fetchMembers = async () => {
     const headers = await getAuthHeaders()
     const response = await apiFetch('/api/members', { headers })
     if (response.ok) {
-      members.value = await response.json()
+      const data = await response.json()
+      members.value = data.map((member: any) => ({
+        ...member,
+        HouseholdID:
+          member.HouseholdID !== null && member.HouseholdID !== undefined && member.HouseholdID !== ''
+            ? Number(member.HouseholdID)
+            : null
+      }))
     } else {
       console.error('Failed to fetch members:', response.statusText)
     }
