@@ -665,6 +665,7 @@ const showModal = ref(false)
 const showImportHelp = ref(false)
 const isEditing = ref(false)
 const isViewOnly = ref(false)
+const familyPrimaryId = ref<number | null>(null)
 const searchQuery = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const expandedHouseholds = ref<Set<number>>(new Set())
@@ -880,6 +881,8 @@ const openAddModal = () => {
 
 const openAddFamilyModal = (primaryMember: any) => {
   isEditing.value = false
+  isViewOnly.value = false
+  familyPrimaryId.value = primaryMember.MemberID
   formData.value = {
     MemberID: null,
     HouseholdID: primaryMember.HouseholdID || primaryMember.MemberID,
@@ -913,6 +916,7 @@ const openAddFamilyModal = (primaryMember: any) => {
 const openEditModal = (member: any) => {
   isEditing.value = true
   isViewOnly.value = false
+  familyPrimaryId.value = null
   formData.value = { ...member }
   showModal.value = true
 }
@@ -920,6 +924,7 @@ const openEditModal = (member: any) => {
 const openViewModal = (member: any) => {
   isEditing.value = false
   isViewOnly.value = true
+  familyPrimaryId.value = null
   formData.value = { ...member }
   showModal.value = true
 }
@@ -928,6 +933,7 @@ const closeModal = () => {
   showModal.value = false
   isViewOnly.value = false
   isEditing.value = false
+  familyPrimaryId.value = null
   formData.value = {
     MemberID: null,
     HouseholdID: null,
@@ -964,8 +970,12 @@ const enterEditMode = () => {
 
 const saveMember = async () => {
   try {
-    const url = isEditing.value ? `/api/members/${formData.value.MemberID}` : '/api/members'
-    const method = isEditing.value ? 'PUT' : 'POST'
+    const isFamily = formData.value.MemberType === 'Family Member'
+    const isAddingFamily = !isEditing.value && isFamily && familyPrimaryId.value
+    const url = isAddingFamily
+      ? `/api/members/${familyPrimaryId.value}/family`
+      : (isEditing.value ? `/api/members/${formData.value.MemberID}` : '/api/members')
+    const method = isAddingFamily ? 'POST' : (isEditing.value ? 'PUT' : 'POST')
     const headers = await getAuthHeaders()
     
     const response = await fetch(url, {
