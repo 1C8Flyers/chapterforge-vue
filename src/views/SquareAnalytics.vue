@@ -81,6 +81,29 @@
             </div>
           </div>
 
+          <div v-if="transactions.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="rounded-lg border border-gray-200 bg-gradient-to-br from-blue-50 to-blue-100 p-6 dark:border-gray-700 dark:from-blue-900/20 dark:to-blue-900/10">
+              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total</p>
+              <p class="text-3xl font-bold text-blue-700 dark:text-blue-400 mt-2">
+                ${{ formatCurrency(totalAmount) }}
+              </p>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-gradient-to-br from-orange-50 to-orange-100 p-6 dark:border-gray-700 dark:from-orange-900/20 dark:to-orange-900/10">
+              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Fees</p>
+              <p class="text-3xl font-bold text-orange-700 dark:text-orange-400 mt-2">
+                ${{ formatCurrency(totalFees) }}
+              </p>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-gradient-to-br from-green-50 to-green-100 p-6 dark:border-gray-700 dark:from-green-900/20 dark:to-green-900/10">
+              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Deposit</p>
+              <p class="text-3xl font-bold text-green-700 dark:text-green-400 mt-2">
+                ${{ formatCurrency(totalDeposit) }}
+              </p>
+            </div>
+          </div>
+
           <div v-if="transactionsError" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800">
             <p class="text-red-700 dark:text-red-300">{{ transactionsError }}</p>
           </div>
@@ -189,7 +212,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -381,6 +404,20 @@ const exportTransactions = () => {
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
+}
+
+const totalAmount = computed(() =>
+  transactions.value.reduce((sum, txn) => sum + (txn.amount_money?.amount || 0), 0)
+)
+
+const totalFees = computed(() =>
+  transactions.value.reduce((sum, txn) => sum + (txn.processing_fee?.amount || 0), 0)
+)
+
+const totalDeposit = computed(() => totalAmount.value - totalFees.value)
+
+const formatCurrency = (amount: number): string => {
+  return (amount / 100).toFixed(2)
 }
 
 onMounted(() => {
