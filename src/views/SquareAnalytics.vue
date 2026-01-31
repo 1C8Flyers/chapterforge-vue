@@ -18,6 +18,17 @@
             >
               Transactions
             </button>
+            <button
+              @click="activeTab = 'charts'"
+              :class="[
+                'px-4 py-3 text-sm font-medium border-b-2 transition',
+                activeTab === 'charts'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+              ]"
+            >
+              Charts
+            </button>
           </div>
         </div>
 
@@ -202,6 +213,82 @@
           </div>
         </div>
 
+        <!-- Charts Tab -->
+        <div v-if="activeTab === 'charts'" class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Item Performance</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Top items by revenue for the selected date range
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 mr-2">
+                <select
+                  v-model="statusFilter"
+                  class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                >
+                  <option value="COMPLETED">Completed</option>
+                  <option value="FAILED">Failed</option>
+                  <option value="ALL">All</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-2">
+                <select
+                  v-model="datePreset"
+                  @change="applyDatePreset"
+                  class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                >
+                  <option value="this_month">This Month</option>
+                  <option value="last_month">Last Month</option>
+                  <option value="this_year">This Year</option>
+                  <option value="last_year">Last Year</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <input
+                  v-if="datePreset === 'custom'"
+                  v-model="customStart"
+                  type="date"
+                  class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                />
+                <input
+                  v-if="datePreset === 'custom'"
+                  v-model="customEnd"
+                  type="date"
+                  class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                />
+                <button
+                  v-if="datePreset === 'custom'"
+                  @click="loadTransactions"
+                  :disabled="loadingTransactions || !customStart || !customEnd"
+                  class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                >
+                  Apply
+                </button>
+              </div>
+              <button
+                @click="loadTransactions"
+                :disabled="loadingTransactions"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                {{ loadingTransactions ? 'Loading...' : 'Refresh' }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="loadingTransactions" class="text-center py-8">
+            <p class="text-gray-500">Loading item data...</p>
+          </div>
+
+          <div v-else-if="itemChartSeries[0].data.length === 0" class="text-center py-8">
+            <p class="text-gray-500">No item data available for this range.</p>
+          </div>
+
+          <div v-else class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
+            <VueApexCharts type="bar" height="340" :options="itemChartOptions" :series="itemChartSeries" />
+          </div>
+        </div>
+
       </div>
     </div>
   </AdminLayout>
@@ -209,6 +296,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import VueApexCharts from 'vue3-apexcharts'
 import { useAuth } from '@/composables/useAuth'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
@@ -422,6 +510,59 @@ const filteredTransactions = computed(() => {
 
   return results
 })
+
+const itemChartData = computed(() => {
+  const itemTotals = new Map<string, { revenue: number; quantity: number }>()
+
+  filteredTransactions.value
+    .filter((txn) => txn.transaction_type !== 'refund')
+    .forEach((txn) => {
+      const items = txn.order_items || []
+      items.forEach((item) => {
+        const name = item.name || 'Unnamed item'
+        const quantity = Number(item.quantity) || 0
+        const revenue = Number(item.total) || 0
+        const current = itemTotals.get(name) || { revenue: 0, quantity: 0 }
+        current.revenue += revenue
+        current.quantity += quantity
+        itemTotals.set(name, current)
+      })
+    })
+
+  return Array.from(itemTotals.entries())
+    .map(([name, totals]) => ({ name, revenue: totals.revenue, quantity: totals.quantity }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10)
+})
+
+const itemChartOptions = computed(() => ({
+  chart: {
+    toolbar: { show: false },
+    foreColor: '#64748b'
+  },
+  plotOptions: {
+    bar: { horizontal: true, borderRadius: 6 }
+  },
+  dataLabels: { enabled: false },
+  xaxis: {
+    categories: itemChartData.value.map(item => item.name),
+    labels: {
+      formatter: (value: number) => `$${(Number(value) / 100).toFixed(2)}`
+    }
+  },
+  tooltip: {
+    y: {
+      formatter: (value: number) => `$${(Number(value) / 100).toFixed(2)}`
+    }
+  }
+}))
+
+const itemChartSeries = computed(() => ([
+  {
+    name: 'Revenue',
+    data: itemChartData.value.map(item => item.revenue)
+  }
+]))
 
 
 onMounted(() => {
