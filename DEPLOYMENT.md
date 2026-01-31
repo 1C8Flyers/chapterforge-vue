@@ -12,6 +12,7 @@ This guide walks you through deploying ChapterForge to a Docker server (like ent
 - **Server**: Docker + Docker Compose, nginx proxy manager (or reverse proxy)
 - **Domain**: DNS configured (e.g., `chapterforge.eaa22.org`)
 - **Firebase**: Project created, authorized domains configured
+- **Email (SMTP)**: Required for renewal emails and scheduled report delivery
 
 ---
 
@@ -160,6 +161,7 @@ docker ps | grep chapterforge
    - ✅ Settings page accessible
    - ✅ Renewals page works
    - ✅ Reports page loads
+   - ✅ Scheduled Reports tab loads (Settings → Scheduled Reports)
 
 ---
 
@@ -186,6 +188,13 @@ docker compose up -d --build
 ```bash
 docker logs chapterforge-vue-chapterforge-1 --tail 20
 ```
+
+---
+
+## Scheduled Reports
+- Configure schedules in **Settings → Scheduled Reports**.
+- Schedules run inside the app process (no system cron required).
+- Timezone is controlled by **Settings → Timezone**.
 
 ---
 

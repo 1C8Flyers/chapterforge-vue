@@ -42,13 +42,22 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
    - Professional HTML email templates
    - Optional Square payment link embedded in renewal emails (includes configurable fee)
 
-5. **CSV Import**
+5. **Square Payment Data (optional)**
+   - Transaction list with item details and fees
+   - Status + date filters
+   - Items chart tab for top revenue items
+
+6. **Scheduled Report Emails**
+   - Configure recipients, reports, and schedule in Settings
+   - “Send Report Now” for immediate delivery
+
+7. **CSV Import**
    - Drag-and-drop CSV upload
    - Download template CSV
    - Bulk upload with validation
    - Error reporting per row
 
-6. **Live Dashboard**
+8. **Live Dashboard**
    - Real-time stats: Total members, Active members, Renewals due, Youth Protection expiring
    - System status (Database + Email health)
    - Quick action buttons
@@ -205,6 +214,11 @@ This runs the production build on `http://localhost:3000` and persists the SQLit
 - Admin-only allowlist of users who can access the app
 - Add users by email, assign role, and optionally link to a member
 
+**Scheduled Reports Tab**:
+- Select reports to email, recipients, and schedule
+- Configure date range + status filter
+- Use **Send Report Now** to email instantly
+
 ### Authentication
 - Sign in using Google via FirebaseUI.
 - Only allowlisted users can access the app (admins in `.env` are always allowed).
@@ -220,9 +234,16 @@ This runs the production build on `http://localhost:3000` and persists the SQLit
 - If Square is configured, renewal emails include a payment link with the configured fee
 - Renewal cards show the last notice sent timestamp when available
 
+### Square Payment Data (`/square-analytics`)
+- **Transactions**: Filter by status, date range, and item name
+- **Charts**: Top items by revenue for the selected range
+- **Export**: Download CSV for the filtered list
+
 ### Reports (`/reports`)
 - Export CSVs for Members, Member Types, Users, and Email Templates.
 - Click an export button to download a CSV.
+- Dues by member/year CSV export available.
+- Reports page is marked as in active development.
 
 ### Import (`/import`)
 - **Download Template**: Get CSV format with all required fields

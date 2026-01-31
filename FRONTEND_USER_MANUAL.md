@@ -1,6 +1,6 @@
 # ChapterForge Front‑End User Manual
 
-_Last updated: 2026-01-24_
+_Last updated: 2026-01-30_
 
 ## Who this is for
 This guide is for chapter staff using the ChapterForge web app to manage members, renewals, and reports.
@@ -94,6 +94,16 @@ Use this page to manage renewal emails.
 3. Send individual emails or use **Send All**.
 4. If Square is configured, renewal emails include a payment link with the configured fee.
 5. Renewal cards show the last notice sent timestamp when available.
+6. Outstanding totals show count and amount due for the selected year.
+
+---
+
+## Square Payment Data
+Admin-only page for Square transactions.
+
+- **Transactions tab**: Filter by status, date range, and item name; export CSV.
+- **Charts tab**: Top items by revenue for the selected range.
+- **Receipts**: Click receipt links when available.
 
 ---
 
@@ -113,6 +123,8 @@ Use Reports to view and download various reports and visualizations.
 ### Table Exports
 - Exports available: Members, Member Types, Users, Email Templates.
 - Click a report button to download a CSV.
+- Members export includes Dues_YYYY columns populated from dues-by-member data.
+- Reports page is marked as in active development.
 
 ---
 
@@ -152,6 +164,11 @@ Manage configuration and email templates.
 - Admin-only allowlist of users who can access the app.
 - Click **Add User** to add an email, role, and optional member link.
 - Non-allowlisted users are signed out with a “not authorized” message.
+
+### Scheduled Reports
+- Select reports to email, recipients, and schedule.
+- Choose date range and status filter.
+- Use **Send Report Now** for immediate delivery.
 
 ---
 

@@ -127,8 +127,10 @@ Response:
 ## Recent Enhancements (January 2026)
 - ✅ **Dues/Fee Separation**: Payments now split into DuesAmount and SquareFee columns
 - ✅ **Fee Configuration**: Processing fee now managed in Settings → Payment Settings (not .env)
-- ✅ **Dues Chart Fix**: Reports "Dues collected by year" now excludes fees (sums DuesAmount only)
-- ✅ **Square Analytics**: New admin-only page showing Square transactions with per-transaction processing fees and account balance
+- ✅ **Dues Chart Alignment**: Reports "Dues collected by year" aligns with exports (uses payment amounts)
+- ✅ **Square Payment Data**: Admin-only page showing Square transactions with per-transaction processing fees
+- ✅ **Items Analytics**: Charts tab for top items by revenue
+- ✅ **Scheduled Reports**: Email Square Payment Data exports on a schedule (Settings)
 - ✅ **Payment Recording**: Webhook now correctly stores DuesAmount and SquareFee when creating payment records
 
 ## Future Enhancements

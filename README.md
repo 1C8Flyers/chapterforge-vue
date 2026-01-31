@@ -27,13 +27,14 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - ✅ Raw payment editor with member reassignment and provider field management
 - ✅ Square payment links + webhook processing (optional)
 - ✅ **Dues/Fee separation** - Tracks dues amount and Square processing fees separately per transaction
-- ✅ **Square Analytics page** - Admin view of Square transactions with per-transaction fees and account balance
+- ✅ **Square Payment Data page** - Admin view of Square transactions with per-transaction fees, item details, and charts
+- ✅ **Scheduled report emails** - Configure recipients, reports, and schedule in Settings (with “Send Report Now”)
 - ✅ **Payment fee configuration** - Configurable in Settings → Payment Settings
 - ✅ Configurable member types with dues management
 - ✅ Stacked dues-by-year visualization (Family vs Individual)
-- ✅ **Dues chart excludes fees** - Reports "Dues collected by year" shows dues only
+- ✅ **Dues chart aligned with exports** - Reports "Dues collected by year" uses payment amounts
 - ✅ Dues by member/year CSV export with member type
-- ✅ Reports export links (CSV)
+- ✅ Reports export links (CSV) + members export now includes Dues_YYYY columns
 - ✅ Real-time dashboard with live statistics
 - ✅ Email renewal system with WYSIWYG editor (Quill.js)
 - ✅ Renewal notice sent tracking
@@ -56,9 +57,9 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 | **Backend** | Node.js + Express.js (API-only) |
 | **Database** | SQLite3 (file-based, no setup needed) |
 | **Routing** | Vue Router 4 (client-side) |
-| **Editor** | Quill.js 1.3.7 (WYSIWYG email templates) |
-| **Charts** | Chart.js 4.4 (dashboard visualizations) |
-| **Icons** | Font Awesome 6.4 |
+| **Editor** | Quill.js 2.x (WYSIWYG email templates) |
+| **Charts** | ApexCharts 4.x (dashboard + reports + Square analytics) |
+| **Icons** | Lucide (Vue) |
 | **Email** | Nodemailer (SMTP) |
 | **Dev Tools** | Concurrently, Nodemon, PostCSS |
 
@@ -93,6 +94,7 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `Settings.vue` → Member types, email template editor (Quill), and user allowlist
 - `Renewals.vue` → Renewal list with year filter + bulk send
 - `Reports.vue` → Export links (CSV)
+- `SquareAnalytics.vue` → Square Payment Data (transactions + items chart)
 
 **Features**:
 - Reactive data binding (no jQuery)
@@ -123,6 +125,13 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `GET /api/settings/email-template` → Get template
 - `POST /api/settings/email-template` → Save template
 - `POST /api/settings/email-template/preview` → Preview template
+- `GET /api/settings/payments` → Square fee settings
+- `POST /api/settings/payments` → Save Square fee
+- `GET /api/settings/timezone` → Get app timezone
+- `POST /api/settings/timezone` → Save app timezone
+- `GET /api/settings/report-schedule` → Get scheduled report settings
+- `POST /api/settings/report-schedule` → Save scheduled report settings
+- `POST /api/settings/report-schedule/send-now` → Send reports immediately
 - `GET /api/renewals?year=YYYY` → Renewals by year
 - `POST /api/renewals/send/:id` → Send individual email
 - `POST /api/renewals/send-bulk` → Send bulk emails
@@ -131,6 +140,12 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `GET /api/payments` → Payments list (reports)
 - `POST /api/payments/square/link` → Create Square payment link
 - `POST /api/payments/square/webhook` → Square webhook receiver
+- `GET /api/square/payments` → Square transactions for analytics
+- `GET /api/square/balance` → Square account balance
+- `POST /api/square/backfill-dues` → Backfill Square dues/fees metadata
+- `GET /api/reports/payments/summary` → Dues collected by year (chart)
+- `GET /api/reports/payments/year/:year` → Payment details by year
+- `GET /api/reports/payments/by-member-year` → Dues by member/year export
 - `GET /api/config` → Chapter name/email config
 - `GET /api/reports/:table` → CSV export data (members, member_types, user_allowlist, email_templates)
 - `GET /api/users/me` → Current user profile
@@ -203,9 +218,20 @@ CREATE TABLE payments (
   ProviderOrderId TEXT,
   ProviderInvoiceId TEXT,
   ProviderStatus TEXT,
+  ProviderLinkId TEXT,
+  DuesAmount REAL DEFAULT 0,
+  SquareFee REAL DEFAULT 0,
   CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 -- Indexes: MemberID, Year
+```
+
+### app_settings table
+```sql
+CREATE TABLE app_settings (
+  Key TEXT PRIMARY KEY,
+  Value TEXT
+);
 ```
 
 ### member_types table
