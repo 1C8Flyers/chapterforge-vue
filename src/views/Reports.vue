@@ -538,7 +538,19 @@ const paidMembersChartOptions = computed(() => ({
     bar: {
       columnWidth: '55%',
       borderRadius: 8,
-      borderRadiusApplication: 'end'
+      borderRadiusApplication: 'end',
+      dataLabels: {
+        total: {
+          enabled: true,
+          formatter: (val: number) => Math.round(val).toString(),
+          style: {
+            fontSize: '12px',
+            fontWeight: 600,
+            colors: ['#374151']
+          },
+          offsetY: -5
+        }
+      }
     }
   },
   dataLabels: { enabled: false },
