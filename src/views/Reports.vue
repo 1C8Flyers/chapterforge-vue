@@ -68,27 +68,6 @@
       <div v-if="activeTab === 'charts'" class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
         <div class="flex items-start justify-between">
           <div>
-            <h3 class="text-base font-semibold text-gray-800 dark:text-white">Dues collected by year</h3>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Click a bar to see payment details for that year.
-            </p>
-          </div>
-          <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">USD</span>
-        </div>
-
-        <div class="mt-4">
-          <div v-if="loadingSummary" class="text-sm text-gray-500">Loading dues summary...</div>
-          <div v-else-if="summaryError" class="text-sm text-red-600">{{ summaryError }}</div>
-          <div v-else-if="!paymentsSummary.length" class="text-sm text-gray-500">No payments recorded yet.</div>
-          <div v-else class="-ml-4 -mr-2">
-            <VueApexCharts type="bar" height="340" :options="chartOptions" :series="chartSeries" @click="onChartClick" />
-          </div>
-        </div>
-      </div>
-
-      <div v-if="activeTab === 'charts'" class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
-        <div class="flex items-start justify-between">
-          <div>
             <h3 class="text-base font-semibold text-gray-800 dark:text-white">Paid members by year</h3>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Counts of unique members with payments, broken out by member type.
@@ -103,6 +82,27 @@
           <div v-else-if="!paidMembersSummary.length" class="text-sm text-gray-500">No paid members recorded yet.</div>
           <div v-else class="-ml-4 -mr-2">
             <VueApexCharts type="bar" height="320" :options="paidMembersChartOptions" :series="paidMembersChartSeries" />
+          </div>
+        </div>
+      </div>
+
+      <div v-if="activeTab === 'charts'" class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="text-base font-semibold text-gray-800 dark:text-white">Dues collected by year</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Click a bar to see payment details for that year.
+            </p>
+          </div>
+          <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">USD</span>
+        </div>
+
+        <div class="mt-4">
+          <div v-if="loadingSummary" class="text-sm text-gray-500">Loading dues summary...</div>
+          <div v-else-if="summaryError" class="text-sm text-red-600">{{ summaryError }}</div>
+          <div v-else-if="!paymentsSummary.length" class="text-sm text-gray-500">No payments recorded yet.</div>
+          <div v-else class="-ml-4 -mr-2">
+            <VueApexCharts type="bar" height="340" :options="chartOptions" :series="chartSeries" @click="onChartClick" />
           </div>
         </div>
       </div>
