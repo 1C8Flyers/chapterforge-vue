@@ -1532,6 +1532,20 @@ app.get('/api/reports/payments/summary', async (req, res) => {
   }
 });
 
+// Reports endpoint - paid members summary by year
+app.get('/api/reports/payments/paid-members', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  try {
+    const rows = await db.getPaidMembersByYearSummary();
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching paid members summary:', error);
+    res.status(500).json({ error: 'Failed to fetch paid members summary' });
+  }
+});
+
 // Reports endpoint - payments details for a specific year
 app.get('/api/reports/payments/year/:year', async (req, res) => {
   if (!req.user) {

@@ -57,6 +57,27 @@
           </div>
         </div>
       </div>
+
+      <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="text-base font-semibold text-gray-800 dark:text-white">Paid members by year</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Counts of unique members with payments, broken out by member type.
+            </p>
+          </div>
+          <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-900/30 dark:text-sky-200">Members</span>
+        </div>
+
+        <div class="mt-4">
+          <div v-if="loadingPaidMembers" class="text-sm text-gray-500">Loading paid members summary...</div>
+          <div v-else-if="paidMembersError" class="text-sm text-red-600">{{ paidMembersError }}</div>
+          <div v-else-if="!paidMembersSummary.length" class="text-sm text-gray-500">No paid members recorded yet.</div>
+          <div v-else class="-ml-4 -mr-2">
+            <VueApexCharts type="bar" height="320" :options="paidMembersChartOptions" :series="paidMembersChartSeries" />
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Payment Details Modal -->
@@ -133,6 +154,7 @@ import { useAuth } from '@/composables/useAuth'
 import { getAuthHeaders, apiFetch, AuthError } from '@/utils/apiAuth'
 
 type PaymentsSummaryRow = { Year: number; Category: string; Total: number }
+type PaidMembersSummaryRow = { Year: number; Category: string; Total: number }
 
 const router = useRouter()
 const { currentUser } = useAuth()
@@ -161,6 +183,9 @@ const errorMessage = ref('')
 const paymentsSummary = ref<PaymentsSummaryRow[]>([])
 const loadingSummary = ref(false)
 const summaryError = ref('')
+const paidMembersSummary = ref<PaidMembersSummaryRow[]>([])
+const loadingPaidMembers = ref(false)
+const paidMembersError = ref('')
 const showDetailsModal = ref(false)
 const selectedYear = ref<number | null>(null)
 const paymentDetails = ref<any[]>([])
@@ -361,6 +386,38 @@ const loadPaymentsSummary = async () => {
   }
 }
 
+const loadPaidMembersSummary = async () => {
+  if (!currentUser.value) return
+  loadingPaidMembers.value = true
+  paidMembersError.value = ''
+  try {
+    const headers = await getAuthHeaders()
+    const response = await apiFetch('/api/reports/payments/paid-members', { headers })
+    if (!response.ok) {
+      throw new Error('Failed to fetch paid members summary')
+    }
+    const rows = await response.json()
+    paidMembersSummary.value = Array.isArray(rows)
+      ? rows
+        .map((row: any) => ({
+          Year: Number(row.Year),
+          Category: String(row.Category || 'Unknown'),
+          Total: Number(row.Total) || 0
+        }))
+        .filter(row => Number.isFinite(row.Year))
+      : []
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      paidMembersError.value = 'Could not load paid members summary.'
+      console.error('Error loading paid members summary:', error)
+    }
+  } finally {
+    loadingPaidMembers.value = false
+  }
+}
+
 const categoryOrder = ['Family', 'Individual', 'Unknown']
 
 const categories = computed(() => {
@@ -373,6 +430,16 @@ const categories = computed(() => {
 
 const years = computed(() => Array.from(new Set(paymentsSummary.value.map(row => row.Year))).sort((a, b) => a - b))
 
+const paidMemberCategories = computed(() => {
+  const found = Array.from(new Set(paidMembersSummary.value.map(row => row.Category)))
+  return [
+    ...categoryOrder.filter(cat => found.includes(cat)),
+    ...found.filter(cat => !categoryOrder.includes(cat))
+  ]
+})
+
+const paidMemberYears = computed(() => Array.from(new Set(paidMembersSummary.value.map(row => row.Year))).sort((a, b) => a - b))
+
 const categoryColorMap: Record<string, string> = {
   Family: '#0ea5e9',
   Individual: '#0f766e',
@@ -383,6 +450,14 @@ const chartSeries = computed(() => categories.value.map(category => ({
   name: `${category} dues`,
   data: years.value.map(year => {
     const match = paymentsSummary.value.find(row => row.Year === year && row.Category === category)
+    return match ? match.Total : 0
+  })
+})))
+
+const paidMembersChartSeries = computed(() => paidMemberCategories.value.map(category => ({
+  name: `${category} members`,
+  data: paidMemberYears.value.map(year => {
+    const match = paidMembersSummary.value.find(row => row.Year === year && row.Category === category)
     return match ? match.Total : 0
   })
 })))
@@ -450,6 +525,59 @@ const chartOptions = computed(() => ({
   }
 }))
 
+const paidMembersChartOptions = computed(() => ({
+  chart: {
+    type: 'bar',
+    fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, sans-serif',
+    toolbar: { show: false },
+    animations: { easing: 'easeinout' },
+    stacked: true
+  },
+  colors: paidMemberCategories.value.map(cat => categoryColorMap[cat] || '#0ea5e9'),
+  plotOptions: {
+    bar: {
+      columnWidth: '55%',
+      borderRadius: 8,
+      borderRadiusApplication: 'end'
+    }
+  },
+  dataLabels: { enabled: false },
+  stroke: {
+    show: true,
+    width: 3,
+    colors: ['transparent']
+  },
+  grid: {
+    strokeDashArray: 4,
+    borderColor: '#e5e7eb'
+  },
+  xaxis: {
+    categories: paidMemberYears.value.map(year => String(year)),
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+    labels: { style: { colors: '#6b7280' } }
+  },
+  yaxis: {
+    min: 0,
+    forceNiceScale: true,
+    labels: {
+      formatter: (val: number) => Math.round(val).toString(),
+      style: { colors: '#6b7280' }
+    }
+  },
+  tooltip: {
+    y: {
+      formatter: (val: number) => Math.round(val).toString()
+    }
+  },
+  legend: {
+    show: true
+  },
+  fill: {
+    opacity: 0.9
+  }
+}))
+
 const onChartClick = async (event: any, chartContext: any, config: any) => {
   const dataPointIndex = config.dataPointIndex
   if (dataPointIndex >= 0 && dataPointIndex < years.value.length) {
@@ -482,15 +610,21 @@ const loadPaymentDetails = async (year: number) => {
   }
 }
 
-onMounted(loadPaymentsSummary)
+onMounted(() => {
+  loadPaymentsSummary()
+  loadPaidMembersSummary()
+})
 
 watch(currentUser, (user) => {
   if (!user) {
     errorMessage.value = ''
     summaryError.value = ''
     paymentsSummary.value = []
+    paidMembersError.value = ''
+    paidMembersSummary.value = []
   } else {
     loadPaymentsSummary()
+    loadPaidMembersSummary()
   }
 })
 </script>
