@@ -1,6 +1,6 @@
 <template>
   <AdminLayout>
-    <PageBreadcrumb pageTitle="Payment Log" />
+    <PageBreadcrumb pageTitle="Renewal Payments" />
 
     <!-- Manual Payment Entry Form -->
     <div class="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-900 dark:bg-blue-950">

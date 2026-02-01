@@ -57,7 +57,7 @@ const router = createRouter({
       name: 'Payments',
       component: () => import('../views/Payments.vue'),
       meta: {
-        title: 'Payment Log',
+        title: 'Renewal Payments',
         requiresAuth: true
       },
     },

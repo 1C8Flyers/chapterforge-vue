@@ -246,7 +246,7 @@ const allMenuItems = [
   },
   {
     icon: PieChartIcon,
-    name: "Payments",
+    name: "Renewal Payments",
     path: "/payments",
     adminOnly: true,
   },
