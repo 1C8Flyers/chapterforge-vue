@@ -6,7 +6,35 @@
       <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
         This page is in active development and may not be accurate.
       </div>
+
       <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            @click="activeTab = 'charts'"
+            :class="[
+              'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              activeTab === 'charts'
+                ? 'bg-brand-500 text-white'
+                : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
+            ]"
+          >
+            Charts
+          </button>
+          <button
+            @click="activeTab = 'other'"
+            :class="[
+              'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              activeTab === 'other'
+                ? 'bg-brand-500 text-white'
+                : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
+            ]"
+          >
+            Other Reports
+          </button>
+        </div>
+      </div>
+
+      <div v-if="activeTab === 'other'" class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
         <h3 class="text-base font-semibold text-gray-800 dark:text-white">Export Reports</h3>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Download CSV exports of raw database tables.
@@ -37,7 +65,7 @@
         <div v-if="errorMessage" class="mt-2 text-sm text-red-600">{{ errorMessage }}</div>
       </div>
 
-      <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
+      <div v-if="activeTab === 'charts'" class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
         <div class="flex items-start justify-between">
           <div>
             <h3 class="text-base font-semibold text-gray-800 dark:text-white">Dues collected by year</h3>
@@ -58,7 +86,7 @@
         </div>
       </div>
 
-      <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
+      <div v-if="activeTab === 'charts'" class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
         <div class="flex items-start justify-between">
           <div>
             <h3 class="text-base font-semibold text-gray-800 dark:text-white">Paid members by year</h3>
@@ -170,6 +198,8 @@ const duesByMemberReport = {
   id: 'dues_by_member_year',
   name: 'Dues by Year by Member'
 }
+
+const activeTab = ref<'charts' | 'other'>('charts')
 
 const schemaColumnOrder = {
   'members': ['MemberID', 'HouseholdID', 'FirstName', 'LastName', 'EAANumber', 'Phone', 'Email', 'MemberType', 'Status', 'DuesRate', 'LastPaidYear', 'AmountDue', 'Dues_2026', 'Dues_2025', 'Dues_2024', 'Dues_2023', 'Dues_2022', 'Dues_2021', 'Dues_2020', 'Dues_2019', 'Dues_2018', 'YouthProtectionExpiration', 'BackgroundCheckExpiration', 'YoungEaglePilot', 'YoungEagleVolunteer', 'EaglePilot', 'EagleFlightVolunteer', 'BoardMember', 'Officer', 'RenewalNoticeSentAt', 'RenewalNoticeSentYear', 'Notes', 'CreatedAt', 'UpdatedAt'],
