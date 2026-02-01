@@ -20,6 +20,8 @@ ChapterForge now runs as a **Vue 3 + Vite single-page app** with an API-only Exp
 ✅ **Global Auth Error Handling**: Automatic redirect to signin on 401/403 with clear error messages
 ✅ **Payment Editor**: Full CRUD modal for editing payments with member reassignment and provider fields
 ✅ **Stacked Dues Chart**: Visualize dues by family vs individual member types with totals
+✅ **Paid Members Chart**: Counts of paid members by year with member-type stacks
+✅ **Reports Tabs**: Charts vs export-focused reports
 ✅ **Dues Export**: CSV export with member type categorization by year
 ✅ **Square Payment Data**: Admin analytics page with transactions + items chart
 ✅ **Scheduled Reports**: Configurable report emails with “Send Now”

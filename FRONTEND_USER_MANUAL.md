@@ -1,6 +1,6 @@
 # ChapterForge Front‑End User Manual
 
-_Last updated: 2026-01-30_
+_Last updated: 2026-01-31_
 
 ## Who this is for
 This guide is for chapter staff using the ChapterForge web app to manage members, renewals, and reports.
@@ -110,10 +110,18 @@ Admin-only page for Square transactions.
 ## Reports
 Use Reports to view and download various reports and visualizations.
 
+### Tabs
+- **Charts**: Visual summaries (dues + paid members).
+- **Other Reports**: CSV exports of core tables.
+
 ### Stacked Dues Chart
 - **What it shows**: Total dues collected by year, broken down by member type (Family vs Individual vs Unknown).
 - **Click to see details**: Click any bar to see breakdown details for that year.
 - **Total amount**: Displays total dues above each bar in currency format.
+
+### Paid Members by Year
+- **What it shows**: Unique members who paid in each year, broken out by member type.
+- **Totals**: Member counts shown above each stacked bar.
 
 ### Dues by Member/Year CSV Export
 - Download a detailed report of all dues paid, with columns:
@@ -125,6 +133,15 @@ Use Reports to view and download various reports and visualizations.
 - Click a report button to download a CSV.
 - Members export includes Dues_YYYY columns populated from dues-by-member data.
 - Reports page is marked as in active development.
+
+---
+
+## Renewal Payments
+Use this page to view and manually record dues payments.
+
+- **Manual entry**: Record a payment for a member with year, amount, and method.
+- **Payment history**: Filter by member, provider, or year.
+- **Refresh**: Reload the table with the latest data.
 
 ---
 

@@ -4,7 +4,7 @@ Professional EAA Chapter Management System - Modern SPA Architecture
 
 **Status**: ✅ Production-ready with Vue 3 + Vite frontend, headless API backend, TailAdmin UI
 
-_Last updated: 2026-01-30_
+_Last updated: 2026-01-31_
 
 ---
 
@@ -32,8 +32,10 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - ✅ **Payment fee configuration** - Configurable in Settings → Payment Settings
 - ✅ Configurable member types with dues management
 - ✅ Stacked dues-by-year visualization (Family vs Individual)
+- ✅ Paid members by year chart (stacked by member type)
 - ✅ **Dues chart aligned with exports** - Reports "Dues collected by year" uses payment amounts
 - ✅ Dues by member/year CSV export with member type
+- ✅ Reports page tabs (Charts + Other Reports)
 - ✅ Reports export links (CSV) + members export now includes Dues_YYYY columns
 - ✅ Real-time dashboard with live statistics
 - ✅ Email renewal system with WYSIWYG editor (Quill.js)
@@ -91,9 +93,10 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 **Views** (`src/views/`):
 - `Dashboard.vue` → Stats cards (total/active/renewals due/YP expiring)
 - `Members.vue` → Member table with search/filter + add/edit modals + payments history
+- `Payments.vue` → Renewal Payments log + manual entry
 - `Settings.vue` → Member types, email template editor (Quill), and user allowlist
 - `Renewals.vue` → Renewal list with year filter + bulk send
-- `Reports.vue` → Export links (CSV)
+- `Reports.vue` → Charts + export links (CSV)
 - `SquareAnalytics.vue` → Square Payment Data (transactions + items chart)
 
 **Features**:
@@ -144,6 +147,7 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `GET /api/square/balance` → Square account balance
 - `POST /api/square/backfill-dues` → Backfill Square dues/fees metadata
 - `GET /api/reports/payments/summary` → Dues collected by year (chart)
+- `GET /api/reports/payments/paid-members` → Paid members by year (chart)
 - `GET /api/reports/payments/year/:year` → Payment details by year
 - `GET /api/reports/payments/by-member-year` → Dues by member/year export
 - `GET /api/config` → Chapter name/email config

@@ -51,13 +51,18 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
    - Configure recipients, reports, and schedule in Settings
    - “Send Report Now” for immediate delivery
 
-7. **CSV Import**
+7. **Reports & Charts**
+   - Charts tab with dues collected by year (stacked by member type)
+   - Paid members by year chart (stacked by member type, totals shown)
+   - Other Reports tab for CSV exports
+
+8. **CSV Import**
    - Drag-and-drop CSV upload
    - Download template CSV
    - Bulk upload with validation
    - Error reporting per row
 
-8. **Live Dashboard**
+9. **Live Dashboard**
    - Real-time stats: Total members, Active members, Renewals due, Youth Protection expiring
    - System status (Database + Email health)
    - Quick action buttons

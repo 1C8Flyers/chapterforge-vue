@@ -1,6 +1,6 @@
 # Square Payments Integration Plan (Implemented)
 
-_Last updated: 2026-01-30_
+_Last updated: 2026-01-31_
 
 ## Goals
 - Accept payments via Square (card + optionally ACH) for membership dues.

@@ -43,7 +43,7 @@ Ensure your local repo has:
 ### SSH into Your Server
 ```bash
 ssh nas@enterprise.local
-cd /path/to/docker/apps  # Adjust to your docker directory
+cd /backup-8tb/Docker
 ```
 
 ### Clone Repository
@@ -100,7 +100,7 @@ FIREBASE_ADMIN_EMAILS=josh.manring@eaa22.org
 From your **local machine** (PowerShell):
 ```powershell
 cd "c:\Users\jmanr\seadrive_root\Josh\My Libraries\My Library\Code Projects\New - ChapterForge"
-scp chapterforge-vue-firebase-adminsdk-fbsvc-8e7bf9e0fd.json nas@enterprise.local:/path/to/docker/apps/chapterforge-vue/
+scp chapterforge-vue-firebase-adminsdk-fbsvc-8e7bf9e0fd.json nas@enterprise.local:/backup-8tb/Docker/chapterforge-vue/
 ```
 
 ---
@@ -178,7 +178,7 @@ git push origin main
 
 2. **On server**, pull and rebuild:
 ```bash
-cd /path/to/docker/apps/chapterforge-vue
+cd /backup-8tb/Docker/chapterforge-vue
 git pull origin main
 docker compose down
 docker compose up -d --build
