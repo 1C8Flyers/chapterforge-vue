@@ -435,7 +435,7 @@
                       @click.stop="exportSelectedPayout(payout)"
                       class="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
                     >
-                      Export Details
+                      Export Entries
                     </button>
                   </td>
                 </tr>
@@ -465,10 +465,10 @@
           </div>
           <div class="flex items-center gap-2">
             <button
-              @click="exportSelectedPayout"
+              @click="exportSelectedPayout(selectedPayout)"
               class="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
             >
-              Export Payout CSV
+              Export Entries CSV
             </button>
             <button
               @click="showPayoutModal = false"
@@ -855,67 +855,7 @@ const exportPayouts = () => {
   URL.revokeObjectURL(url)
 }
 
-const exportSelectedPayout = (payoutOverride?: Payout) => {
-  const payout = payoutOverride || selectedPayout.value
-  if (!payout) return
-  const headers = [
-    'Payout ID',
-    'Status',
-    'Type',
-    'Arrival Date',
-    'Created At',
-    'Amount',
-    'Fees',
-    'Net',
-    'Entries',
-    'Destination Type',
-    'Destination ID',
-    'End-to-End ID'
-  ]
-
-  const amount = payout.amount_money?.amount ?? 0
-  const fees = payout.fee_amount_money?.amount ?? 0
-  const net = amount - fees
-
-  const rows = [[
-    payout.id,
-    payout.status,
-    payout.type || '',
-    payout.arrival_date || '',
-    payout.created_at || '',
-    (amount / 100).toFixed(2),
-    (fees / 100).toFixed(2),
-    (net / 100).toFixed(2),
-    payout.number_of_entries ?? '',
-    payout.destination?.type || '',
-    payout.destination?.id || '',
-    payout.end_to_end_id || ''
-  ]]
-
-  const csvContent = [headers, ...rows]
-    .map(row => row.map(cell => {
-      const value = String(cell ?? '')
-      return value.includes(',') || value.includes('"') || value.includes('\n')
-        ? `"${value.replace(/"/g, '""')}"`
-        : value
-    }).join(','))
-    .join('\n')
-
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `square-payout-${payout.id}.csv`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-}
-
-const exportPayoutEntries = () => {
-  if (!selectedPayout.value || payoutEntries.value.length === 0) return
-
-  const payout = selectedPayout.value
+const downloadPayoutEntriesCsv = (payout: Payout, entries: PayoutEntry[]) => {
   const payoutAmount = payout.amount_money?.amount ?? 0
   const payoutFees = payout.fee_amount_money?.amount ?? 0
   const payoutNet = payoutAmount - payoutFees
@@ -948,7 +888,7 @@ const exportPayoutEntries = () => {
     'Payout Reference'
   ]
 
-  const rows = payoutEntries.value.map((entry) => {
+  const rows = entries.map((entry) => {
     const gross = entry.gross_amount_money?.amount ?? 0
     const fee = entry.fee_amount_money?.amount ?? 0
     const net = entry.net_amount_money?.amount ?? 0
@@ -994,11 +934,35 @@ const exportPayoutEntries = () => {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `square-payout-${selectedPayout.value.id}-entries.csv`
+  link.download = `square-payout-${payout.id}-entries.csv`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
+}
+
+const exportSelectedPayout = async (payoutOverride?: Payout) => {
+  const payout = payoutOverride || selectedPayout.value
+  if (!payout) return
+
+  try {
+    const headers = await getAuthHeaders()
+    const response = await fetch(`/api/square/payouts/${payout.id}/entries`, { headers })
+    if (!response.ok) {
+      throw new Error('Failed to fetch payout entries')
+    }
+
+    const entries = await response.json()
+    if (!Array.isArray(entries)) return
+    downloadPayoutEntriesCsv(payout, entries)
+  } catch (error) {
+    console.error('Error exporting payout entries:', error)
+  }
+}
+
+const exportPayoutEntries = () => {
+  if (!selectedPayout.value || payoutEntries.value.length === 0) return
+  downloadPayoutEntriesCsv(selectedPayout.value, payoutEntries.value)
 }
 
 
