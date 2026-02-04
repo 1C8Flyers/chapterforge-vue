@@ -384,6 +384,7 @@
                   <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Fees</th>
                   <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Entries</th>
                   <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">End-to-End ID</th>
+                  <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Export</th>
                 </tr>
               </thead>
               <tbody>
@@ -428,6 +429,14 @@
                   </td>
                   <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
                     {{ payout.end_to_end_id || '-' }}
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <button
+                      @click.stop="exportSelectedPayout(payout)"
+                      class="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                    >
+                      Export Details
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -846,10 +855,9 @@ const exportPayouts = () => {
   URL.revokeObjectURL(url)
 }
 
-const exportSelectedPayout = () => {
-  if (!selectedPayout.value) return
-
-  const payout = selectedPayout.value
+const exportSelectedPayout = (payoutOverride?: Payout) => {
+  const payout = payoutOverride || selectedPayout.value
+  if (!payout) return
   const headers = [
     'Payout ID',
     'Status',
