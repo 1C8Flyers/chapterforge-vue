@@ -234,7 +234,13 @@ async function listPayoutEntries(payoutId, options = {}) {
   }
 
   try {
-    const response = await client.payouts.listPayoutEntries({
+    const payoutsApi = client.payouts;
+    const listFn = payoutsApi.listPayoutEntries || payoutsApi.listEntries;
+    if (typeof listFn !== 'function') {
+      throw new Error('Square payouts list entries API is not available');
+    }
+
+    const response = await listFn.call(payoutsApi, {
       payoutId,
       sortOrder: options.sort_order || 'DESC',
       cursor: options.cursor,
