@@ -156,6 +156,16 @@
         </div>
 
         <div class="space-y-4 text-sm text-gray-700 dark:text-gray-200">
+          <div class="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-900/40 dark:bg-blue-900/20 dark:text-blue-200">
+            <p class="font-semibold">Setup steps</p>
+            <ol class="mt-2 list-decimal space-y-1 pl-5">
+              <li>Create a Google Cloud project and enable the Google Sheets API.</li>
+              <li>Create a service account and download the JSON key.</li>
+              <li>Share your Google Sheet with the service account email (Editor access).</li>
+              <li>Set the service account JSON on the server as GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON or GOOGLE_SHEETS_SERVICE_ACCOUNT_PATH.</li>
+              <li>Paste the spreadsheet ID below and click Save Settings, then Sync Now.</li>
+            </ol>
+          </div>
           <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
             <input
               v-model="googleSheetsSettings.enabled"
