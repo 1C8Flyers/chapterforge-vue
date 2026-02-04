@@ -173,6 +173,16 @@ app.use('/api', async (req, res, next) => {
   };
 
   const getGoogleSheetsClient = async () => {
+    const accountPath = process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_PATH || process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
+    if (accountPath) {
+      const auth = new google.auth.JWT({
+        keyFile: path.resolve(accountPath),
+        scopes: ['https://www.googleapis.com/auth/spreadsheets']
+      });
+      await auth.authorize();
+      return google.sheets({ version: 'v4', auth });
+    }
+
     const serviceAccount = loadGoogleServiceAccount();
     if (!serviceAccount) {
       throw new Error('Google Sheets service account is not configured');
