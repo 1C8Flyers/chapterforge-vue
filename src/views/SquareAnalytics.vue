@@ -350,6 +350,13 @@
               >
                 {{ loadingPayouts ? 'Loading...' : 'Refresh' }}
               </button>
+              <button
+                @click="exportPayouts"
+                :disabled="payouts.length === 0"
+                class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                Export CSV
+              </button>
             </div>
           </div>
 
@@ -485,6 +492,15 @@
 
         <div class="mt-6">
           <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90 mb-2">Entries</h4>
+          <div class="flex items-center justify-end mb-3">
+            <button
+              @click="exportPayoutEntries"
+              :disabled="payoutEntries.length === 0"
+              class="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              Export Entries CSV
+            </button>
+          </div>
           <div v-if="loadingPayoutEntries" class="text-sm text-gray-500">Loading entries...</div>
           <div v-else-if="payoutEntriesError" class="text-sm text-red-600">{{ payoutEntriesError }}</div>
           <div v-else-if="payoutEntries.length === 0" class="text-sm text-gray-500">No entries found.</div>
@@ -762,6 +778,116 @@ const formatMoney = (amount?: number, currency?: string) => {
     style: 'currency',
     currency: currency || 'USD'
   }).format(value)
+}
+
+const exportPayouts = () => {
+  if (payouts.value.length === 0) return
+
+  const headers = [
+    'Payout ID',
+    'Status',
+    'Type',
+    'Arrival Date',
+    'Created At',
+    'Amount',
+    'Fees',
+    'Net',
+    'Entries',
+    'Destination Type',
+    'Destination ID',
+    'End-to-End ID'
+  ]
+
+  const rows = payouts.value.map((payout) => {
+    const amount = payout.amount_money?.amount ?? 0
+    const fees = payout.fee_amount_money?.amount ?? 0
+    const net = amount - fees
+    return [
+      payout.id,
+      payout.status,
+      payout.type || '',
+      payout.arrival_date || '',
+      payout.created_at || '',
+      (amount / 100).toFixed(2),
+      (fees / 100).toFixed(2),
+      (net / 100).toFixed(2),
+      payout.number_of_entries ?? '',
+      payout.destination?.type || '',
+      payout.destination?.id || '',
+      payout.end_to_end_id || ''
+    ]
+  })
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(cell => {
+      const value = String(cell ?? '')
+      return value.includes(',') || value.includes('"') || value.includes('\n')
+        ? `"${value.replace(/"/g, '""')}"`
+        : value
+    }).join(','))
+    .join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `square-payouts-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+const exportPayoutEntries = () => {
+  if (!selectedPayout.value || payoutEntries.value.length === 0) return
+
+  const headers = [
+    'Payout ID',
+    'Entry ID',
+    'Type',
+    'Effective At',
+    'Gross',
+    'Fee',
+    'Net',
+    'Payment ID',
+    'Refund ID'
+  ]
+
+  const rows = payoutEntries.value.map((entry) => {
+    const gross = entry.gross_amount_money?.amount ?? 0
+    const fee = entry.fee_amount_money?.amount ?? 0
+    const net = entry.net_amount_money?.amount ?? 0
+    return [
+      selectedPayout.value?.id || entry.payout_id || '',
+      entry.id,
+      entry.type || '',
+      entry.effective_at || '',
+      (gross / 100).toFixed(2),
+      (fee / 100).toFixed(2),
+      (net / 100).toFixed(2),
+      entry.payment_id || '',
+      entry.refund_id || ''
+    ]
+  })
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(cell => {
+      const value = String(cell ?? '')
+      return value.includes(',') || value.includes('"') || value.includes('\n')
+        ? `"${value.replace(/"/g, '""')}"`
+        : value
+    }).join(','))
+    .join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `square-payout-${selectedPayout.value.id}-entries.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
 
