@@ -1902,6 +1902,58 @@ app.get('/api/square/payouts', async (req, res) => {
   }
 });
 
+// Square Analytics - Get payout entries (deposit details)
+app.get('/api/square/payouts/:id/entries', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  try {
+    const payoutId = req.params.id;
+    if (!payoutId) {
+      return res.status(400).json({ error: 'Payout ID is required' });
+    }
+
+    const entries = await squareService.listPayoutEntries(payoutId, { limit: 200 });
+    const sanitized = sanitizeForJson(entries.map((entry) => {
+      const grossMoney = entry.grossAmountMoney || entry.gross_amount_money;
+      const feeMoney = entry.feeAmountMoney || entry.fee_amount_money;
+      const netMoney = entry.netAmountMoney || entry.net_amount_money;
+      const chargeDetails = entry.typeChargeDetails || entry.type_charge_details;
+      const refundDetails = entry.typeRefundDetails || entry.type_refund_details;
+      const feeDetails = entry.typeFeeDetails || entry.type_fee_details;
+      const depositFeeDetails = entry.typeDepositFeeDetails || entry.type_deposit_fee_details;
+
+      return {
+        id: entry.id,
+        payout_id: entry.payoutId || entry.payout_id,
+        effective_at: entry.effectiveAt || entry.effective_at,
+        type: entry.type,
+        gross_amount_money: grossMoney ? {
+          amount: Number(grossMoney.amount || 0),
+          currency: grossMoney.currency || grossMoney.currencyCode
+        } : null,
+        fee_amount_money: feeMoney ? {
+          amount: Number(feeMoney.amount || 0),
+          currency: feeMoney.currency || feeMoney.currencyCode
+        } : null,
+        net_amount_money: netMoney ? {
+          amount: Number(netMoney.amount || 0),
+          currency: netMoney.currency || netMoney.currencyCode
+        } : null,
+        payment_id: chargeDetails?.paymentId || refundDetails?.paymentId || feeDetails?.paymentId || null,
+        refund_id: refundDetails?.refundId || null,
+        payout_ref: depositFeeDetails?.payoutId || null
+      };
+    }));
+
+    res.json(sanitized);
+  } catch (error) {
+    console.error('[SQUARE] Error fetching payout entries:', error);
+    res.status(500).json({ error: 'Failed to fetch payout entries from Square' });
+  }
+});
+
 function sanitizeForJson(value) {
   if (value === null || value === undefined) return value;
   if (typeof value === 'bigint') return value.toString();

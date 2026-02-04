@@ -383,7 +383,8 @@
                 <tr
                   v-for="payout in payouts"
                   :key="payout.id"
-                  class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+                  @click="openPayoutDetails(payout)"
                 >
                   <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
                     {{ payout.arrival_date || (payout.created_at ? new Date(payout.created_at).toLocaleDateString() : '-') }}
@@ -427,6 +428,105 @@
           </div>
         </div>
 
+      </div>
+    </div>
+
+    <!-- Payout Details Modal -->
+    <div
+      v-if="showPayoutModal && selectedPayout"
+      class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+      @click.self="showPayoutModal = false"
+    >
+      <div class="w-full max-w-4xl my-8 rounded-xl bg-white p-6 dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h3 class="text-xl font-semibold text-gray-800 dark:text-white/90">
+              Payout {{ selectedPayout.id }}
+            </h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {{ selectedPayout.arrival_date || (selectedPayout.created_at ? new Date(selectedPayout.created_at).toLocaleDateString() : '') }}
+            </p>
+          </div>
+          <button
+            @click="showPayoutModal = false"
+            class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm dark:border-gray-800 dark:bg-gray-800/50">
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500">Amount</span>
+              <span class="font-semibold text-gray-800 dark:text-white/90">
+                {{ formatMoney(selectedPayout.amount_money?.amount, selectedPayout.amount_money?.currency) }}
+              </span>
+            </div>
+            <div class="mt-2 flex items-center justify-between">
+              <span class="text-gray-500">Fees</span>
+              <span class="font-semibold text-gray-800 dark:text-white/90">
+                {{ formatMoney(selectedPayout.fee_amount_money?.amount, selectedPayout.fee_amount_money?.currency) }}
+              </span>
+            </div>
+          </div>
+          <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm dark:border-gray-800 dark:bg-gray-800/50">
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500">Status</span>
+              <span class="font-semibold text-gray-800 dark:text-white/90">{{ selectedPayout.status }}</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between">
+              <span class="text-gray-500">Type</span>
+              <span class="font-semibold text-gray-800 dark:text-white/90">{{ selectedPayout.type || '-' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90 mb-2">Entries</h4>
+          <div v-if="loadingPayoutEntries" class="text-sm text-gray-500">Loading entries...</div>
+          <div v-else-if="payoutEntriesError" class="text-sm text-red-600">{{ payoutEntriesError }}</div>
+          <div v-else-if="payoutEntries.length === 0" class="text-sm text-gray-500">No entries found.</div>
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Type</th>
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Effective</th>
+                  <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Gross</th>
+                  <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Fee</th>
+                  <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Net</th>
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Payment ID</th>
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Refund ID</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="entry in payoutEntries" :key="entry.id" class="border-b border-gray-200 dark:border-gray-700">
+                  <td class="px-4 py-3 text-gray-800 dark:text-gray-300">{{ entry.type || '-' }}</td>
+                  <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
+                    {{ entry.effective_at ? new Date(entry.effective_at).toLocaleString() : '-' }}
+                  </td>
+                  <td class="px-4 py-3 text-right text-gray-800 dark:text-gray-300">
+                    {{ formatMoney(entry.gross_amount_money?.amount, entry.gross_amount_money?.currency) }}
+                  </td>
+                  <td class="px-4 py-3 text-right text-gray-800 dark:text-gray-300">
+                    {{ formatMoney(entry.fee_amount_money?.amount, entry.fee_amount_money?.currency) }}
+                  </td>
+                  <td class="px-4 py-3 text-right text-gray-800 dark:text-gray-300">
+                    {{ formatMoney(entry.net_amount_money?.amount, entry.net_amount_money?.currency) }}
+                  </td>
+                  <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
+                    {{ entry.payment_id || '-' }}
+                  </td>
+                  <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
+                    {{ entry.refund_id || '-' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </AdminLayout>
@@ -479,6 +579,19 @@ interface Payout {
   end_to_end_id?: string | null
 }
 
+interface PayoutEntry {
+  id: string
+  payout_id?: string
+  effective_at?: string
+  type?: string
+  gross_amount_money?: { amount: number; currency: string } | null
+  fee_amount_money?: { amount: number; currency: string } | null
+  net_amount_money?: { amount: number; currency: string } | null
+  payment_id?: string | null
+  refund_id?: string | null
+  payout_ref?: string | null
+}
+
 const { currentUser, getAuthHeaders } = useAuth()
 
 const activeTab = ref<'transactions' | 'charts' | 'payouts'>('transactions')
@@ -488,6 +601,11 @@ const transactionsError = ref('')
 const payouts = ref<Payout[]>([])
 const loadingPayouts = ref(false)
 const payoutsError = ref('')
+const selectedPayout = ref<Payout | null>(null)
+const payoutEntries = ref<PayoutEntry[]>([])
+const loadingPayoutEntries = ref(false)
+const payoutEntriesError = ref('')
+const showPayoutModal = ref(false)
 const statusFilter = ref<'COMPLETED' | 'FAILED' | 'ALL'>('COMPLETED')
 const datePreset = ref<'this_month' | 'last_month' | 'this_year' | 'last_year' | 'custom'>('this_month')
 const customStart = ref('')
@@ -612,6 +730,28 @@ const loadPayouts = async () => {
     console.error('Error loading payouts:', error)
   } finally {
     loadingPayouts.value = false
+  }
+}
+
+const openPayoutDetails = async (payout: Payout) => {
+  selectedPayout.value = payout
+  showPayoutModal.value = true
+  payoutEntries.value = []
+  payoutEntriesError.value = ''
+  loadingPayoutEntries.value = true
+
+  try {
+    const headers = await getAuthHeaders()
+    const response = await fetch(`/api/square/payouts/${payout.id}/entries`, { headers })
+    if (!response.ok) {
+      throw new Error('Failed to fetch payout entries')
+    }
+    payoutEntries.value = await response.json()
+  } catch (error) {
+    payoutEntriesError.value = error instanceof Error ? error.message : 'Failed to load payout entries'
+    console.error('Error loading payout entries:', error)
+  } finally {
+    loadingPayoutEntries.value = false
   }
 }
 
