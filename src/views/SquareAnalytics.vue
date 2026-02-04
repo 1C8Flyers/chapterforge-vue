@@ -454,13 +454,21 @@
               {{ selectedPayout.arrival_date || (selectedPayout.created_at ? new Date(selectedPayout.created_at).toLocaleDateString() : '') }}
             </p>
           </div>
-          <button
-            @click="showPayoutModal = false"
-            class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            aria-label="Close"
-          >
-            ✕
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              @click="exportSelectedPayout"
+              class="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              Export Payout CSV
+            </button>
+            <button
+              @click="showPayoutModal = false"
+              class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
@@ -832,6 +840,64 @@ const exportPayouts = () => {
   const link = document.createElement('a')
   link.href = url
   link.download = `square-payouts-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+const exportSelectedPayout = () => {
+  if (!selectedPayout.value) return
+
+  const payout = selectedPayout.value
+  const headers = [
+    'Payout ID',
+    'Status',
+    'Type',
+    'Arrival Date',
+    'Created At',
+    'Amount',
+    'Fees',
+    'Net',
+    'Entries',
+    'Destination Type',
+    'Destination ID',
+    'End-to-End ID'
+  ]
+
+  const amount = payout.amount_money?.amount ?? 0
+  const fees = payout.fee_amount_money?.amount ?? 0
+  const net = amount - fees
+
+  const rows = [[
+    payout.id,
+    payout.status,
+    payout.type || '',
+    payout.arrival_date || '',
+    payout.created_at || '',
+    (amount / 100).toFixed(2),
+    (fees / 100).toFixed(2),
+    (net / 100).toFixed(2),
+    payout.number_of_entries ?? '',
+    payout.destination?.type || '',
+    payout.destination?.id || '',
+    payout.end_to_end_id || ''
+  ]]
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(cell => {
+      const value = String(cell ?? '')
+      return value.includes(',') || value.includes('"') || value.includes('\n')
+        ? `"${value.replace(/"/g, '""')}"`
+        : value
+    }).join(','))
+    .join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `square-payout-${payout.id}.csv`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
