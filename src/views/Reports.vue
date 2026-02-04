@@ -98,37 +98,11 @@
       </div>
 
       <div v-if="activeTab === 'spreadsheet'" class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-dark">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 class="text-base font-semibold text-gray-800 dark:text-white">Spreadsheet Editor</h3>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Inline edit members and payments. Save per row.
-            </p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button
-              @click="activeSheet = 'members'"
-              :class="[
-                'rounded-lg px-3 py-2 text-xs font-semibold transition-colors',
-                activeSheet === 'members'
-                  ? 'bg-emerald-500 text-white'
-                  : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-              ]"
-            >
-              Members
-            </button>
-            <button
-              @click="activeSheet = 'payments'"
-              :class="[
-                'rounded-lg px-3 py-2 text-xs font-semibold transition-colors',
-                activeSheet === 'payments'
-                  ? 'bg-emerald-500 text-white'
-                  : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-              ]"
-            >
-              Payments
-            </button>
-          </div>
+        <div>
+          <h3 class="text-base font-semibold text-gray-800 dark:text-white">Spreadsheet Editor</h3>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Inline edit members and review dues paid by year. Save per row.
+          </p>
         </div>
 
         <div class="mt-4">
@@ -150,7 +124,7 @@
 
           <div v-if="sheetError" class="mt-3 text-sm text-red-600">{{ sheetError }}</div>
 
-          <div v-if="activeSheet === 'members'" class="mt-4 overflow-x-auto">
+          <div class="mt-4 overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800 text-left text-xs uppercase text-gray-500">
@@ -163,6 +137,13 @@
                   <th class="px-3 py-2">Dues</th>
                   <th class="px-3 py-2">Last Paid</th>
                   <th class="px-3 py-2">Amount Due</th>
+                  <th
+                    v-for="year in sheetYears"
+                    :key="`dues-${year}`"
+                    class="px-3 py-2"
+                  >
+                    Paid {{ year }}
+                  </th>
                   <th class="px-3 py-2 text-right">Save</th>
                 </tr>
               </thead>
@@ -181,6 +162,13 @@
                   <td class="px-3 py-2"><input v-model.number="member.DuesRate" type="number" step="0.01" class="sheet-input" /></td>
                   <td class="px-3 py-2"><input v-model.number="member.LastPaidYear" type="number" class="sheet-input" /></td>
                   <td class="px-3 py-2"><input v-model.number="member.AmountDue" type="number" step="0.01" class="sheet-input" /></td>
+                  <td
+                    v-for="year in sheetYears"
+                    :key="`dues-${member.MemberID}-${year}`"
+                    class="px-3 py-2 text-gray-600"
+                  >
+                    {{ formatCurrency(member.DuesByYear?.[year] || 0) }}
+                  </td>
                   <td class="px-3 py-2 text-right">
                     <button
                       @click="saveSheetMember(member)"
@@ -188,49 +176,6 @@
                       class="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
                     >
                       {{ rowSavingMembers[member.MemberID] ? 'Saving...' : 'Save' }}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div v-if="activeSheet === 'payments'" class="mt-4 overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-800 text-left text-xs uppercase text-gray-500">
-                  <th class="px-3 py-2">ID</th>
-                  <th class="px-3 py-2">Member</th>
-                  <th class="px-3 py-2">Year</th>
-                  <th class="px-3 py-2">Amount</th>
-                  <th class="px-3 py-2">Method</th>
-                  <th class="px-3 py-2">Provider</th>
-                  <th class="px-3 py-2">Status</th>
-                  <th class="px-3 py-2">Payment ID</th>
-                  <th class="px-3 py-2 text-right">Save</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="payment in filteredSheetPayments"
-                  :key="payment.PaymentID"
-                  class="border-b border-gray-200 dark:border-gray-800"
-                >
-                  <td class="px-3 py-2 text-gray-600">{{ payment.PaymentID }}</td>
-                  <td class="px-3 py-2"><input v-model.number="payment.MemberID" type="number" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model.number="payment.Year" type="number" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model.number="payment.Amount" type="number" step="0.01" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model="payment.Method" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model="payment.Provider" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model="payment.ProviderStatus" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model="payment.ProviderPaymentId" class="sheet-input" /></td>
-                  <td class="px-3 py-2 text-right">
-                    <button
-                      @click="saveSheetPayment(payment)"
-                      :disabled="rowSavingPayments[payment.PaymentID]"
-                      class="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
-                    >
-                      {{ rowSavingPayments[payment.PaymentID] ? 'Saving...' : 'Save' }}
                     </button>
                   </td>
                 </tr>
@@ -372,14 +317,12 @@ const duesByMemberReport = {
 }
 
 const activeTab = ref<'charts' | 'other' | 'spreadsheet'>('charts')
-const activeSheet = ref<'members' | 'payments'>('members')
 const sheetSearch = ref('')
 const sheetLoading = ref(false)
 const sheetError = ref('')
 const sheetMembers = ref<any[]>([])
-const sheetPayments = ref<any[]>([])
 const rowSavingMembers = ref<Record<number, boolean>>({})
-const rowSavingPayments = ref<Record<number, boolean>>({})
+const sheetYears = ref<number[]>([])
 
 const schemaColumnOrder = {
   'members': ['MemberID', 'HouseholdID', 'FirstName', 'LastName', 'EAANumber', 'Phone', 'Email', 'MemberType', 'Status', 'DuesRate', 'LastPaidYear', 'AmountDue', 'Dues_2026', 'Dues_2025', 'Dues_2024', 'Dues_2023', 'Dues_2022', 'Dues_2021', 'Dues_2020', 'Dues_2019', 'Dues_2018', 'YouthProtectionExpiration', 'BackgroundCheckExpiration', 'YoungEaglePilot', 'YoungEagleVolunteer', 'EaglePilot', 'EagleFlightVolunteer', 'BoardMember', 'Officer', 'RenewalNoticeSentAt', 'RenewalNoticeSentYear', 'Notes', 'CreatedAt', 'UpdatedAt'],
@@ -441,34 +384,52 @@ const filteredSheetMembers = computed(() => {
   )
 })
 
-const filteredSheetPayments = computed(() => {
-  if (!sheetSearch.value) return sheetPayments.value
-  const query = sheetSearchLower.value
-  return sheetPayments.value.filter(payment =>
-    String(payment.PaymentID || '').includes(query) ||
-    String(payment.MemberID || '').includes(query) ||
-    String(payment.ProviderPaymentId || '').toLowerCase().includes(query) ||
-    String(payment.Provider || '').toLowerCase().includes(query)
-  )
-})
-
 const refreshSpreadsheet = async () => {
   if (!currentUser.value) return
   sheetLoading.value = true
   sheetError.value = ''
   try {
     const headers = await getAuthHeaders()
-    const [membersResponse, paymentsResponse] = await Promise.all([
+    const [membersResponse, duesByMemberResponse] = await Promise.all([
       apiFetch('/api/members', { headers }),
-      apiFetch('/api/payments', { headers })
+      apiFetch('/api/reports/payments/by-member-year', { headers })
     ])
 
-    if (!membersResponse.ok || !paymentsResponse.ok) {
+    if (!membersResponse.ok || !duesByMemberResponse.ok) {
       throw new Error('Failed to fetch spreadsheet data')
     }
 
-    sheetMembers.value = await membersResponse.json()
-    sheetPayments.value = await paymentsResponse.json()
+    const members = await membersResponse.json()
+    const duesRows = await duesByMemberResponse.json()
+    const duesByMember = new Map<number, Record<number, number>>()
+    const yearsSet = new Set<number>()
+
+    for (const row of Array.isArray(duesRows) ? duesRows : []) {
+      const memberId = Number(row.MemberID)
+      const year = Number(row.Year)
+      const totalPaid = Number(row.TotalPaid) || 0
+      if (!Number.isFinite(memberId) || !Number.isFinite(year)) continue
+      yearsSet.add(year)
+      if (!duesByMember.has(memberId)) {
+        duesByMember.set(memberId, {})
+      }
+      duesByMember.get(memberId)[year] = totalPaid
+    }
+
+    sheetYears.value = Array.from(yearsSet).sort((a, b) => b - a)
+
+    sheetMembers.value = (Array.isArray(members) ? members : []).map(member => {
+      const memberId = Number(member.MemberID)
+      const dues = duesByMember.get(memberId) || {}
+      const duesByYear: Record<number, number> = {}
+      sheetYears.value.forEach(year => {
+        duesByYear[year] = Number(dues[year]) || 0
+      })
+      return {
+        ...member,
+        DuesByYear: duesByYear
+      }
+    })
   } catch (error) {
     if (error instanceof AuthError) {
       router.push('/signin')
@@ -506,30 +467,6 @@ const saveSheetMember = async (member: any) => {
   }
 }
 
-const saveSheetPayment = async (payment: any) => {
-  if (!payment?.PaymentID) return
-  rowSavingPayments.value = { ...rowSavingPayments.value, [payment.PaymentID]: true }
-  try {
-    const headers = await getAuthHeaders()
-    const response = await apiFetch(`/api/payments/${payment.PaymentID}`, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify(payment)
-    })
-    if (!response.ok) {
-      throw new Error('Failed to save payment')
-    }
-  } catch (error) {
-    if (error instanceof AuthError) {
-      router.push('/signin')
-    } else {
-      alert('Failed to save payment')
-      console.error('Error saving payment:', error)
-    }
-  } finally {
-    rowSavingPayments.value = { ...rowSavingPayments.value, [payment.PaymentID]: false }
-  }
-}
 
 const exportReport = async (table: { id: string; name: string }) => {
   if (!currentUser.value) {
@@ -947,6 +884,9 @@ watch(currentUser, (user) => {
     paymentsSummary.value = []
     paidMembersError.value = ''
     paidMembersSummary.value = []
+    sheetError.value = ''
+    sheetMembers.value = []
+    sheetYears.value = []
   } else {
     loadPaymentsSummary()
     loadPaidMembersSummary()
