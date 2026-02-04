@@ -193,6 +193,76 @@ async function listPayments(options = {}) {
   }
 }
 
+async function listPayouts(options = {}) {
+  if (!client || !isConfigured()) {
+    console.error('[SQUARE] Client not configured. client:', client, 'isConfigured:', isConfigured());
+    throw new Error('Square is not configured');
+  }
+
+  try {
+    const response = await client.payouts.list({
+      locationId: options.location_id || locationId,
+      beginTime: options.begin_time,
+      endTime: options.end_time,
+      sortOrder: options.sort_order || 'DESC',
+      cursor: options.cursor,
+      limit: options.limit || 100
+    });
+
+    let payouts = [];
+    if (response.result?.payouts) {
+      payouts = response.result.payouts;
+    } else if (response.payouts) {
+      payouts = response.payouts;
+    } else if (response.data) {
+      payouts = response.data;
+    } else if (typeof response.getItems === 'function') {
+      payouts = response.getItems() || [];
+    }
+
+    return payouts;
+  } catch (error) {
+    console.error('[SQUARE] Error listing payouts from Square:', error);
+    throw error;
+  }
+}
+
+async function listPayoutEntries(payoutId, options = {}) {
+  if (!client || !isConfigured()) {
+    console.error('[SQUARE] Client not configured. client:', client, 'isConfigured:', isConfigured());
+    throw new Error('Square is not configured');
+  }
+
+  try {
+    const response = await client.payouts.listPayoutEntries({
+      payoutId,
+      sortOrder: options.sort_order || 'DESC',
+      cursor: options.cursor,
+      limit: options.limit || 200
+    });
+
+    let entries = [];
+    if (response.result?.payoutEntries) {
+      entries = response.result.payoutEntries;
+    } else if (response.result?.payout_entries) {
+      entries = response.result.payout_entries;
+    } else if (response.payoutEntries) {
+      entries = response.payoutEntries;
+    } else if (response.payout_entries) {
+      entries = response.payout_entries;
+    } else if (response.data) {
+      entries = response.data;
+    } else if (typeof response.getItems === 'function') {
+      entries = response.getItems() || [];
+    }
+
+    return entries;
+  } catch (error) {
+    console.error('[SQUARE] Error listing payout entries from Square:', error);
+    throw error;
+  }
+}
+
 async function retrieveBalance() {
   if (!client || !isConfigured()) {
     console.error('[SQUARE] Client not configured. client:', client, 'isConfigured:', isConfigured());
@@ -300,6 +370,8 @@ module.exports = {
   retrieveOrder,
   verifyWebhookSignature,
   listPayments,
+  listPayouts,
+  listPayoutEntries,
   retrieveBalance,
   getCustomer,
   getOrder,

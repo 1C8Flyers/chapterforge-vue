@@ -29,6 +29,17 @@
             >
               Charts
             </button>
+            <button
+              @click="activeTab = 'payouts'"
+              :class="[
+                'px-4 py-3 text-sm font-medium border-b-2 transition',
+                activeTab === 'payouts'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+              ]"
+            >
+              Payouts
+            </button>
           </div>
         </div>
 
@@ -289,6 +300,133 @@
           </div>
         </div>
 
+        <!-- Payouts Tab -->
+        <div v-if="activeTab === 'payouts'" class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Square Payouts</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Deposits to your bank account with fees and net totals
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2">
+                <select
+                  v-model="datePreset"
+                  @change="applyDatePreset"
+                  class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                >
+                  <option value="this_month">This Month</option>
+                  <option value="last_month">Last Month</option>
+                  <option value="this_year">This Year</option>
+                  <option value="last_year">Last Year</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <input
+                  v-if="datePreset === 'custom'"
+                  v-model="customStart"
+                  type="date"
+                  class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                />
+                <input
+                  v-if="datePreset === 'custom'"
+                  v-model="customEnd"
+                  type="date"
+                  class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700"
+                />
+                <button
+                  v-if="datePreset === 'custom'"
+                  @click="loadPayouts"
+                  :disabled="loadingPayouts || !customStart || !customEnd"
+                  class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                >
+                  Apply
+                </button>
+              </div>
+              <button
+                @click="loadPayouts"
+                :disabled="loadingPayouts"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                {{ loadingPayouts ? 'Loading...' : 'Refresh' }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="payoutsError" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800">
+            <p class="text-red-700 dark:text-red-300">{{ payoutsError }}</p>
+          </div>
+
+          <div v-if="loadingPayouts" class="text-center py-8">
+            <p class="text-gray-500">Loading payouts...</p>
+          </div>
+
+          <div v-else-if="payouts.length === 0" class="text-center py-8">
+            <p class="text-gray-500">No payouts found.</p>
+          </div>
+
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Date</th>
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Status</th>
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Type</th>
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">Destination</th>
+                  <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Amount</th>
+                  <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Fees</th>
+                  <th class="px-4 py-3 text-right text-gray-700 font-semibold dark:text-gray-300">Entries</th>
+                  <th class="px-4 py-3 text-left text-gray-700 font-semibold dark:text-gray-300">End-to-End ID</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="payout in payouts"
+                  :key="payout.id"
+                  class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                >
+                  <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
+                    {{ payout.arrival_date || (payout.created_at ? new Date(payout.created_at).toLocaleDateString() : '-') }}
+                  </td>
+                  <td class="px-4 py-3">
+                    <span :class="[
+                      'inline-block px-2 py-1 rounded text-xs font-medium',
+                      payout.status === 'PAID' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                        : payout.status === 'FAILED' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                    ]">
+                      {{ payout.status }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
+                    {{ payout.type || '-' }}
+                  </td>
+                  <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
+                    <div class="text-sm">
+                      {{ payout.destination?.type || '-' }}
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ payout.destination?.id || '' }}
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-right text-gray-800 dark:text-gray-300">
+                    {{ formatMoney(payout.amount_money?.amount, payout.amount_money?.currency) }}
+                  </td>
+                  <td class="px-4 py-3 text-right text-gray-800 dark:text-gray-300">
+                    {{ formatMoney(payout.fee_amount_money?.amount, payout.fee_amount_money?.currency) }}
+                  </td>
+                  <td class="px-4 py-3 text-right text-gray-800 dark:text-gray-300">
+                    {{ payout.number_of_entries ?? '-' }}
+                  </td>
+                  <td class="px-4 py-3 text-gray-800 dark:text-gray-300">
+                    {{ payout.end_to_end_id || '-' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
   </AdminLayout>
@@ -327,12 +465,29 @@ interface Transaction {
   } | null
 }
 
+interface Payout {
+  id: string
+  status: string
+  type?: string
+  created_at?: string
+  updated_at?: string
+  arrival_date?: string
+  amount_money?: { amount: number; currency: string }
+  fee_amount_money?: { amount: number; currency: string }
+  destination?: { type?: string; id?: string } | null
+  number_of_entries?: number | null
+  end_to_end_id?: string | null
+}
+
 const { currentUser, getAuthHeaders } = useAuth()
 
-const activeTab = ref<'transactions'>('transactions')
+const activeTab = ref<'transactions' | 'charts' | 'payouts'>('transactions')
 const transactions = ref<Transaction[]>([])
 const loadingTransactions = ref(false)
 const transactionsError = ref('')
+const payouts = ref<Payout[]>([])
+const loadingPayouts = ref(false)
+const payoutsError = ref('')
 const statusFilter = ref<'COMPLETED' | 'FAILED' | 'ALL'>('COMPLETED')
 const datePreset = ref<'this_month' | 'last_month' | 'this_year' | 'last_year' | 'custom'>('this_month')
 const customStart = ref('')
@@ -382,6 +537,7 @@ const applyDatePreset = () => {
       customEnd.value = range.end.toISOString().slice(0, 10)
     }
     loadTransactions()
+    loadPayouts()
   }
 }
 
@@ -420,6 +576,52 @@ const loadTransactions = async () => {
   } finally {
     loadingTransactions.value = false
   }
+}
+
+const loadPayouts = async () => {
+  if (!currentUser.value) return
+
+  loadingPayouts.value = true
+  payoutsError.value = ''
+
+  try {
+    const headers = await getAuthHeaders()
+    const params = new URLSearchParams()
+    const range = datePreset.value === 'custom'
+      ? (customStart.value && customEnd.value ? {
+          start: new Date(`${customStart.value}T00:00:00`).toISOString(),
+          end: new Date(`${customEnd.value}T23:59:59`).toISOString()
+        } : null)
+      : getPresetRange()
+
+    if (range) {
+      params.set('begin_time', range.start.toISOString())
+      params.set('end_time', range.end.toISOString())
+    }
+
+    const url = params.toString() ? `/api/square/payouts?${params.toString()}` : '/api/square/payouts'
+    const response = await fetch(url, { headers })
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch payouts')
+    }
+
+    payouts.value = await response.json()
+  } catch (error) {
+    payoutsError.value = error instanceof Error ? error.message : 'Failed to load payouts'
+    console.error('Error loading payouts:', error)
+  } finally {
+    loadingPayouts.value = false
+  }
+}
+
+const formatMoney = (amount?: number, currency?: string) => {
+  if (!Number.isFinite(amount)) return '-'
+  const value = Number(amount) / 100
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency || 'USD'
+  }).format(value)
 }
 
 
@@ -567,6 +769,5 @@ const itemChartSeries = computed(() => ([
 
 onMounted(() => {
   applyDatePreset()
-  loadTransactions()
 })
 </script>

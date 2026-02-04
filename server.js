@@ -1802,6 +1802,71 @@ const fetchSquareTransactions = async ({ beginTime, endTime }) => {
   return sanitizeForJson(transactions);
 };
 
+const fetchSquarePayouts = async ({ beginTime, endTime }) => {
+  const defaultBegin = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
+
+  const payouts = await squareService.listPayouts({
+    begin_time: beginTime || defaultBegin,
+    end_time: endTime || undefined,
+    sort_order: 'DESC',
+    limit: 100
+  });
+
+  const payoutDetails = await Promise.all(payouts.map(async (payout) => {
+    let entries = [];
+    try {
+      entries = await squareService.listPayoutEntries(payout.id, { limit: 200 });
+    } catch (error) {
+      console.error('[SQUARE] Error fetching payout entries:', error);
+    }
+
+    const amountMoney = payout.amountMoney || payout.amount_money;
+    const payoutFee = payout.payoutFee || payout.payout_fee || [];
+    const feeEntryTypes = new Set(['FEE', 'PROCESSING_FEE', 'DEPOSIT_FEE']);
+
+    let feeTotal = 0;
+    if (Array.isArray(entries) && entries.length > 0) {
+      feeTotal = entries
+        .filter(entry => feeEntryTypes.has(entry.type))
+        .reduce((sum, entry) => {
+          const money = entry.netAmountMoney || entry.net_amount_money || entry.grossAmountMoney || entry.gross_amount_money;
+          return sum + Number(money?.amount || 0);
+        }, 0);
+    } else if (Array.isArray(payoutFee) && payoutFee.length > 0) {
+      feeTotal = payoutFee.reduce((sum, fee) => sum + Number(fee.amountMoney?.amount || fee.amount_money?.amount || 0), 0);
+    }
+
+    return {
+      id: payout.id,
+      status: payout.status,
+      location_id: payout.locationId || payout.location_id,
+      created_at: payout.createdAt || payout.created_at,
+      updated_at: payout.updatedAt || payout.updated_at,
+      arrival_date: payout.arrivalDate || payout.arrival_date,
+      amount_money: amountMoney ? {
+        amount: Number(amountMoney.amount || 0),
+        currency: amountMoney.currency || amountMoney.currencyCode
+      } : null,
+      destination: payout.destination ? {
+        type: payout.destination.type,
+        id: payout.destination.id
+      } : null,
+      version: payout.version,
+      type: payout.type,
+      end_to_end_id: payout.endToEndId || payout.end_to_end_id || null,
+      number_of_entries: payout.numberOfEntries || payout.number_of_entries || entries.length || null,
+      payout_fee: payoutFee,
+      fee_amount_money: {
+        amount: Number(feeTotal),
+        currency: amountMoney?.currency || amountMoney?.currencyCode || 'USD'
+      },
+      fee_entries_count: entries.filter(entry => feeEntryTypes.has(entry.type)).length
+    };
+  }));
+
+  return sanitizeForJson(payoutDetails);
+};
+
 // Square Analytics - Get transactions with processing fees
 app.get('/api/square/payments', async (req, res) => {
   if (!req.user) {
@@ -1817,6 +1882,23 @@ app.get('/api/square/payments', async (req, res) => {
   } catch (error) {
     console.error('[SQUARE] Error fetching Square payments:', error);
     res.status(500).json({ error: 'Failed to fetch payments from Square' });
+  }
+});
+
+// Square Analytics - Get payouts (deposits)
+app.get('/api/square/payouts', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  try {
+    const beginTime = typeof req.query.begin_time === 'string' ? req.query.begin_time : null;
+    const endTime = typeof req.query.end_time === 'string' ? req.query.end_time : null;
+    const payouts = await fetchSquarePayouts({ beginTime, endTime });
+    res.json(payouts);
+  } catch (error) {
+    console.error('[SQUARE] Error fetching Square payouts:', error);
+    res.status(500).json({ error: 'Failed to fetch payouts from Square' });
   }
 });
 
