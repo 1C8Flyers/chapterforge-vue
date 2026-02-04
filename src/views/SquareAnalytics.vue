@@ -841,16 +841,37 @@ const exportPayouts = () => {
 const exportPayoutEntries = () => {
   if (!selectedPayout.value || payoutEntries.value.length === 0) return
 
+  const payout = selectedPayout.value
+  const payoutAmount = payout.amount_money?.amount ?? 0
+  const payoutFees = payout.fee_amount_money?.amount ?? 0
+  const payoutNet = payoutAmount - payoutFees
+
   const headers = [
     'Payout ID',
+    'Payout Status',
+    'Payout Type',
+    'Payout Created At',
+    'Payout Arrival Date',
+    'Payout Amount',
+    'Payout Fees',
+    'Payout Net',
+    'Payout Currency',
+    'Payout Entries',
+    'Destination Type',
+    'Destination ID',
+    'End-to-End ID',
     'Entry ID',
     'Type',
     'Effective At',
     'Gross',
     'Fee',
     'Net',
+    'Gross Currency',
+    'Fee Currency',
+    'Net Currency',
     'Payment ID',
-    'Refund ID'
+    'Refund ID',
+    'Payout Reference'
   ]
 
   const rows = payoutEntries.value.map((entry) => {
@@ -858,15 +879,31 @@ const exportPayoutEntries = () => {
     const fee = entry.fee_amount_money?.amount ?? 0
     const net = entry.net_amount_money?.amount ?? 0
     return [
-      selectedPayout.value?.id || entry.payout_id || '',
+      payout.id || entry.payout_id || '',
+      payout.status || '',
+      payout.type || '',
+      payout.created_at || '',
+      payout.arrival_date || '',
+      (payoutAmount / 100).toFixed(2),
+      (payoutFees / 100).toFixed(2),
+      (payoutNet / 100).toFixed(2),
+      payout.amount_money?.currency || payout.fee_amount_money?.currency || '',
+      payout.number_of_entries ?? '',
+      payout.destination?.type || '',
+      payout.destination?.id || '',
+      payout.end_to_end_id || '',
       entry.id,
       entry.type || '',
       entry.effective_at || '',
       (gross / 100).toFixed(2),
       (fee / 100).toFixed(2),
       (net / 100).toFixed(2),
+      entry.gross_amount_money?.currency || '',
+      entry.fee_amount_money?.currency || '',
+      entry.net_amount_money?.currency || '',
       entry.payment_id || '',
-      entry.refund_id || ''
+      entry.refund_id || '',
+      entry.payout_ref || ''
     ]
   })
 
