@@ -92,6 +92,9 @@ VITE_FIREBASE_APP_ID=your-app-id
 FIREBASE_SERVICE_ACCOUNT_PATH=./chapterforge-vue-firebase-adminsdk-fbsvc-8e7bf9e0fd.json
 FIREBASE_ALLOWED_DOMAINS=eaa22.org
 FIREBASE_ADMIN_EMAILS=josh.manring@eaa22.org
+
+# Google Sheets Sync (optional)
+GOOGLE_SHEETS_SERVICE_ACCOUNT_PATH=./google-service-account.json
 ```
 
 **Save file**: Ctrl+O, Enter, Ctrl+X
@@ -101,6 +104,11 @@ From your **local machine** (PowerShell):
 ```powershell
 cd "c:\Users\jmanr\seadrive_root\Josh\My Libraries\My Library\Code Projects\New - ChapterForge"
 scp chapterforge-vue-firebase-adminsdk-fbsvc-8e7bf9e0fd.json nas@enterprise.local:/backup-8tb/Docker/chapterforge-vue/
+```
+
+### Upload Google Sheets Credentials (optional)
+```powershell
+scp google-service-account.json nas@enterprise.local:/backup-8tb/Docker/chapterforge-vue/
 ```
 
 ---
@@ -195,6 +203,11 @@ docker logs chapterforge-vue-chapterforge-1 --tail 20
 - Configure schedules in **Settings → Scheduled Reports**.
 - Schedules run inside the app process (no system cron required).
 - Timezone is controlled by **Settings → Timezone**.
+
+## Google Sheets Sync (optional)
+- Share the target Google Sheet with the service account email.
+- Configure **Settings → Google Sheets** with the Spreadsheet ID.
+- Use **Sync Now** to verify data flow.
 
 ---
 

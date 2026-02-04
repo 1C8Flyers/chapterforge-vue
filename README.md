@@ -4,7 +4,7 @@ Professional EAA Chapter Management System - Modern SPA Architecture
 
 **Status**: ✅ Production-ready with Vue 3 + Vite frontend, headless API backend, TailAdmin UI
 
-_Last updated: 2026-01-31_
+_Last updated: 2026-02-04_
 
 ---
 
@@ -28,8 +28,10 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - ✅ Square payment links + webhook processing (optional)
 - ✅ **Dues/Fee separation** - Tracks dues amount and Square processing fees separately per transaction
 - ✅ **Square Payment Data page** - Admin view of Square transactions with per-transaction fees, item details, and charts
+- ✅ **Square Payouts reporting** - Payouts tab with entry details and CSV exports
 - ✅ **Scheduled report emails** - Configure recipients, reports, and schedule in Settings (with “Send Report Now”)
 - ✅ **Payment fee configuration** - Configurable in Settings → Payment Settings
+- ✅ **Google Sheets sync** - Optional auto-sync of all tables to a Google Sheet
 - ✅ Configurable member types with dues management
 - ✅ Stacked dues-by-year visualization (Family vs Individual)
 - ✅ Paid members by year chart (stacked by member type)
@@ -97,7 +99,7 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `Settings.vue` → Member types, email template editor (Quill), and user allowlist
 - `Renewals.vue` → Renewal list with year filter + bulk send
 - `Reports.vue` → Charts + export links (CSV)
-- `SquareAnalytics.vue` → Square Payment Data (transactions + items chart)
+- `SquareAnalytics.vue` → Square Payment Data (transactions + items chart + payouts)
 
 **Features**:
 - Reactive data binding (no jQuery)
@@ -145,6 +147,8 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `POST /api/payments/square/webhook` → Square webhook receiver
 - `GET /api/square/payments` → Square transactions for analytics
 - `GET /api/square/balance` → Square account balance
+- `GET /api/square/payouts` → Square payouts list
+- `GET /api/square/payouts/:id/entries` → Payout entry details
 - `POST /api/square/backfill-dues` → Backfill Square dues/fees metadata
 - `GET /api/reports/payments/summary` → Dues collected by year (chart)
 - `GET /api/reports/payments/paid-members` → Paid members by year (chart)
@@ -157,6 +161,9 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `POST /api/users` → Add allowlisted user (admin only)
 - `PUT /api/users/:email` → Update allowlisted user (admin only)
 - `DELETE /api/users/:email` → Remove allowlisted user (admin only)
+- `GET /api/settings/google-sheets` → Google Sheets settings
+- `POST /api/settings/google-sheets` → Save Google Sheets settings
+- `POST /api/settings/google-sheets/sync` → Manual Google Sheets sync
 
 **Database Helpers** (`database.js`):
 - Member CRUD operations

@@ -1,6 +1,6 @@
 # ChapterForge Front‑End User Manual
 
-_Last updated: 2026-01-31_
+_Last updated: 2026-02-04_
 
 ## Who this is for
 This guide is for chapter staff using the ChapterForge web app to manage members, renewals, and reports.
@@ -104,6 +104,7 @@ Admin-only page for Square transactions.
 - **Transactions tab**: Filter by status, date range, and item name; export CSV.
 - **Charts tab**: Top items by revenue for the selected range.
 - **Receipts**: Click receipt links when available.
+- **Payouts tab**: Bank deposits with payout entries; export entries CSV for reconciliation.
 
 ---
 
@@ -113,6 +114,7 @@ Use Reports to view and download various reports and visualizations.
 ### Tabs
 - **Charts**: Visual summaries (dues + paid members).
 - **Other Reports**: CSV exports of core tables.
+- **Spreadsheet**: Editable member/dues grid for quick review.
 
 ### Stacked Dues Chart
 - **What it shows**: Total dues collected by year, broken down by member type (Family vs Individual vs Unknown).
@@ -186,6 +188,10 @@ Manage configuration and email templates.
 - Select reports to email, recipients, and schedule.
 - Choose date range and status filter.
 - Use **Send Report Now** for immediate delivery.
+
+### Google Sheets
+- Enable sync, set the Spreadsheet ID, and (optionally) a sheet name prefix.
+- Use **Sync Now** to push the latest data on demand.
 
 ---
 

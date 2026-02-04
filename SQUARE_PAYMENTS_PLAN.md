@@ -1,6 +1,6 @@
 # Square Payments Integration Plan (Implemented)
 
-_Last updated: 2026-01-31_
+_Last updated: 2026-02-04_
 
 ## Goals
 - Accept payments via Square (card + optionally ACH) for membership dues.
@@ -132,6 +132,11 @@ Response:
 - ✅ **Items Analytics**: Charts tab for top items by revenue
 - ✅ **Scheduled Reports**: Email Square Payment Data exports on a schedule (Settings)
 - ✅ **Payment Recording**: Webhook now correctly stores DuesAmount and SquareFee when creating payment records
+
+## Recent Enhancements (February 2026)
+- ✅ **Square Payouts Tab**: Bank deposit list with status, destination, and totals
+- ✅ **Payout Details**: Entry-level breakdown per payout
+- ✅ **Payout Exports**: CSV export for payout entries from the payouts list
 
 ## Future Enhancements
 - Subscriptions for auto-renewal.

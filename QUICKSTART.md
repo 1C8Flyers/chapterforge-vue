@@ -46,6 +46,7 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
    - Transaction list with item details and fees
    - Status + date filters
    - Items chart tab for top revenue items
+   - Payouts tab with payout entries and CSV exports
 
 6. **Scheduled Report Emails**
    - Configure recipients, reports, and schedule in Settings
@@ -55,6 +56,11 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
    - Charts tab with dues collected by year (stacked by member type)
    - Paid members by year chart (stacked by member type, totals shown)
    - Other Reports tab for CSV exports
+   - Spreadsheet tab for quick editing and dues-by-year view
+
+8. **Google Sheets Sync (optional)**
+   - Sync all tables to a Google Sheet
+   - Auto-sync on changes or manual “Sync Now”
 
 8. **CSV Import**
    - Drag-and-drop CSV upload
@@ -143,6 +149,11 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
    FIREBASE_SERVICE_ACCOUNT_PATH=./your-service-account.json
    FIREBASE_ALLOWED_DOMAINS=yourdomain.org
    FIREBASE_ADMIN_EMAILS=admin1@yourdomain.org,admin2@yourdomain.org
+
+   # Google Sheets Sync (optional)
+   GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"..."}
+   # Or use a file path:
+   # GOOGLE_SHEETS_SERVICE_ACCOUNT_PATH=./google-service-account.json
    ```
    - For Gmail: Use [App Password](https://support.google.com/accounts/answer/185833)
 

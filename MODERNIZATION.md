@@ -24,7 +24,10 @@ ChapterForge now runs as a **Vue 3 + Vite single-page app** with an API-only Exp
 ✅ **Reports Tabs**: Charts vs export-focused reports
 ✅ **Dues Export**: CSV export with member type categorization by year
 ✅ **Square Payment Data**: Admin analytics page with transactions + items chart
+✅ **Square Payouts**: Payouts reporting with entry details and exports
 ✅ **Scheduled Reports**: Configurable report emails with “Send Now”
+✅ **Spreadsheet View**: Inline dues/member spreadsheet tab in Reports
+✅ **Google Sheets Sync**: Optional auto-sync of tables to Google Sheets
 
 ## Installation
 
