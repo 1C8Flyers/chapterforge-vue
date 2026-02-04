@@ -61,6 +61,17 @@
           Scheduled Reports
         </button>
         <button
+          @click="activeTab = 'google-sheets'"
+          :class="[
+            'px-4 py-3 text-sm font-medium border-b-2 transition',
+            activeTab === 'google-sheets'
+              ? 'border-brand-500 text-brand-500 dark:text-brand-400'
+              : 'border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+          ]"
+        >
+          Google Sheets
+        </button>
+        <button
           @click="activeTab = 'timezone'"
           :class="[
             'px-4 py-3 text-sm font-medium border-b-2 transition',
@@ -117,6 +128,68 @@
           <p class="text-xs text-gray-500 dark:text-gray-400">
             This timezone will be used for displaying dates and times throughout the application.
           </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Google Sheets Tab -->
+    <div v-if="activeTab === 'google-sheets'" class="space-y-6">
+      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Google Sheets Sync</h3>
+          <div class="flex items-center gap-2">
+            <button
+              @click="syncGoogleSheetsNow"
+              class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-800 dark:text-gray-200"
+              :disabled="syncingGoogleSheets || !googleSheetsSettings.enabled || !googleSheetsSettings.spreadsheetId"
+            >
+              {{ syncingGoogleSheets ? 'Syncing...' : 'Sync Now' }}
+            </button>
+            <button
+              @click="saveGoogleSheetsSettings"
+              class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
+              :disabled="savingGoogleSheetsSettings"
+            >
+              {{ savingGoogleSheetsSettings ? 'Saving...' : 'Save Settings' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-4 text-sm text-gray-700 dark:text-gray-200">
+          <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <input
+              v-model="googleSheetsSettings.enabled"
+              type="checkbox"
+              class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+            />
+            Enable sync on changes
+          </label>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Spreadsheet ID</label>
+            <input
+              v-model="googleSheetsSettings.spreadsheetId"
+              type="text"
+              placeholder="1AbC..."
+              class="mt-1 h-11 w-full max-w-2xl rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Use the spreadsheet ID from the URL. Share the sheet with the Google service account email.
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sheet name prefix (optional)</label>
+            <input
+              v-model="googleSheetsSettings.sheetPrefix"
+              type="text"
+              placeholder="ChapterForge-"
+              class="mt-1 h-11 w-full max-w-md rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Each table is written to its own tab using this prefix.
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -866,6 +939,14 @@ const reportScheduleReports = ref<Array<{ id: string; name: string; description?
 const savingReportScheduleSettings = ref(false)
 const sendingReportNow = ref(false)
 
+const googleSheetsSettings = ref({
+  enabled: false,
+  spreadsheetId: '',
+  sheetPrefix: ''
+})
+const savingGoogleSheetsSettings = ref(false)
+const syncingGoogleSheets = ref(false)
+
 // Audit Log state
 const auditLogs = ref<AuditLog[]>([])
 const loadingAuditLogs = ref(false)
@@ -990,6 +1071,27 @@ const fetchReportScheduleSettings = async () => {
   }
 }
 
+const fetchGoogleSheetsSettings = async () => {
+  try {
+    const headers = await getAuthHeaders()
+    const response = await apiFetch('/api/settings/google-sheets', { headers })
+    if (response.ok) {
+      const data = await response.json()
+      googleSheetsSettings.value = {
+        enabled: Boolean(data.enabled),
+        spreadsheetId: data.spreadsheetId || '',
+        sheetPrefix: data.sheetPrefix || ''
+      }
+    }
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching Google Sheets settings:', error)
+    }
+  }
+}
+
 const saveReportScheduleSettings = async () => {
   try {
     savingReportScheduleSettings.value = true
@@ -1024,6 +1126,57 @@ const saveReportScheduleSettings = async () => {
     }
   } finally {
     savingReportScheduleSettings.value = false
+  }
+}
+
+const saveGoogleSheetsSettings = async () => {
+  try {
+    savingGoogleSheetsSettings.value = true
+    const headers = await getAuthHeaders()
+    const response = await apiFetch('/api/settings/google-sheets', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(googleSheetsSettings.value)
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to save Google Sheets settings')
+    }
+    alert('Google Sheets settings saved')
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error saving Google Sheets settings:', error)
+      alert(error instanceof Error ? error.message : 'Failed to save Google Sheets settings')
+    }
+  } finally {
+    savingGoogleSheetsSettings.value = false
+  }
+}
+
+const syncGoogleSheetsNow = async () => {
+  try {
+    syncingGoogleSheets.value = true
+    const headers = await getAuthHeaders()
+    const response = await apiFetch('/api/settings/google-sheets/sync', {
+      method: 'POST',
+      headers
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to sync Google Sheets')
+    }
+    alert('Google Sheets sync started')
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error syncing Google Sheets:', error)
+      alert(error instanceof Error ? error.message : 'Failed to sync Google Sheets')
+    }
+  } finally {
+    syncingGoogleSheets.value = false
   }
 }
 
@@ -1438,5 +1591,6 @@ onMounted(() => {
   fetchPaymentSettings()
   fetchTimezoneSettings()
   fetchReportScheduleSettings()
+  fetchGoogleSheetsSettings()
 })
 </script>

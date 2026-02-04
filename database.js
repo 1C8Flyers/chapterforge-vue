@@ -1233,6 +1233,45 @@ class Database {
     });
   }
 
+  getTableNames() {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+        [],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve((rows || []).map(row => row.name));
+        }
+      );
+    });
+  }
+
+  getTableColumns(tableName) {
+    return new Promise((resolve, reject) => {
+      const safeName = String(tableName || '').replace(/"/g, '""');
+      this.db.all(`PRAGMA table_info("${safeName}")`, [], (err, rows) => {
+        if (err) reject(err);
+        else resolve((rows || []).map(row => row.name));
+      });
+    });
+  }
+
+  getTableRows(tableName) {
+    return new Promise((resolve, reject) => {
+      const safeName = String(tableName || '').replace(/"/g, '""');
+      this.db.all(`SELECT * FROM "${safeName}"`, [], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
+
+  async getTableData(tableName) {
+    const columns = await this.getTableColumns(tableName);
+    const rows = await this.getTableRows(tableName);
+    return { columns, rows };
+  }
+
   async getSquareFeeAmount(defaultValue = 1) {
     const stored = await this.getSetting('square_fee_amount', null);
     const envFallback = Number(process.env.SQUARE_FEE_AMOUNT || defaultValue);

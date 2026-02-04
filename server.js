@@ -5,6 +5,7 @@ const multer = require('multer');
 const { parse } = require('csv-parse/sync');
 const admin = require('firebase-admin');
 const cron = require('node-cron');
+const { google } = require('googleapis');
 require('dotenv').config();
 
 const db = require('./database');
@@ -127,6 +128,7 @@ app.use('/api', async (req, res, next) => {
   ];
 
   const REPORT_SCHEDULE_SETTING_KEY = 'report_schedule_config';
+  const GOOGLE_SHEETS_SETTING_KEY = 'google_sheets_config';
   const DEFAULT_REPORT_SCHEDULE = {
     enabled: false,
     recipients: [],
@@ -142,6 +144,137 @@ app.use('/api', async (req, res, next) => {
   const VALID_DATE_PRESETS = ['last_7_days', 'last_30_days', 'this_month', 'last_month', 'this_year', 'last_year'];
   const VALID_STATUSES = ['COMPLETED', 'FAILED', 'ALL'];
   const VALID_FREQUENCIES = ['daily', 'weekly', 'monthly'];
+
+  const DEFAULT_GOOGLE_SHEETS_CONFIG = {
+    enabled: false,
+    spreadsheetId: '',
+    sheetPrefix: ''
+  };
+
+  const normalizeGoogleSheetsConfig = (input = {}) => {
+    const merged = { ...DEFAULT_GOOGLE_SHEETS_CONFIG, ...(input || {}) };
+    return {
+      enabled: Boolean(merged.enabled),
+      spreadsheetId: typeof merged.spreadsheetId === 'string' ? merged.spreadsheetId.trim() : '',
+      sheetPrefix: typeof merged.sheetPrefix === 'string' ? merged.sheetPrefix.trim() : ''
+    };
+  };
+
+  const loadGoogleServiceAccount = () => {
+    const json = process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    const accountPath = process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_PATH || process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
+    if (json) {
+      return JSON.parse(json);
+    }
+    if (accountPath) {
+      return require(path.resolve(accountPath));
+    }
+    return null;
+  };
+
+  const getGoogleSheetsClient = async () => {
+    const serviceAccount = loadGoogleServiceAccount();
+    if (!serviceAccount) {
+      throw new Error('Google Sheets service account is not configured');
+    }
+
+    const auth = new google.auth.JWT(
+      serviceAccount.client_email,
+      null,
+      serviceAccount.private_key,
+      ['https://www.googleapis.com/auth/spreadsheets']
+    );
+    await auth.authorize();
+    return google.sheets({ version: 'v4', auth });
+  };
+
+  const getGoogleSheetsConfig = async () => {
+    const raw = await db.getSetting(GOOGLE_SHEETS_SETTING_KEY);
+    if (!raw) return { ...DEFAULT_GOOGLE_SHEETS_CONFIG };
+    try {
+      return normalizeGoogleSheetsConfig(JSON.parse(raw));
+    } catch (error) {
+      return { ...DEFAULT_GOOGLE_SHEETS_CONFIG };
+    }
+  };
+
+  const formatSheetCell = (value) => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  };
+
+  const runGoogleSheetsSync = async () => {
+    const config = await getGoogleSheetsConfig();
+    if (!config.enabled || !config.spreadsheetId) {
+      return { skipped: true };
+    }
+
+    const sheetsClient = await getGoogleSheetsClient();
+    const tables = await db.getTableNames();
+    const prefix = config.sheetPrefix || '';
+
+    const sheetResponse = await sheetsClient.spreadsheets.get({
+      spreadsheetId: config.spreadsheetId
+    });
+
+    const existingSheets = new Set(
+      (sheetResponse.data.sheets || []).map(sheet => sheet.properties?.title).filter(Boolean)
+    );
+
+    const requests = [];
+    for (const table of tables) {
+      const title = `${prefix}${table}`;
+      if (!existingSheets.has(title)) {
+        requests.push({ addSheet: { properties: { title } } });
+      }
+    }
+
+    if (requests.length > 0) {
+      await sheetsClient.spreadsheets.batchUpdate({
+        spreadsheetId: config.spreadsheetId,
+        requestBody: { requests }
+      });
+    }
+
+    for (const table of tables) {
+      const title = `${prefix}${table}`;
+      const { columns, rows } = await db.getTableData(table);
+      const values = [columns, ...rows.map(row => columns.map(column => formatSheetCell(row[column])))]
+      await sheetsClient.spreadsheets.values.clear({
+        spreadsheetId: config.spreadsheetId,
+        range: title
+      });
+      await sheetsClient.spreadsheets.values.update({
+        spreadsheetId: config.spreadsheetId,
+        range: `${title}!A1`,
+        valueInputOption: 'RAW',
+        requestBody: { values }
+      });
+    }
+
+    return { synced: true, tables: tables.length };
+  };
+
+  let googleSheetsSyncTimer = null;
+  let googleSheetsSyncRunning = false;
+  const scheduleGoogleSheetsSync = () => {
+    if (googleSheetsSyncTimer) {
+      clearTimeout(googleSheetsSyncTimer);
+    }
+
+    googleSheetsSyncTimer = setTimeout(async () => {
+      if (googleSheetsSyncRunning) return;
+      googleSheetsSyncRunning = true;
+      try {
+        await runGoogleSheetsSync();
+      } catch (error) {
+        console.error('Google Sheets sync failed:', error);
+      } finally {
+        googleSheetsSyncRunning = false;
+      }
+    }, 5000);
+  };
 
   const normalizeReportSchedule = (input = {}) => {
     const merged = { ...DEFAULT_REPORT_SCHEDULE, ...(input || {}) };
@@ -589,6 +722,9 @@ app.post('/api/members/import', upload.single('file'), async (req, res) => {
       }
     }
 
+    if (imported > 0) {
+      scheduleGoogleSheetsSync();
+    }
     res.json({ imported, errors });
   } catch (error) {
     console.error(error);
@@ -615,6 +751,7 @@ app.post('/api/members', async (req, res) => {
     const result = await db.createMember(req.body);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'CREATE', 'members', result.id, null, req.body, ipAddress, 'Created new member');
+    scheduleGoogleSheetsSync();
     res.json({ success: true, id: result.id });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -628,6 +765,7 @@ app.put('/api/members/:id', async (req, res) => {
     await db.updateMember(req.params.id, req.body);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'members', req.params.id, oldMember, req.body, ipAddress, 'Updated member');
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -641,6 +779,7 @@ app.delete('/api/members/:id', async (req, res) => {
     await db.deleteMember(req.params.id);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'DELETE', 'members', req.params.id, oldMember, null, ipAddress, 'Deleted member');
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -677,6 +816,7 @@ app.post('/api/members/:id/family', async (req, res) => {
     }
 
     const familyMember = await db.addFamilyMember(householdId, req.body);
+    scheduleGoogleSheetsSync();
     res.json(familyMember);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -687,6 +827,7 @@ app.post('/api/members/:id/family', async (req, res) => {
 app.delete('/api/members/:id/family/:familyId', async (req, res) => {
   try {
     await db.removeFamilyMember(req.params.familyId);
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -698,6 +839,7 @@ app.post('/api/members/:id/dues', async (req, res) => {
   try {
     const { year, amount } = req.body;
     await db.updateDuesPayment(req.params.id, year, amount);
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1029,6 +1171,8 @@ app.post('/api/payments/square/webhook', async (req, res) => {
       console.log('[WEBHOOK] Skipping member summary refresh - no valid memberId');
     }
 
+    scheduleGoogleSheetsSync();
+
     res.json({ received: true });
   } catch (error) {
     console.error('[WEBHOOK] Error processing webhook:', error);
@@ -1077,6 +1221,7 @@ app.post('/api/members/:id/payments', async (req, res) => {
     await db.refreshMemberPaymentSummary(memberId);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'CREATE', 'payments', result.id, null, { MemberID: memberId, Year: yearNum, Amount: amountNum, Method, DuesAmount, SquareFee }, ipAddress, 'Created manual payment');
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1127,6 +1272,7 @@ app.put('/api/payments/:id', async (req, res) => {
     }
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'payments', paymentId, payment, req.body, ipAddress, 'Updated payment');
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1149,6 +1295,7 @@ app.delete('/api/payments/:id', async (req, res) => {
     await db.refreshMemberPaymentSummary(payment.MemberID);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'DELETE', 'payments', paymentId, payment, null, ipAddress, 'Deleted payment');
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1174,6 +1321,7 @@ app.post('/api/settings/member-types', async (req, res) => {
     const result = await db.createMemberType({ Name: Name.trim(), DuesRate: Number(DuesRate) || 0, SortOrder: Number(SortOrder) || 0 });
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'CREATE', 'member_types', result.id, null, req.body, ipAddress, 'Created member type');
+    scheduleGoogleSheetsSync();
     res.json({ success: true, id: result.id });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1189,6 +1337,7 @@ app.put('/api/settings/member-types/:id', async (req, res) => {
     await db.updateMemberType(req.params.id, { Name: Name.trim(), DuesRate: Number(DuesRate) || 0, SortOrder: Number(SortOrder) || 0 });
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'member_types', req.params.id, null, req.body, ipAddress, 'Updated member type');
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1200,6 +1349,7 @@ app.delete('/api/settings/member-types/:id', async (req, res) => {
     await db.deleteMemberType(req.params.id);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'DELETE', 'member_types', req.params.id, null, null, ipAddress, 'Deleted member type');
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1241,6 +1391,7 @@ app.post('/api/settings/payments', async (req, res) => {
     await db.setSetting('square_fee_amount', fee);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'app_settings', null, { squareFeeAmount: oldValue }, { squareFeeAmount: fee }, ipAddress, 'Updated payment settings');
+    scheduleGoogleSheetsSync();
     res.json({ success: true, squareFeeAmount: fee });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1267,7 +1418,55 @@ app.post('/api/settings/timezone', async (req, res) => {
     await db.setSetting('timezone', timezone);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'app_settings', null, { timezone: oldValue }, { timezone }, ipAddress, 'Updated timezone settings');
+    scheduleGoogleSheetsSync();
     res.json({ success: true, timezone });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Google Sheets settings
+app.get('/api/settings/google-sheets', async (req, res) => {
+  try {
+    const config = await getGoogleSheetsConfig();
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings/google-sheets', async (req, res) => {
+  try {
+    const normalized = normalizeGoogleSheetsConfig(req.body || {});
+    if (normalized.enabled && !normalized.spreadsheetId) {
+      return res.status(400).json({ error: 'Spreadsheet ID is required when sync is enabled' });
+    }
+
+    const oldValue = await db.getSetting(GOOGLE_SHEETS_SETTING_KEY);
+    await db.setSetting(GOOGLE_SHEETS_SETTING_KEY, JSON.stringify(normalized));
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(
+      req.user.email,
+      'UPDATE',
+      'app_settings',
+      null,
+      { googleSheets: oldValue },
+      { googleSheets: normalized },
+      ipAddress,
+      'Updated Google Sheets settings'
+    );
+
+    scheduleGoogleSheetsSync();
+    res.json({ success: true, config: normalized });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings/google-sheets/sync', async (req, res) => {
+  try {
+    const result = await runGoogleSheetsSync();
+    res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1299,6 +1498,7 @@ app.post('/api/settings/report-schedule', async (req, res) => {
     await db.logAudit(req.user.email, 'UPDATE', 'app_settings', null, { reportSchedule: oldValue }, { reportSchedule: normalized }, ipAddress, 'Updated report schedule settings');
 
     await scheduleReportJob();
+    scheduleGoogleSheetsSync();
 
     res.json({ success: true, config: normalized, cron: cronExpression });
   } catch (error) {
@@ -1345,6 +1545,7 @@ app.post('/api/settings/email-template', async (req, res) => {
     await db.saveEmailTemplate('renewal', subject.trim(), body.trim());
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'email_templates', null, oldTemplate, { subject, body }, ipAddress, 'Updated email template');
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1443,6 +1644,7 @@ app.post('/api/users', async (req, res) => {
     });
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'CREATE', 'user_allowlist', null, null, { email: normalizedEmail, role: normalizedRole, memberId }, ipAddress, 'Added user to allowlist');
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1465,6 +1667,7 @@ app.put('/api/users/:email', async (req, res) => {
     });
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'user_allowlist', null, oldUser, { role: normalizedRole, memberId }, ipAddress, 'Updated user allowlist');
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1482,6 +1685,7 @@ app.delete('/api/users/:email', async (req, res) => {
     await db.removeUserAllowlist(normalizedEmail);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'DELETE', 'user_allowlist', null, oldUser, null, ipAddress, 'Removed user from allowlist');
+    scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
