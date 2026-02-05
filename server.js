@@ -130,6 +130,8 @@ app.use('/api', async (req, res, next) => {
   const REPORT_SCHEDULE_SETTING_KEY = 'report_schedule_config';
   const GOOGLE_SHEETS_SETTING_KEY = 'google_sheets_config';
   const GOOGLE_GROUPS_SETTING_KEY = 'google_groups_config';
+  const MEMBER_ROLE_OPTIONS_KEY = 'member_role_options';
+  const MEMBER_ACTIVITY_OPTIONS_KEY = 'member_activity_options';
   const DEFAULT_REPORT_SCHEDULE = {
     enabled: false,
     recipients: [],
@@ -158,6 +160,14 @@ app.use('/api', async (req, res, next) => {
     removeUnmatched: false,
     mappings: []
   };
+
+  const DEFAULT_MEMBER_ROLE_OPTIONS = ['BoardMember', 'Officer'];
+  const DEFAULT_MEMBER_ACTIVITY_OPTIONS = [
+    'YoungEaglePilot',
+    'YoungEagleVolunteer',
+    'EaglePilot',
+    'EagleFlightVolunteer'
+  ];
 
   const normalizeGoogleSheetsConfig = (input = {}) => {
     const merged = { ...DEFAULT_GOOGLE_SHEETS_CONFIG, ...(input || {}) };
@@ -270,6 +280,35 @@ app.use('/api', async (req, res, next) => {
       return normalizeGoogleGroupsConfig(JSON.parse(raw));
     } catch (error) {
       return { ...DEFAULT_GOOGLE_GROUPS_CONFIG };
+    }
+  };
+
+  const normalizeOptionList = (value, allowed) => {
+    const rawList = Array.isArray(value) ? value : String(value || '').split(',');
+    const normalized = rawList
+      .map(item => String(item || '').trim())
+      .filter(Boolean)
+      .filter(item => allowed.includes(item));
+    return normalized.length > 0 ? normalized : [...allowed];
+  };
+
+  const getMemberRoleOptions = async () => {
+    const raw = await db.getSetting(MEMBER_ROLE_OPTIONS_KEY);
+    if (!raw) return [...DEFAULT_MEMBER_ROLE_OPTIONS];
+    try {
+      return normalizeOptionList(JSON.parse(raw), DEFAULT_MEMBER_ROLE_OPTIONS);
+    } catch (error) {
+      return [...DEFAULT_MEMBER_ROLE_OPTIONS];
+    }
+  };
+
+  const getMemberActivityOptions = async () => {
+    const raw = await db.getSetting(MEMBER_ACTIVITY_OPTIONS_KEY);
+    if (!raw) return [...DEFAULT_MEMBER_ACTIVITY_OPTIONS];
+    try {
+      return normalizeOptionList(JSON.parse(raw), DEFAULT_MEMBER_ACTIVITY_OPTIONS);
+    } catch (error) {
+      return [...DEFAULT_MEMBER_ACTIVITY_OPTIONS];
     }
   };
 
@@ -1847,6 +1886,47 @@ app.post('/api/settings/google-groups/sync', async (req, res) => {
   try {
     const result = await runGoogleGroupsSync();
     res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Member role/activity options
+app.get('/api/settings/member-options', async (req, res) => {
+  try {
+    const roles = await getMemberRoleOptions();
+    const activities = await getMemberActivityOptions();
+    res.json({ roles, activities });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings/member-options', async (req, res) => {
+  try {
+    const roles = normalizeOptionList(req.body?.roles, DEFAULT_MEMBER_ROLE_OPTIONS);
+    const activities = normalizeOptionList(req.body?.activities, DEFAULT_MEMBER_ACTIVITY_OPTIONS);
+
+    const oldRoles = await db.getSetting(MEMBER_ROLE_OPTIONS_KEY);
+    const oldActivities = await db.getSetting(MEMBER_ACTIVITY_OPTIONS_KEY);
+    await db.setSetting(MEMBER_ROLE_OPTIONS_KEY, JSON.stringify(roles));
+    await db.setSetting(MEMBER_ACTIVITY_OPTIONS_KEY, JSON.stringify(activities));
+
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(
+      req.user.email,
+      'UPDATE',
+      'app_settings',
+      null,
+      { roles: oldRoles, activities: oldActivities },
+      { roles, activities },
+      ipAddress,
+      'Updated member role/activity options'
+    );
+
+    scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
+    res.json({ success: true, roles, activities });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

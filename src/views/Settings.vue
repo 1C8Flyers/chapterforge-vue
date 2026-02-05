@@ -666,6 +666,56 @@
           </button>
         </div>
 
+        <div class="mb-6 grid gap-6 lg:grid-cols-2">
+          <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.02]">
+            <div class="mb-3 flex items-center justify-between">
+              <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">Roles</h4>
+              <button
+                type="button"
+                class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                @click="addRoleOption"
+              >
+                Add Role
+              </button>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <span
+                v-for="role in googleGroupRoleOptions"
+                :key="role.value"
+                class="flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              >
+                {{ role.label }}
+                <button type="button" class="text-gray-400 hover:text-red-500" @click="removeRoleOption(role.value)">×</button>
+              </span>
+              <span v-if="googleGroupRoleOptions.length === 0" class="text-xs text-gray-400">No roles configured</span>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.02]">
+            <div class="mb-3 flex items-center justify-between">
+              <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">Activities</h4>
+              <button
+                type="button"
+                class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                @click="addActivityOption"
+              >
+                Add Activity
+              </button>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <span
+                v-for="activity in googleGroupActivityOptions"
+                :key="activity.value"
+                class="flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              >
+                {{ activity.label }}
+                <button type="button" class="text-gray-400 hover:text-red-500" @click="removeActivityOption(activity.value)">×</button>
+              </span>
+              <span v-if="googleGroupActivityOptions.length === 0" class="text-xs text-gray-400">No activities configured</span>
+            </div>
+          </div>
+        </div>
+
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead>
@@ -1122,28 +1172,115 @@ const loadingGoogleGroups = ref(false)
 const availableGoogleGroups = ref<Array<{ email: string; name: string }>>([])
 const lastLoadedGroupsEmail = ref('')
 
-const googleGroupRoleOptions = [
+const baseRoleOptions = [
   { value: 'BoardMember', label: 'Board Member' },
   { value: 'Officer', label: 'Officer' }
 ]
 
-const googleGroupActivityOptions = [
+const baseActivityOptions = [
   { value: 'YoungEaglePilot', label: 'Young Eagle Pilot' },
   { value: 'YoungEagleVolunteer', label: 'Young Eagle Volunteer' },
   { value: 'EaglePilot', label: 'Eagle Pilot' },
   { value: 'EagleFlightVolunteer', label: 'Eagle Flight Volunteer' }
 ]
 
+const memberOptionSettings = ref({
+  roles: baseRoleOptions.map(option => option.value),
+  activities: baseActivityOptions.map(option => option.value)
+})
+
+const googleGroupRoleOptions = computed(() => {
+  return baseRoleOptions.filter(option => memberOptionSettings.value.roles.includes(option.value))
+})
+
+const googleGroupActivityOptions = computed(() => {
+  return baseActivityOptions.filter(option => memberOptionSettings.value.activities.includes(option.value))
+})
+
 const formatMemberTypeRoles = (type: any) => {
-  return googleGroupRoleOptions
+  return googleGroupRoleOptions.value
     .filter(role => Number(type?.[role.value]) === 1)
     .map(role => role.label)
 }
 
 const formatMemberTypeActivities = (type: any) => {
-  return googleGroupActivityOptions
+  return googleGroupActivityOptions.value
     .filter(activity => Number(type?.[activity.value]) === 1)
     .map(activity => activity.label)
+}
+
+const resolveOptionValue = (input: string, options: Array<{ value: string; label: string }>) => {
+  const normalized = input.trim().toLowerCase()
+  return options.find(option => option.label.toLowerCase() === normalized || option.value.toLowerCase() === normalized)?.value
+}
+
+const fetchMemberOptions = async () => {
+  try {
+    const headers = await getAuthHeaders()
+    const response = await apiFetch('/api/settings/member-options', { headers })
+    if (response.ok) {
+      const data = await response.json()
+      memberOptionSettings.value = {
+        roles: Array.isArray(data.roles) ? data.roles : baseRoleOptions.map(option => option.value),
+        activities: Array.isArray(data.activities) ? data.activities : baseActivityOptions.map(option => option.value)
+      }
+    }
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching member options:', error)
+    }
+  }
+}
+
+const saveMemberOptions = async () => {
+  try {
+    const headers = await getAuthHeaders()
+    await apiFetch('/api/settings/member-options', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(memberOptionSettings.value)
+    })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error saving member options:', error)
+    }
+  }
+}
+
+const addRoleOption = async () => {
+  const remaining = baseRoleOptions.filter(option => !memberOptionSettings.value.roles.includes(option.value))
+  if (remaining.length === 0) return
+  const input = prompt(`Add role: ${remaining.map(option => option.label).join(', ')}`)
+  if (!input) return
+  const value = resolveOptionValue(input, remaining)
+  if (!value) return
+  memberOptionSettings.value.roles.push(value)
+  await saveMemberOptions()
+}
+
+const removeRoleOption = async (value: string) => {
+  memberOptionSettings.value.roles = memberOptionSettings.value.roles.filter(role => role !== value)
+  await saveMemberOptions()
+}
+
+const addActivityOption = async () => {
+  const remaining = baseActivityOptions.filter(option => !memberOptionSettings.value.activities.includes(option.value))
+  if (remaining.length === 0) return
+  const input = prompt(`Add activity: ${remaining.map(option => option.label).join(', ')}`)
+  if (!input) return
+  const value = resolveOptionValue(input, remaining)
+  if (!value) return
+  memberOptionSettings.value.activities.push(value)
+  await saveMemberOptions()
+}
+
+const removeActivityOption = async (value: string) => {
+  memberOptionSettings.value.activities = memberOptionSettings.value.activities.filter(activity => activity !== value)
+  await saveMemberOptions()
 }
 
 // Audit Log state
@@ -1954,6 +2091,7 @@ onMounted(() => {
   fetchReportScheduleSettings()
   fetchGoogleSheetsSettings()
   fetchGoogleGroupsSettings()
+  fetchMemberOptions()
 })
 
 watch(
