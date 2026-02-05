@@ -1480,7 +1480,7 @@ const publicSignupEmbedSnippet = computed(() => {
     <div class="cf-field"><label>First Name</label><input name="FirstName" required /></div>
     <div class="cf-field"><label>Last Name</label><input name="LastName" required /></div>
     <div class="cf-field"><label>Email</label><input name="Email" type="email" required /></div>
-    <div class="cf-field"><label>EAA Number</label><input name="EAANumber" required /></div>
+    <div class="cf-field"><label>EAA Number (optional)</label><input name="EAANumber" /></div>
     <div class="cf-field cf-full"><label>Street Address</label><input name="Street" required /></div>
     <div class="cf-field"><label>City</label><input name="City" required /></div>
     <div class="cf-field"><label>State</label><input name="State" required /></div>

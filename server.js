@@ -102,7 +102,7 @@ app.get('/public/member-signup/form', async (req, res) => {
               <div class="field"><label>First Name</label><input name="FirstName" required /></div>
               <div class="field"><label>Last Name</label><input name="LastName" required /></div>
               <div class="field"><label>Email</label><input name="Email" type="email" required /></div>
-              <div class="field"><label>EAA Number</label><input name="EAANumber" required /></div>
+              <div class="field"><label>EAA Number (optional)</label><input name="EAANumber" /></div>
               <div class="field full"><label>Street Address</label><input name="Street" required /></div>
               <div class="field"><label>City</label><input name="City" required /></div>
               <div class="field"><label>State</label><input name="State" required /></div>
@@ -158,7 +158,7 @@ app.post('/public/member-signup', async (req, res) => {
     const Zip = String(req.body?.Zip || '').trim();
     const HearAbout = String(req.body?.HearAbout || '').trim();
 
-    if (!FirstName || !LastName || !Email || !EAANumber || !Street || !City || !State || !Zip) {
+    if (!FirstName || !LastName || !Email || !Street || !City || !State || !Zip) {
       return res.status(400).send('Missing required fields.');
     }
 
