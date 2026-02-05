@@ -673,6 +673,8 @@
                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Name</th>
                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Dues Rate</th>
                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Sort Order</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Roles</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Activities</th>
                 <th class="px-4 py-3 text-right text-sm font-semibold text-gray-800 dark:text-white/90">Actions</th>
               </tr>
             </thead>
@@ -685,6 +687,30 @@
                 <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">{{ type.Name }}</td>
                 <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">${{ type.DuesRate.toFixed(2) }}</td>
                 <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{{ type.SortOrder }}</td>
+                <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                  <div class="flex flex-wrap gap-2">
+                    <span
+                      v-for="role in formatMemberTypeRoles(type)"
+                      :key="role"
+                      class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                    >
+                      {{ role }}
+                    </span>
+                    <span v-if="formatMemberTypeRoles(type).length === 0" class="text-xs text-gray-400">-</span>
+                  </div>
+                </td>
+                <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                  <div class="flex flex-wrap gap-2">
+                    <span
+                      v-for="activity in formatMemberTypeActivities(type)"
+                      :key="activity"
+                      class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                    >
+                      {{ activity }}
+                    </span>
+                    <span v-if="formatMemberTypeActivities(type).length === 0" class="text-xs text-gray-400">-</span>
+                  </div>
+                </td>
                 <td class="px-4 py-4 text-right text-sm">
                   <button
                     @click="editMemberType(type)"
@@ -890,6 +916,34 @@
                 class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
               />
             </div>
+
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Roles</label>
+              <div class="flex flex-wrap gap-3 text-xs text-gray-700 dark:text-gray-300">
+                <label v-for="role in googleGroupRoleOptions" :key="role.value" class="flex items-center gap-2">
+                  <input
+                    v-model="memberTypeForm[role.value]"
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                  />
+                  {{ role.label }}
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Activities</label>
+              <div class="flex flex-wrap gap-3 text-xs text-gray-700 dark:text-gray-300">
+                <label v-for="activity in googleGroupActivityOptions" :key="activity.value" class="flex items-center gap-2">
+                  <input
+                    v-model="memberTypeForm[activity.value]"
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                  />
+                  {{ activity.label }}
+                </label>
+              </div>
+            </div>
           </div>
 
           <div class="mt-6 flex justify-end gap-3">
@@ -1080,6 +1134,18 @@ const googleGroupActivityOptions = [
   { value: 'EagleFlightVolunteer', label: 'Eagle Flight Volunteer' }
 ]
 
+const formatMemberTypeRoles = (type: any) => {
+  return googleGroupRoleOptions
+    .filter(role => Number(type?.[role.value]) === 1)
+    .map(role => role.label)
+}
+
+const formatMemberTypeActivities = (type: any) => {
+  return googleGroupActivityOptions
+    .filter(activity => Number(type?.[activity.value]) === 1)
+    .map(activity => activity.label)
+}
+
 // Audit Log state
 const auditLogs = ref<AuditLog[]>([])
 const loadingAuditLogs = ref(false)
@@ -1108,7 +1174,13 @@ const reportScheduleCron = computed(() => {
 const memberTypeForm = ref({
   Name: '',
   DuesRate: 0,
-  SortOrder: 0
+  SortOrder: 0,
+  BoardMember: false,
+  Officer: false,
+  YoungEaglePilot: false,
+  YoungEagleVolunteer: false,
+  EaglePilot: false,
+  EagleFlightVolunteer: false
 })
 
 const userForm = ref({
@@ -1542,7 +1614,17 @@ const fetchEmailTemplate = async () => {
 
 const openMemberTypeModal = () => {
   editingMemberTypeId.value = null
-  memberTypeForm.value = { Name: '', DuesRate: 0, SortOrder: 0 }
+  memberTypeForm.value = {
+    Name: '',
+    DuesRate: 0,
+    SortOrder: 0,
+    BoardMember: false,
+    Officer: false,
+    YoungEaglePilot: false,
+    YoungEagleVolunteer: false,
+    EaglePilot: false,
+    EagleFlightVolunteer: false
+  }
   showMemberTypeModal.value = true
 }
 
@@ -1551,14 +1633,30 @@ const editMemberType = (type: any) => {
   memberTypeForm.value = {
     Name: type.Name,
     DuesRate: type.DuesRate,
-    SortOrder: type.SortOrder
+    SortOrder: type.SortOrder,
+    BoardMember: Number(type.BoardMember) === 1,
+    Officer: Number(type.Officer) === 1,
+    YoungEaglePilot: Number(type.YoungEaglePilot) === 1,
+    YoungEagleVolunteer: Number(type.YoungEagleVolunteer) === 1,
+    EaglePilot: Number(type.EaglePilot) === 1,
+    EagleFlightVolunteer: Number(type.EagleFlightVolunteer) === 1
   }
   showMemberTypeModal.value = true
 }
 
 const closeMemberTypeModal = () => {
   showMemberTypeModal.value = false
-  memberTypeForm.value = { Name: '', DuesRate: 0, SortOrder: 0 }
+  memberTypeForm.value = {
+    Name: '',
+    DuesRate: 0,
+    SortOrder: 0,
+    BoardMember: false,
+    Officer: false,
+    YoungEaglePilot: false,
+    YoungEagleVolunteer: false,
+    EaglePilot: false,
+    EagleFlightVolunteer: false
+  }
 }
 
 const saveMemberType = async () => {

@@ -151,10 +151,26 @@ class Database {
           Name TEXT NOT NULL UNIQUE,
           DuesRate REAL DEFAULT 0,
           SortOrder INTEGER DEFAULT 0,
+          BoardMember INTEGER DEFAULT 0,
+          Officer INTEGER DEFAULT 0,
+          YoungEaglePilot INTEGER DEFAULT 0,
+          YoungEagleVolunteer INTEGER DEFAULT 0,
+          EaglePilot INTEGER DEFAULT 0,
+          EagleFlightVolunteer INTEGER DEFAULT 0,
           CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
           UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      const addMemberTypeColumn = (name, type) => {
+        this.db.run(`ALTER TABLE member_types ADD COLUMN ${name} ${type}`, [], () => {});
+      };
+      addMemberTypeColumn('BoardMember', 'INTEGER DEFAULT 0');
+      addMemberTypeColumn('Officer', 'INTEGER DEFAULT 0');
+      addMemberTypeColumn('YoungEaglePilot', 'INTEGER DEFAULT 0');
+      addMemberTypeColumn('YoungEagleVolunteer', 'INTEGER DEFAULT 0');
+      addMemberTypeColumn('EaglePilot', 'INTEGER DEFAULT 0');
+      addMemberTypeColumn('EagleFlightVolunteer', 'INTEGER DEFAULT 0');
 
       this.db.run(`
         CREATE TABLE IF NOT EXISTS email_templates (
@@ -1164,12 +1180,45 @@ class Database {
 
   createMemberType(type) {
     return new Promise((resolve, reject) => {
-      const { Name, DuesRate = 0, SortOrder = 0 } = type;
+      const {
+        Name,
+        DuesRate = 0,
+        SortOrder = 0,
+        BoardMember = 0,
+        Officer = 0,
+        YoungEaglePilot = 0,
+        YoungEagleVolunteer = 0,
+        EaglePilot = 0,
+        EagleFlightVolunteer = 0
+      } = type;
       const sql = `
-        INSERT INTO member_types (Name, DuesRate, SortOrder)
-        VALUES (?, ?, ?)
+        INSERT INTO member_types (
+          Name,
+          DuesRate,
+          SortOrder,
+          BoardMember,
+          Officer,
+          YoungEaglePilot,
+          YoungEagleVolunteer,
+          EaglePilot,
+          EagleFlightVolunteer
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
-      this.db.run(sql, [Name, DuesRate, SortOrder], function(err) {
+      this.db.run(
+        sql,
+        [
+          Name,
+          DuesRate,
+          SortOrder,
+          BoardMember,
+          Officer,
+          YoungEaglePilot,
+          YoungEagleVolunteer,
+          EaglePilot,
+          EagleFlightVolunteer
+        ],
+        function(err) {
         if (err) reject(err);
         else resolve({ id: this.lastID });
       });
@@ -1178,13 +1227,46 @@ class Database {
 
   updateMemberType(id, type) {
     return new Promise((resolve, reject) => {
-      const { Name, DuesRate = 0, SortOrder = 0 } = type;
+      const {
+        Name,
+        DuesRate = 0,
+        SortOrder = 0,
+        BoardMember = 0,
+        Officer = 0,
+        YoungEaglePilot = 0,
+        YoungEagleVolunteer = 0,
+        EaglePilot = 0,
+        EagleFlightVolunteer = 0
+      } = type;
       const sql = `
         UPDATE member_types
-        SET Name = ?, DuesRate = ?, SortOrder = ?, UpdatedAt = CURRENT_TIMESTAMP
+        SET Name = ?,
+            DuesRate = ?,
+            SortOrder = ?,
+            BoardMember = ?,
+            Officer = ?,
+            YoungEaglePilot = ?,
+            YoungEagleVolunteer = ?,
+            EaglePilot = ?,
+            EagleFlightVolunteer = ?,
+            UpdatedAt = CURRENT_TIMESTAMP
         WHERE MemberTypeID = ?
       `;
-      this.db.run(sql, [Name, DuesRate, SortOrder, id], (err) => {
+      this.db.run(
+        sql,
+        [
+          Name,
+          DuesRate,
+          SortOrder,
+          BoardMember,
+          Officer,
+          YoungEaglePilot,
+          YoungEagleVolunteer,
+          EaglePilot,
+          EagleFlightVolunteer,
+          id
+        ],
+        (err) => {
         if (err) reject(err);
         else resolve({ updated: true });
       });

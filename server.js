@@ -1623,7 +1623,18 @@ app.post('/api/settings/member-types', async (req, res) => {
     if (!Name || !Name.trim()) {
       return res.status(400).json({ error: 'Name is required' });
     }
-    const result = await db.createMemberType({ Name: Name.trim(), DuesRate: Number(DuesRate) || 0, SortOrder: Number(SortOrder) || 0 });
+    const toFlag = (value) => Number(Boolean(value));
+    const result = await db.createMemberType({
+      Name: Name.trim(),
+      DuesRate: Number(DuesRate) || 0,
+      SortOrder: Number(SortOrder) || 0,
+      BoardMember: toFlag(req.body.BoardMember),
+      Officer: toFlag(req.body.Officer),
+      YoungEaglePilot: toFlag(req.body.YoungEaglePilot),
+      YoungEagleVolunteer: toFlag(req.body.YoungEagleVolunteer),
+      EaglePilot: toFlag(req.body.EaglePilot),
+      EagleFlightVolunteer: toFlag(req.body.EagleFlightVolunteer)
+    });
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'CREATE', 'member_types', result.id, null, req.body, ipAddress, 'Created member type');
     scheduleGoogleSheetsSync();
@@ -1640,7 +1651,18 @@ app.put('/api/settings/member-types/:id', async (req, res) => {
     if (!Name || !Name.trim()) {
       return res.status(400).json({ error: 'Name is required' });
     }
-    await db.updateMemberType(req.params.id, { Name: Name.trim(), DuesRate: Number(DuesRate) || 0, SortOrder: Number(SortOrder) || 0 });
+    const toFlag = (value) => Number(Boolean(value));
+    await db.updateMemberType(req.params.id, {
+      Name: Name.trim(),
+      DuesRate: Number(DuesRate) || 0,
+      SortOrder: Number(SortOrder) || 0,
+      BoardMember: toFlag(req.body.BoardMember),
+      Officer: toFlag(req.body.Officer),
+      YoungEaglePilot: toFlag(req.body.YoungEaglePilot),
+      YoungEagleVolunteer: toFlag(req.body.YoungEagleVolunteer),
+      EaglePilot: toFlag(req.body.EaglePilot),
+      EagleFlightVolunteer: toFlag(req.body.EagleFlightVolunteer)
+    });
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'member_types', req.params.id, null, req.body, ipAddress, 'Updated member type');
     scheduleGoogleSheetsSync();
