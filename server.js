@@ -174,15 +174,32 @@ app.use('/api', async (req, res, next) => {
     const mappings = rawMappings
       .map((mapping) => {
         const memberType = typeof mapping?.memberType === 'string' ? mapping.memberType.trim() : '';
+        const memberTypes = Array.isArray(mapping?.memberTypes)
+          ? mapping.memberTypes
+          : (memberType ? [memberType] : []);
+        const normalizedMemberTypes = memberTypes
+          .map(type => String(type || '').trim())
+          .filter(Boolean);
+        const roles = Array.isArray(mapping?.roles)
+          ? mapping.roles.map(role => String(role || '').trim()).filter(Boolean)
+          : [];
+        const activities = Array.isArray(mapping?.activities)
+          ? mapping.activities.map(activity => String(activity || '').trim()).filter(Boolean)
+          : [];
         const rawGroups = Array.isArray(mapping?.groups)
           ? mapping.groups
           : String(mapping?.groups || '').split(',');
         const groups = rawGroups
           .map(group => String(group || '').trim().toLowerCase())
           .filter(Boolean);
-        return { memberType, groups };
+        return {
+          memberTypes: normalizedMemberTypes,
+          roles,
+          activities,
+          groups
+        };
       })
-      .filter(mapping => mapping.memberType && mapping.groups.length > 0);
+      .filter(mapping => (mapping.memberTypes.length > 0 || mapping.roles.length > 0 || mapping.activities.length > 0) && mapping.groups.length > 0);
 
     return {
       enabled: Boolean(merged.enabled),
@@ -398,13 +415,51 @@ app.use('/api', async (req, res, next) => {
       return status === 'active' && member.Email;
     });
 
-    const mappingByType = new Map();
     const expectedByGroup = new Map();
-    for (const mapping of config.mappings) {
-      const typeKey = String(mapping.memberType || '').trim().toLowerCase();
-      if (!typeKey) continue;
-      mappingByType.set(typeKey, mapping.groups || []);
-      for (const group of mapping.groups || []) {
+    const normalizedMappings = config.mappings.map(mapping => ({
+      memberTypes: Array.isArray(mapping.memberTypes)
+        ? mapping.memberTypes.map(type => String(type || '').trim().toLowerCase()).filter(Boolean)
+        : [],
+      roles: Array.isArray(mapping.roles)
+        ? mapping.roles.map(role => String(role || '').trim()).filter(Boolean)
+        : [],
+      activities: Array.isArray(mapping.activities)
+        ? mapping.activities.map(activity => String(activity || '').trim()).filter(Boolean)
+        : [],
+      groups: Array.isArray(mapping.groups) ? mapping.groups : []
+    }));
+
+    const matchesMapping = (member, mapping) => {
+      if (mapping.memberTypes.length > 0) {
+        const memberType = String(member.MemberType || '').trim().toLowerCase();
+        if (!mapping.memberTypes.includes(memberType)) return false;
+      }
+
+      if (mapping.roles.length > 0) {
+        const hasRole = mapping.roles.some(role => {
+          if (role === 'BoardMember') return Number(member.BoardMember) === 1;
+          if (role === 'Officer') return Number(member.Officer) === 1;
+          return false;
+        });
+        if (!hasRole) return false;
+      }
+
+      if (mapping.activities.length > 0) {
+        const hasActivity = mapping.activities.some(activity => {
+          if (activity === 'YoungEaglePilot') return Number(member.YoungEaglePilot) === 1;
+          if (activity === 'YoungEagleVolunteer') return Number(member.YoungEagleVolunteer) === 1;
+          if (activity === 'EaglePilot') return Number(member.EaglePilot) === 1;
+          if (activity === 'EagleFlightVolunteer') return Number(member.EagleFlightVolunteer) === 1;
+          return false;
+        });
+        if (!hasActivity) return false;
+      }
+
+      return true;
+    };
+
+    for (const mapping of normalizedMappings) {
+      for (const group of mapping.groups) {
         const groupKey = String(group || '').trim().toLowerCase();
         if (!groupKey) continue;
         if (!expectedByGroup.has(groupKey)) {
@@ -414,18 +469,18 @@ app.use('/api', async (req, res, next) => {
     }
 
     for (const member of activeMembers) {
-      const typeKey = String(member.MemberType || '').trim().toLowerCase();
-      const groups = mappingByType.get(typeKey);
-      if (!groups || groups.length === 0) continue;
       const email = String(member.Email || '').trim().toLowerCase();
       if (!email) continue;
-      for (const group of groups) {
-        const groupKey = String(group || '').trim().toLowerCase();
-        if (!groupKey) continue;
-        if (!expectedByGroup.has(groupKey)) {
-          expectedByGroup.set(groupKey, new Set());
+      for (const mapping of normalizedMappings) {
+        if (!matchesMapping(member, mapping)) continue;
+        for (const group of mapping.groups) {
+          const groupKey = String(group || '').trim().toLowerCase();
+          if (!groupKey) continue;
+          if (!expectedByGroup.has(groupKey)) {
+            expectedByGroup.set(groupKey, new Set());
+          }
+          expectedByGroup.get(groupKey).add(email);
         }
-        expectedByGroup.get(groupKey).add(email);
       }
     }
 

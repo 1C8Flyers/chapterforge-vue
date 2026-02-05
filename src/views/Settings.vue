@@ -289,7 +289,7 @@
 
           <div class="space-y-3">
             <div class="flex items-center justify-between">
-              <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Member type mappings</p>
+              <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Group mappings</p>
               <button
                 type="button"
                 class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
@@ -304,35 +304,58 @@
               :key="`mapping-${index}`"
               class="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-800"
             >
-              <div class="min-w-[220px] flex-1">
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Member Type</label>
-                <select
-                  v-model="mapping.memberType"
-                  class="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                >
-                  <option value="">Select a member type</option>
-                  <option v-for="type in memberTypes" :key="type.MemberTypeID" :value="type.Name">
-                    {{ type.Name }}
-                  </option>
-                </select>
-              </div>
-              <div class="min-w-[260px] flex-[2]">
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Google Group Email(s)</label>
-                <select
-                  v-model="mapping.groups"
-                  multiple
-                  class="mt-1 h-28 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                >
-                  <option
-                    v-for="group in availableGoogleGroups"
-                    :key="group.email"
-                    :value="group.email"
+              <div class="min-w-[260px] flex-[2] space-y-2">
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Member Types (optional)</label>
+                  <select
+                    v-model="mapping.memberTypes"
+                    multiple
+                    class="mt-1 h-24 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                   >
-                    {{ group.name ? `${group.name} (${group.email})` : group.email }}
-                  </option>
-                </select>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Load groups to select. Hold Ctrl/Cmd to select multiple.
+                    <option v-for="type in memberTypes" :key="type.MemberTypeID" :value="type.Name">
+                      {{ type.Name }}
+                    </option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Roles (optional)</label>
+                  <div class="mt-1 flex flex-wrap gap-3 text-xs text-gray-700 dark:text-gray-300">
+                    <label v-for="role in googleGroupRoleOptions" :key="role.value" class="flex items-center gap-2">
+                      <input v-model="mapping.roles" type="checkbox" :value="role.value" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" />
+                      {{ role.label }}
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Activities (optional)</label>
+                  <div class="mt-1 flex flex-wrap gap-3 text-xs text-gray-700 dark:text-gray-300">
+                    <label v-for="activity in googleGroupActivityOptions" :key="activity.value" class="flex items-center gap-2">
+                      <input v-model="mapping.activities" type="checkbox" :value="activity.value" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" />
+                      {{ activity.label }}
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div class="min-w-[260px] flex-[2] space-y-2">
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Google Groups</label>
+                <input
+                  v-model="mapping.groupSearch"
+                  type="text"
+                  placeholder="Search groups..."
+                  class="mt-1 h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                />
+                <div class="max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-2 text-xs text-gray-700 dark:border-gray-800 dark:text-gray-300">
+                  <label
+                    v-for="group in filteredGoogleGroups(mapping.groupSearch)"
+                    :key="group.email"
+                    class="flex items-center gap-2 py-1"
+                  >
+                    <input v-model="mapping.groups" type="checkbox" :value="group.email" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" />
+                    <span>{{ group.name ? `${group.name} (${group.email})` : group.email }}</span>
+                  </label>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ mapping.groups.length }} selected
                 </p>
               </div>
               <button
@@ -1109,13 +1132,31 @@ const googleGroupsSettings = ref({
   enabled: false,
   adminEmail: '',
   removeUnmatched: false,
-  mappings: [] as Array<{ memberType: string; groups: string[] }>
+  mappings: [] as Array<{
+    memberTypes: string[]
+    roles: string[]
+    activities: string[]
+    groups: string[]
+    groupSearch: string
+  }>
 })
 const savingGoogleGroupsSettings = ref(false)
 const syncingGoogleGroups = ref(false)
 const loadingGoogleGroups = ref(false)
 const availableGoogleGroups = ref<Array<{ email: string; name: string }>>([])
 const lastLoadedGroupsEmail = ref('')
+
+const googleGroupRoleOptions = [
+  { value: 'BoardMember', label: 'Board Member' },
+  { value: 'Officer', label: 'Officer' }
+]
+
+const googleGroupActivityOptions = [
+  { value: 'YoungEaglePilot', label: 'Young Eagle Pilot' },
+  { value: 'YoungEagleVolunteer', label: 'Young Eagle Volunteer' },
+  { value: 'EaglePilot', label: 'Eagle Pilot' },
+  { value: 'EagleFlightVolunteer', label: 'Eagle Flight Volunteer' }
+]
 
 // Audit Log state
 const auditLogs = ref<AuditLog[]>([])
@@ -1274,10 +1315,15 @@ const fetchGoogleGroupsSettings = async () => {
         adminEmail: data.adminEmail || '',
         removeUnmatched: Boolean(data.removeUnmatched),
         mappings: mappings.map((mapping: any) => ({
-          memberType: mapping.memberType || '',
+          memberTypes: Array.isArray(mapping.memberTypes)
+            ? mapping.memberTypes
+            : (mapping.memberType ? [mapping.memberType] : []),
+          roles: Array.isArray(mapping.roles) ? mapping.roles : [],
+          activities: Array.isArray(mapping.activities) ? mapping.activities : [],
           groups: Array.isArray(mapping.groups)
             ? mapping.groups
-            : String(mapping.groups || '').split(',').map((group: string) => group.trim()).filter(Boolean)
+            : String(mapping.groups || '').split(',').map((group: string) => group.trim()).filter(Boolean),
+          groupSearch: ''
         }))
       }
     }
@@ -1396,7 +1442,9 @@ const saveGoogleGroupsSettings = async () => {
       adminEmail: googleGroupsSettings.value.adminEmail,
       removeUnmatched: googleGroupsSettings.value.removeUnmatched,
       mappings: googleGroupsSettings.value.mappings.map(mapping => ({
-        memberType: mapping.memberType,
+        memberTypes: mapping.memberTypes,
+        roles: mapping.roles,
+        activities: mapping.activities,
         groups: mapping.groups
       }))
     }
@@ -1473,7 +1521,21 @@ const syncGoogleGroupsNow = async () => {
 }
 
 const addGoogleGroupMapping = () => {
-  googleGroupsSettings.value.mappings.push({ memberType: '', groups: [] })
+  googleGroupsSettings.value.mappings.push({
+    memberTypes: [],
+    roles: [],
+    activities: [],
+    groups: [],
+    groupSearch: ''
+  })
+}
+
+const filteredGoogleGroups = (search: string) => {
+  const normalized = String(search || '').trim().toLowerCase()
+  if (!normalized) return availableGoogleGroups.value
+  return availableGoogleGroups.value.filter(group => {
+    return group.email.includes(normalized) || (group.name || '').toLowerCase().includes(normalized)
+  })
 }
 
 const removeGoogleGroupMapping = (index: number) => {
