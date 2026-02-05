@@ -670,24 +670,14 @@
           <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.02]">
             <div class="mb-3 flex items-center justify-between">
               <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">Roles</h4>
-              <div class="flex items-center gap-2">
-                <select
-                  v-model="newRoleOption"
-                  class="h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-                >
-                  <option value="">Add role...</option>
-                  <option v-for="role in availableRoleOptions" :key="role.value" :value="role.value">
-                    {{ role.label }}
-                  </option>
-                </select>
-                <button
-                  type="button"
-                  class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-                  @click="addRoleOption"
-                >
-                  Add
-                </button>
-              </div>
+              <button
+                type="button"
+                class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                :disabled="availableRoleOptions.length === 0"
+                @click="openRolePicker"
+              >
+                Add
+              </button>
             </div>
             <div class="flex flex-wrap gap-2">
               <span
@@ -705,24 +695,14 @@
           <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.02]">
             <div class="mb-3 flex items-center justify-between">
               <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">Activities</h4>
-              <div class="flex items-center gap-2">
-                <select
-                  v-model="newActivityOption"
-                  class="h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-                >
-                  <option value="">Add activity...</option>
-                  <option v-for="activity in availableActivityOptions" :key="activity.value" :value="activity.value">
-                    {{ activity.label }}
-                  </option>
-                </select>
-                <button
-                  type="button"
-                  class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-                  @click="addActivityOption"
-                >
-                  Add
-                </button>
-              </div>
+              <button
+                type="button"
+                class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                :disabled="availableActivityOptions.length === 0"
+                @click="openActivityPicker"
+              >
+                Add
+              </button>
             </div>
             <div class="flex flex-wrap gap-2">
               <span
@@ -1111,6 +1091,53 @@
         </form>
       </div>
     </div>
+
+    <!-- Role/Activity Picker Modal -->
+    <div
+      v-if="showOptionPicker"
+      class="fixed inset-0 z-99999 flex items-center justify-center bg-black/50"
+      @click.self="closeOptionPicker"
+    >
+      <div class="w-full max-w-sm rounded-xl bg-white p-6 dark:bg-gray-900">
+        <h3 class="mb-4 text-lg font-semibold text-gray-800 dark:text-white/90">
+          Add {{ optionPickerType === 'role' ? 'Role' : 'Activity' }}
+        </h3>
+
+        <div class="space-y-4">
+          <select
+            v-model="optionPickerValue"
+            class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          >
+            <option value="">Select...</option>
+            <option
+              v-for="option in optionPickerOptions"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            @click="closeOptionPicker"
+            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
+            :disabled="!optionPickerValue"
+            @click="confirmOptionPicker"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    </div>
   </AdminLayout>
 </template>
 
@@ -1210,8 +1237,9 @@ const memberOptionSettings = ref({
   roles: baseRoleOptions.map(option => option.value),
   activities: baseActivityOptions.map(option => option.value)
 })
-const newRoleOption = ref('')
-const newActivityOption = ref('')
+const showOptionPicker = ref(false)
+const optionPickerType = ref<'role' | 'activity'>('role')
+const optionPickerValue = ref('')
 
 const googleGroupRoleOptions = computed(() => {
   return baseRoleOptions.filter(option => memberOptionSettings.value.roles.includes(option.value))
@@ -1227,6 +1255,12 @@ const availableRoleOptions = computed(() => {
 
 const availableActivityOptions = computed(() => {
   return baseActivityOptions.filter(option => !memberOptionSettings.value.activities.includes(option.value))
+})
+
+const optionPickerOptions = computed(() => {
+  return optionPickerType.value === 'role'
+    ? availableRoleOptions.value
+    : availableActivityOptions.value
 })
 
 const formatMemberTypeRoles = (type: any) => {
@@ -1278,26 +1312,39 @@ const saveMemberOptions = async () => {
   }
 }
 
-const addRoleOption = async () => {
-  if (!newRoleOption.value) return
-  if (!memberOptionSettings.value.roles.includes(newRoleOption.value)) {
-    memberOptionSettings.value.roles.push(newRoleOption.value)
+const openRolePicker = () => {
+  optionPickerType.value = 'role'
+  optionPickerValue.value = ''
+  showOptionPicker.value = true
+}
+
+const openActivityPicker = () => {
+  optionPickerType.value = 'activity'
+  optionPickerValue.value = ''
+  showOptionPicker.value = true
+}
+
+const closeOptionPicker = () => {
+  showOptionPicker.value = false
+}
+
+const confirmOptionPicker = async () => {
+  if (!optionPickerValue.value) return
+  if (optionPickerType.value === 'role') {
+    if (!memberOptionSettings.value.roles.includes(optionPickerValue.value)) {
+      memberOptionSettings.value.roles.push(optionPickerValue.value)
+    }
+  } else {
+    if (!memberOptionSettings.value.activities.includes(optionPickerValue.value)) {
+      memberOptionSettings.value.activities.push(optionPickerValue.value)
+    }
   }
-  newRoleOption.value = ''
   await saveMemberOptions()
+  closeOptionPicker()
 }
 
 const removeRoleOption = async (value: string) => {
   memberOptionSettings.value.roles = memberOptionSettings.value.roles.filter(role => role !== value)
-  await saveMemberOptions()
-}
-
-const addActivityOption = async () => {
-  if (!newActivityOption.value) return
-  if (!memberOptionSettings.value.activities.includes(newActivityOption.value)) {
-    memberOptionSettings.value.activities.push(newActivityOption.value)
-  }
-  newActivityOption.value = ''
   await saveMemberOptions()
 }
 
