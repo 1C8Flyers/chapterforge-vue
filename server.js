@@ -129,6 +129,7 @@ app.use('/api', async (req, res, next) => {
 
   const REPORT_SCHEDULE_SETTING_KEY = 'report_schedule_config';
   const GOOGLE_SHEETS_SETTING_KEY = 'google_sheets_config';
+  const GOOGLE_GROUPS_SETTING_KEY = 'google_groups_config';
   const DEFAULT_REPORT_SCHEDULE = {
     enabled: false,
     recipients: [],
@@ -151,6 +152,13 @@ app.use('/api', async (req, res, next) => {
     sheetPrefix: ''
   };
 
+  const DEFAULT_GOOGLE_GROUPS_CONFIG = {
+    enabled: false,
+    adminEmail: '',
+    removeUnmatched: false,
+    mappings: []
+  };
+
   const normalizeGoogleSheetsConfig = (input = {}) => {
     const merged = { ...DEFAULT_GOOGLE_SHEETS_CONFIG, ...(input || {}) };
     return {
@@ -160,9 +168,49 @@ app.use('/api', async (req, res, next) => {
     };
   };
 
+  const normalizeGoogleGroupsConfig = (input = {}) => {
+    const merged = { ...DEFAULT_GOOGLE_GROUPS_CONFIG, ...(input || {}) };
+    const rawMappings = Array.isArray(merged.mappings) ? merged.mappings : [];
+    const mappings = rawMappings
+      .map((mapping) => {
+        const memberType = typeof mapping?.memberType === 'string' ? mapping.memberType.trim() : '';
+        const rawGroups = Array.isArray(mapping?.groups)
+          ? mapping.groups
+          : String(mapping?.groups || '').split(',');
+        const groups = rawGroups
+          .map(group => String(group || '').trim().toLowerCase())
+          .filter(Boolean);
+        return { memberType, groups };
+      })
+      .filter(mapping => mapping.memberType && mapping.groups.length > 0);
+
+    return {
+      enabled: Boolean(merged.enabled),
+      adminEmail: typeof merged.adminEmail === 'string' ? merged.adminEmail.trim().toLowerCase() : '',
+      removeUnmatched: Boolean(merged.removeUnmatched),
+      mappings
+    };
+  };
+
   const loadGoogleServiceAccount = () => {
     const json = process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
     const accountPath = process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_PATH || process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
+    if (json) {
+      return JSON.parse(json);
+    }
+    if (accountPath) {
+      return require(path.resolve(accountPath));
+    }
+    return null;
+  };
+
+  const loadGoogleAdminServiceAccount = () => {
+    const json = process.env.GOOGLE_ADMIN_SERVICE_ACCOUNT_JSON
+      || process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON
+      || process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    const accountPath = process.env.GOOGLE_ADMIN_SERVICE_ACCOUNT_PATH
+      || process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_PATH
+      || process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
     if (json) {
       return JSON.parse(json);
     }
@@ -196,6 +244,51 @@ app.use('/api', async (req, res, next) => {
     );
     await auth.authorize();
     return google.sheets({ version: 'v4', auth });
+  };
+
+  const getGoogleGroupsConfig = async () => {
+    const raw = await db.getSetting(GOOGLE_GROUPS_SETTING_KEY);
+    if (!raw) return { ...DEFAULT_GOOGLE_GROUPS_CONFIG };
+    try {
+      return normalizeGoogleGroupsConfig(JSON.parse(raw));
+    } catch (error) {
+      return { ...DEFAULT_GOOGLE_GROUPS_CONFIG };
+    }
+  };
+
+  const getGoogleAdminClient = async (adminEmail) => {
+    const scopes = [
+      'https://www.googleapis.com/auth/admin.directory.group',
+      'https://www.googleapis.com/auth/admin.directory.group.member'
+    ];
+    const accountPath = process.env.GOOGLE_ADMIN_SERVICE_ACCOUNT_PATH
+      || process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_PATH
+      || process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
+
+    if (accountPath) {
+      const auth = new google.auth.JWT({
+        keyFile: path.resolve(accountPath),
+        scopes,
+        subject: adminEmail
+      });
+      await auth.authorize();
+      return google.admin({ version: 'directory_v1', auth });
+    }
+
+    const serviceAccount = loadGoogleAdminServiceAccount();
+    if (!serviceAccount) {
+      throw new Error('Google Admin service account is not configured');
+    }
+
+    const auth = new google.auth.JWT(
+      serviceAccount.client_email,
+      null,
+      serviceAccount.private_key,
+      scopes,
+      adminEmail
+    );
+    await auth.authorize();
+    return google.admin({ version: 'directory_v1', auth });
   };
 
   const getGoogleSheetsConfig = async () => {
@@ -266,6 +359,126 @@ app.use('/api', async (req, res, next) => {
     return { synced: true, tables: tables.length };
   };
 
+  const listGoogleGroupMembers = async (adminClient, groupKey) => {
+    const members = [];
+    let pageToken = undefined;
+    do {
+      const response = await adminClient.members.list({
+        groupKey,
+        maxResults: 200,
+        pageToken
+      });
+      const dataMembers = response.data?.members || [];
+      for (const member of dataMembers) {
+        if (member?.email) {
+          members.push(String(member.email).trim().toLowerCase());
+        }
+      }
+      pageToken = response.data?.nextPageToken;
+    } while (pageToken);
+    return members;
+  };
+
+  const runGoogleGroupsSync = async () => {
+    const config = await getGoogleGroupsConfig();
+    if (!config.enabled) {
+      return { skipped: true };
+    }
+    if (!config.adminEmail) {
+      throw new Error('Admin email is required for Google Groups sync');
+    }
+    if (!Array.isArray(config.mappings) || config.mappings.length === 0) {
+      return { skipped: true, reason: 'No mappings configured' };
+    }
+
+    const adminClient = await getGoogleAdminClient(config.adminEmail);
+    const members = await db.getAllMembers();
+    const activeMembers = (members || []).filter(member => {
+      const status = String(member.Status || '').toLowerCase();
+      return status === 'active' && member.Email;
+    });
+
+    const mappingByType = new Map();
+    const expectedByGroup = new Map();
+    for (const mapping of config.mappings) {
+      const typeKey = String(mapping.memberType || '').trim().toLowerCase();
+      if (!typeKey) continue;
+      mappingByType.set(typeKey, mapping.groups || []);
+      for (const group of mapping.groups || []) {
+        const groupKey = String(group || '').trim().toLowerCase();
+        if (!groupKey) continue;
+        if (!expectedByGroup.has(groupKey)) {
+          expectedByGroup.set(groupKey, new Set());
+        }
+      }
+    }
+
+    for (const member of activeMembers) {
+      const typeKey = String(member.MemberType || '').trim().toLowerCase();
+      const groups = mappingByType.get(typeKey);
+      if (!groups || groups.length === 0) continue;
+      const email = String(member.Email || '').trim().toLowerCase();
+      if (!email) continue;
+      for (const group of groups) {
+        const groupKey = String(group || '').trim().toLowerCase();
+        if (!groupKey) continue;
+        if (!expectedByGroup.has(groupKey)) {
+          expectedByGroup.set(groupKey, new Set());
+        }
+        expectedByGroup.get(groupKey).add(email);
+      }
+    }
+
+    const results = [];
+    for (const [groupKey, expectedSet] of expectedByGroup.entries()) {
+      const currentMembers = new Set(await listGoogleGroupMembers(adminClient, groupKey));
+      const toAdd = Array.from(expectedSet).filter(email => !currentMembers.has(email));
+      const toRemove = config.removeUnmatched
+        ? Array.from(currentMembers).filter(email => !expectedSet.has(email))
+        : [];
+
+      let added = 0;
+      let removed = 0;
+
+      for (const email of toAdd) {
+        try {
+          await adminClient.members.insert({
+            groupKey,
+            requestBody: { email, role: 'MEMBER' }
+          });
+          added += 1;
+        } catch (error) {
+          if (error?.code === 409) continue;
+          console.error(`Failed to add ${email} to ${groupKey}:`, error?.message || error);
+        }
+      }
+
+      if (config.removeUnmatched) {
+        for (const email of toRemove) {
+          try {
+            await adminClient.members.delete({
+              groupKey,
+              memberKey: email
+            });
+            removed += 1;
+          } catch (error) {
+            if (error?.code === 404) continue;
+            console.error(`Failed to remove ${email} from ${groupKey}:`, error?.message || error);
+          }
+        }
+      }
+
+      results.push({
+        group: groupKey,
+        expected: expectedSet.size,
+        added,
+        removed
+      });
+    }
+
+    return { synced: true, groups: results };
+  };
+
   let googleSheetsSyncTimer = null;
   let googleSheetsSyncRunning = false;
   const scheduleGoogleSheetsSync = () => {
@@ -282,6 +495,26 @@ app.use('/api', async (req, res, next) => {
         console.error('Google Sheets sync failed:', error);
       } finally {
         googleSheetsSyncRunning = false;
+      }
+    }, 5000);
+  };
+
+  let googleGroupsSyncTimer = null;
+  let googleGroupsSyncRunning = false;
+  const scheduleGoogleGroupsSync = () => {
+    if (googleGroupsSyncTimer) {
+      clearTimeout(googleGroupsSyncTimer);
+    }
+
+    googleGroupsSyncTimer = setTimeout(async () => {
+      if (googleGroupsSyncRunning) return;
+      googleGroupsSyncRunning = true;
+      try {
+        await runGoogleGroupsSync();
+      } catch (error) {
+        console.error('Google Groups sync failed:', error);
+      } finally {
+        googleGroupsSyncRunning = false;
       }
     }, 5000);
   };
@@ -734,6 +967,7 @@ app.post('/api/members/import', upload.single('file'), async (req, res) => {
 
     if (imported > 0) {
       scheduleGoogleSheetsSync();
+      scheduleGoogleGroupsSync();
     }
     res.json({ imported, errors });
   } catch (error) {
@@ -762,6 +996,7 @@ app.post('/api/members', async (req, res) => {
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'CREATE', 'members', result.id, null, req.body, ipAddress, 'Created new member');
     scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
     res.json({ success: true, id: result.id });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -776,6 +1011,7 @@ app.put('/api/members/:id', async (req, res) => {
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'members', req.params.id, oldMember, req.body, ipAddress, 'Updated member');
     scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -790,6 +1026,7 @@ app.delete('/api/members/:id', async (req, res) => {
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'DELETE', 'members', req.params.id, oldMember, null, ipAddress, 'Deleted member');
     scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -827,6 +1064,7 @@ app.post('/api/members/:id/family', async (req, res) => {
 
     const familyMember = await db.addFamilyMember(householdId, req.body);
     scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
     res.json(familyMember);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -838,6 +1076,7 @@ app.delete('/api/members/:id/family/:familyId', async (req, res) => {
   try {
     await db.removeFamilyMember(req.params.familyId);
     scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -850,6 +1089,7 @@ app.post('/api/members/:id/dues', async (req, res) => {
     const { year, amount } = req.body;
     await db.updateDuesPayment(req.params.id, year, amount);
     scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1332,6 +1572,7 @@ app.post('/api/settings/member-types', async (req, res) => {
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'CREATE', 'member_types', result.id, null, req.body, ipAddress, 'Created member type');
     scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
     res.json({ success: true, id: result.id });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1348,6 +1589,7 @@ app.put('/api/settings/member-types/:id', async (req, res) => {
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'member_types', req.params.id, null, req.body, ipAddress, 'Updated member type');
     scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1360,6 +1602,7 @@ app.delete('/api/settings/member-types/:id', async (req, res) => {
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'DELETE', 'member_types', req.params.id, null, null, ipAddress, 'Deleted member type');
     scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1476,6 +1719,56 @@ app.post('/api/settings/google-sheets', async (req, res) => {
 app.post('/api/settings/google-sheets/sync', async (req, res) => {
   try {
     const result = await runGoogleSheetsSync();
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Google Groups settings
+app.get('/api/settings/google-groups', async (req, res) => {
+  try {
+    const config = await getGoogleGroupsConfig();
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings/google-groups', async (req, res) => {
+  try {
+    const normalized = normalizeGoogleGroupsConfig(req.body || {});
+    if (normalized.enabled && !normalized.adminEmail) {
+      return res.status(400).json({ error: 'Admin email is required when Google Groups sync is enabled' });
+    }
+    if (normalized.enabled && normalized.mappings.length === 0) {
+      return res.status(400).json({ error: 'At least one member type mapping is required when Google Groups sync is enabled' });
+    }
+
+    const oldValue = await db.getSetting(GOOGLE_GROUPS_SETTING_KEY);
+    await db.setSetting(GOOGLE_GROUPS_SETTING_KEY, JSON.stringify(normalized));
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(
+      req.user.email,
+      'UPDATE',
+      'app_settings',
+      null,
+      { googleGroups: oldValue },
+      { googleGroups: normalized },
+      ipAddress,
+      'Updated Google Groups settings'
+    );
+
+    scheduleGoogleGroupsSync();
+    res.json({ success: true, config: normalized });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings/google-groups/sync', async (req, res) => {
+  try {
+    const result = await runGoogleGroupsSync();
     res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -72,6 +72,17 @@
           Google Sheets
         </button>
         <button
+          @click="activeTab = 'google-groups'"
+          :class="[
+            'px-4 py-3 text-sm font-medium border-b-2 transition',
+            activeTab === 'google-groups'
+              ? 'border-brand-500 text-brand-500 dark:text-brand-400'
+              : 'border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+          ]"
+        >
+          Google Groups
+        </button>
+        <button
           @click="activeTab = 'timezone'"
           :class="[
             'px-4 py-3 text-sm font-medium border-b-2 transition',
@@ -198,6 +209,126 @@
             />
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Each table is written to its own tab using this prefix.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Google Groups Tab -->
+    <div v-if="activeTab === 'google-groups'" class="space-y-6">
+      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Google Groups Sync</h3>
+          <div class="flex items-center gap-2">
+            <button
+              @click="syncGoogleGroupsNow"
+              class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-800 dark:text-gray-200"
+              :disabled="syncingGoogleGroups || !googleGroupsSettings.enabled || !googleGroupsSettings.adminEmail"
+            >
+              {{ syncingGoogleGroups ? 'Syncing...' : 'Sync Now' }}
+            </button>
+            <button
+              @click="saveGoogleGroupsSettings"
+              class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
+              :disabled="savingGoogleGroupsSettings"
+            >
+              {{ savingGoogleGroupsSettings ? 'Saving...' : 'Save Settings' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-4 text-sm text-gray-700 dark:text-gray-200">
+          <div class="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-900/40 dark:bg-blue-900/20 dark:text-blue-200">
+            <p class="font-semibold">Setup steps</p>
+            <ol class="mt-2 list-decimal space-y-1 pl-5">
+              <li>Enable Domain-wide Delegation on the service account.</li>
+              <li>In Google Admin Console, grant the Admin SDK scopes for groups and members.</li>
+              <li>Ensure the service account key is configured on the server.</li>
+              <li>Enter an admin email to impersonate and map member types to group emails.</li>
+            </ol>
+          </div>
+
+          <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <input
+              v-model="googleGroupsSettings.enabled"
+              type="checkbox"
+              class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+            />
+            Enable sync on member changes
+          </label>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Admin email to impersonate</label>
+            <input
+              v-model="googleGroupsSettings.adminEmail"
+              type="email"
+              placeholder="admin@yourdomain.org"
+              class="mt-1 h-11 w-full max-w-2xl rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              This user must be a Workspace admin with permissions to manage groups.
+            </p>
+          </div>
+
+          <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <input
+              v-model="googleGroupsSettings.removeUnmatched"
+              type="checkbox"
+              class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+            />
+            Remove members that no longer match the mapped type
+          </label>
+
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Member type mappings</p>
+              <button
+                type="button"
+                class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                @click="addGoogleGroupMapping"
+              >
+                Add mapping
+              </button>
+            </div>
+
+            <div
+              v-for="(mapping, index) in googleGroupsSettings.mappings"
+              :key="`mapping-${index}`"
+              class="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-800"
+            >
+              <div class="min-w-[220px] flex-1">
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Member Type</label>
+                <select
+                  v-model="mapping.memberType"
+                  class="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                >
+                  <option value="">Select a member type</option>
+                  <option v-for="type in memberTypes" :key="type.MemberTypeID" :value="type.Name">
+                    {{ type.Name }}
+                  </option>
+                </select>
+              </div>
+              <div class="min-w-[260px] flex-[2]">
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Google Group Email(s)</label>
+                <input
+                  v-model="mapping.groups"
+                  type="text"
+                  placeholder="group@domain.org, another@domain.org"
+                  class="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                />
+              </div>
+              <button
+                type="button"
+                class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-900/20"
+                @click="removeGoogleGroupMapping(index)"
+              >
+                Remove
+              </button>
+            </div>
+
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              Only active members with an email address are synced to groups.
             </p>
           </div>
         </div>
@@ -957,6 +1088,15 @@ const googleSheetsSettings = ref({
 const savingGoogleSheetsSettings = ref(false)
 const syncingGoogleSheets = ref(false)
 
+const googleGroupsSettings = ref({
+  enabled: false,
+  adminEmail: '',
+  removeUnmatched: false,
+  mappings: [] as Array<{ memberType: string; groups: string }>
+})
+const savingGoogleGroupsSettings = ref(false)
+const syncingGoogleGroups = ref(false)
+
 // Audit Log state
 const auditLogs = ref<AuditLog[]>([])
 const loadingAuditLogs = ref(false)
@@ -1102,6 +1242,32 @@ const fetchGoogleSheetsSettings = async () => {
   }
 }
 
+const fetchGoogleGroupsSettings = async () => {
+  try {
+    const headers = await getAuthHeaders()
+    const response = await apiFetch('/api/settings/google-groups', { headers })
+    if (response.ok) {
+      const data = await response.json()
+      const mappings = Array.isArray(data.mappings) ? data.mappings : []
+      googleGroupsSettings.value = {
+        enabled: Boolean(data.enabled),
+        adminEmail: data.adminEmail || '',
+        removeUnmatched: Boolean(data.removeUnmatched),
+        mappings: mappings.map((mapping: any) => ({
+          memberType: mapping.memberType || '',
+          groups: Array.isArray(mapping.groups) ? mapping.groups.join(', ') : (mapping.groups || '')
+        }))
+      }
+    }
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching Google Groups settings:', error)
+    }
+  }
+}
+
 const saveReportScheduleSettings = async () => {
   try {
     savingReportScheduleSettings.value = true
@@ -1165,6 +1331,41 @@ const saveGoogleSheetsSettings = async () => {
   }
 }
 
+const saveGoogleGroupsSettings = async () => {
+  try {
+    savingGoogleGroupsSettings.value = true
+    const headers = await getAuthHeaders()
+    const payload = {
+      enabled: googleGroupsSettings.value.enabled,
+      adminEmail: googleGroupsSettings.value.adminEmail,
+      removeUnmatched: googleGroupsSettings.value.removeUnmatched,
+      mappings: googleGroupsSettings.value.mappings.map(mapping => ({
+        memberType: mapping.memberType,
+        groups: mapping.groups
+      }))
+    }
+    const response = await apiFetch('/api/settings/google-groups', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to save Google Groups settings')
+    }
+    alert('Google Groups settings saved')
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error saving Google Groups settings:', error)
+      alert(error instanceof Error ? error.message : 'Failed to save Google Groups settings')
+    }
+  } finally {
+    savingGoogleGroupsSettings.value = false
+  }
+}
+
 const syncGoogleSheetsNow = async () => {
   try {
     syncingGoogleSheets.value = true
@@ -1188,6 +1389,39 @@ const syncGoogleSheetsNow = async () => {
   } finally {
     syncingGoogleSheets.value = false
   }
+}
+
+const syncGoogleGroupsNow = async () => {
+  try {
+    syncingGoogleGroups.value = true
+    const headers = await getAuthHeaders()
+    const response = await apiFetch('/api/settings/google-groups/sync', {
+      method: 'POST',
+      headers
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to sync Google Groups')
+    }
+    alert('Google Groups sync started')
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error syncing Google Groups:', error)
+      alert(error instanceof Error ? error.message : 'Failed to sync Google Groups')
+    }
+  } finally {
+    syncingGoogleGroups.value = false
+  }
+}
+
+const addGoogleGroupMapping = () => {
+  googleGroupsSettings.value.mappings.push({ memberType: '', groups: '' })
+}
+
+const removeGoogleGroupMapping = (index: number) => {
+  googleGroupsSettings.value.mappings.splice(index, 1)
 }
 
 const sendReportNow = async () => {
@@ -1602,5 +1836,6 @@ onMounted(() => {
   fetchTimezoneSettings()
   fetchReportScheduleSettings()
   fetchGoogleSheetsSettings()
+  fetchGoogleGroupsSettings()
 })
 </script>
