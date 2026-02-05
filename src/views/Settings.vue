@@ -673,7 +673,6 @@
               <button
                 type="button"
                 class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-                :disabled="availableRoleOptions.length === 0"
                 @click="openRolePicker"
               >
                 Add
@@ -698,7 +697,6 @@
               <button
                 type="button"
                 class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-                :disabled="availableActivityOptions.length === 0"
                 @click="openActivityPicker"
               >
                 Add
@@ -1104,7 +1102,11 @@
         </h3>
 
         <div class="space-y-4">
+          <div v-if="optionPickerOptions.length === 0" class="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-xs text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">
+            No more {{ optionPickerType === 'role' ? 'roles' : 'activities' }} available to add.
+          </div>
           <select
+            v-else
             v-model="optionPickerValue"
             class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
           >
@@ -1314,13 +1316,13 @@ const saveMemberOptions = async () => {
 
 const openRolePicker = () => {
   optionPickerType.value = 'role'
-  optionPickerValue.value = ''
+  optionPickerValue.value = availableRoleOptions.value[0]?.value || ''
   showOptionPicker.value = true
 }
 
 const openActivityPicker = () => {
   optionPickerType.value = 'activity'
-  optionPickerValue.value = ''
+  optionPickerValue.value = availableActivityOptions.value[0]?.value || ''
   showOptionPicker.value = true
 }
 
