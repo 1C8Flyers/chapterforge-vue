@@ -1045,7 +1045,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
@@ -1115,6 +1115,7 @@ const savingGoogleGroupsSettings = ref(false)
 const syncingGoogleGroups = ref(false)
 const loadingGoogleGroups = ref(false)
 const availableGoogleGroups = ref<Array<{ email: string; name: string }>>([])
+const lastLoadedGroupsEmail = ref('')
 
 // Audit Log state
 const auditLogs = ref<AuditLog[]>([])
@@ -1311,6 +1312,16 @@ const fetchGoogleGroupsList = async () => {
   } finally {
     loadingGoogleGroups.value = false
   }
+}
+
+const maybeAutoLoadGroups = async () => {
+  if (activeTab.value !== 'google-groups') return
+  const email = String(googleGroupsSettings.value.adminEmail || '').trim().toLowerCase()
+  if (!email) return
+  if (loadingGoogleGroups.value) return
+  if (email === lastLoadedGroupsEmail.value && availableGoogleGroups.value.length > 0) return
+  await fetchGoogleGroupsList()
+  lastLoadedGroupsEmail.value = email
 }
 
 const saveReportScheduleSettings = async () => {
@@ -1883,4 +1894,14 @@ onMounted(() => {
   fetchGoogleSheetsSettings()
   fetchGoogleGroupsSettings()
 })
+
+watch(
+  [activeTab, () => googleGroupsSettings.value.adminEmail],
+  () => {
+    if (activeTab.value !== 'google-groups') return
+    availableGoogleGroups.value = []
+    lastLoadedGroupsEmail.value = ''
+    maybeAutoLoadGroups()
+  }
+)
 </script>
