@@ -19,15 +19,17 @@
       <div class="space-y-4 text-sm text-gray-700 dark:text-gray-200">
         <div>
           <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Member Types (optional)</label>
-          <select
-            v-model="localMapping.memberTypes"
-            multiple
-            class="mt-1 h-24 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-          >
-            <option v-for="type in memberTypes" :key="type.MemberTypeID" :value="type.Name">
+          <div class="mt-2 grid gap-2 sm:grid-cols-2">
+            <label v-for="type in memberTypes" :key="type.MemberTypeID" class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+              <input
+                v-model="localMapping.memberTypes"
+                type="checkbox"
+                :value="type.Name"
+                class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+              />
               {{ type.Name }}
-            </option>
-          </select>
+            </label>
+          </div>
         </div>
 
         <div>
