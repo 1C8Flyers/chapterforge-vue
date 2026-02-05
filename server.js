@@ -75,26 +75,60 @@ app.get('/public/member-signup/form', async (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>New Member Signup</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 20px; color: #1f2937; }
-          .field { margin-bottom: 12px; }
-          label { display: block; font-size: 14px; margin-bottom: 6px; }
-          input { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; }
-          button { background: #3b82f6; color: white; border: 0; padding: 10px 18px; border-radius: 6px; cursor: pointer; }
+          :root { color-scheme: light; }
+          body { font-family: "Inter", "Segoe UI", Arial, sans-serif; background: #f3f4f6; color: #111827; padding: 24px; }
+          .card { max-width: 720px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08); padding: 24px; }
+          h1 { font-size: 22px; margin: 0 0 6px; }
+          p.sub { margin: 0 0 20px; color: #6b7280; font-size: 14px; }
+          .grid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .field { display: flex; flex-direction: column; gap: 6px; }
+          label { font-size: 13px; color: #374151; font-weight: 600; }
+          input, select { width: 100%; padding: 11px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+          input:focus, select:focus { outline: 2px solid rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
+          .full { grid-column: span 2; }
+          .notice { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: #eff6ff; color: #1e3a8a; font-size: 13px; }
+          .actions { margin-top: 18px; display: flex; justify-content: flex-end; }
+          button { background: #2563eb; color: white; border: 0; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+          button:hover { background: #1d4ed8; }
+          @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } .full { grid-column: span 1; } }
         </style>
       </head>
       <body>
-        <form method="POST" action="${actionUrl}">
-          <div class="field"><label>First Name</label><input name="FirstName" required /></div>
-          <div class="field"><label>Last Name</label><input name="LastName" required /></div>
-          <div class="field"><label>Email</label><input name="Email" type="email" required /></div>
-          <div class="field"><label>EAA Number</label><input name="EAANumber" required /></div>
-          <div class="field"><label>Street Address</label><input name="Street" required /></div>
-          <div class="field"><label>City</label><input name="City" required /></div>
-          <div class="field"><label>State</label><input name="State" required /></div>
-          <div class="field"><label>ZIP</label><input name="Zip" required /></div>
-          <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off" />
-          <button type="submit">Submit</button>
-        </form>
+        <div class="card">
+          <h1>New Member Signup</h1>
+          <p class="sub">Please complete the form below. We will follow up soon.</p>
+          <form method="POST" action="${actionUrl}">
+            <div class="grid">
+              <div class="field"><label>First Name</label><input name="FirstName" required /></div>
+              <div class="field"><label>Last Name</label><input name="LastName" required /></div>
+              <div class="field"><label>Email</label><input name="Email" type="email" required /></div>
+              <div class="field"><label>EAA Number</label><input name="EAANumber" required /></div>
+              <div class="field full"><label>Street Address</label><input name="Street" required /></div>
+              <div class="field"><label>City</label><input name="City" required /></div>
+              <div class="field"><label>State</label><input name="State" required /></div>
+              <div class="field"><label>ZIP</label><input name="Zip" required /></div>
+              <div class="field full">
+                <label>How did you hear about us?</label>
+                <select name="HearAbout">
+                  <option value="">Select...</option>
+                  <option>Friend or family</option>
+                  <option>Chapter event</option>
+                  <option>EAA website</option>
+                  <option>Social media</option>
+                  <option>Search engine</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="notice">
+              By submitting this form, you agree to be added to our chapter events email list.
+            </div>
+            <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off" />
+            <div class="actions">
+              <button type="submit">Submit</button>
+            </div>
+          </form>
+        </div>
       </body>
       </html>
     `);
@@ -122,12 +156,17 @@ app.post('/public/member-signup', async (req, res) => {
     const City = String(req.body?.City || '').trim();
     const State = String(req.body?.State || '').trim();
     const Zip = String(req.body?.Zip || '').trim();
+    const HearAbout = String(req.body?.HearAbout || '').trim();
 
     if (!FirstName || !LastName || !Email || !EAANumber || !Street || !City || !State || !Zip) {
       return res.status(400).send('Missing required fields.');
     }
 
     const memberType = config.defaultMemberType || 'Prospect';
+    const notes = HearAbout
+      ? `Public signup. Heard about us: ${HearAbout}`
+      : 'Public signup';
+
     const createdMember = await db.createMember({
       FirstName,
       LastName,
@@ -139,7 +178,7 @@ app.post('/public/member-signup', async (req, res) => {
       Zip,
       MemberType: memberType,
       Status: 'Prospect',
-      Notes: 'Public signup'
+      Notes: notes
     });
 
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
@@ -155,7 +194,8 @@ app.post('/public/member-signup', async (req, res) => {
       State,
       Zip,
       AssignedMemberType: memberType,
-      RawPayload: JSON.stringify({ FirstName, LastName, Email, EAANumber, Street, City, State, Zip }),
+      Notes: notes,
+      RawPayload: JSON.stringify({ FirstName, LastName, Email, EAANumber, Street, City, State, Zip, HearAbout }),
       CreatedIp: ipAddress,
       UserAgent: userAgent
     });
@@ -168,6 +208,7 @@ app.post('/public/member-signup', async (req, res) => {
           <li>Email: ${Email}</li>
           <li>EAA Number: ${EAANumber}</li>
           <li>Address: ${Street}, ${City}, ${State} ${Zip}</li>
+          <li>Heard about us: ${HearAbout || '—'}</li>
           <li>Member Type: ${memberType}</li>
         </ul>
       `;
