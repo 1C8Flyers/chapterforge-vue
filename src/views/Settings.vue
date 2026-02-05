@@ -670,48 +670,70 @@
           <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.02]">
             <div class="mb-3 flex items-center justify-between">
               <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">Roles</h4>
-              <button
-                type="button"
-                class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-                @click="saveMemberOptions"
-              >
-                Save Roles
-              </button>
+              <div class="flex items-center gap-2">
+                <select
+                  v-model="newRoleOption"
+                  class="h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                >
+                  <option value="">Add role...</option>
+                  <option v-for="role in availableRoleOptions" :key="role.value" :value="role.value">
+                    {{ role.label }}
+                  </option>
+                </select>
+                <button
+                  type="button"
+                  class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                  @click="addRoleOption"
+                >
+                  Add
+                </button>
+              </div>
             </div>
-            <div class="grid gap-2 sm:grid-cols-2">
-              <label v-for="role in baseRoleOptions" :key="role.value" class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
-                <input
-                  v-model="memberOptionSettings.roles"
-                  type="checkbox"
-                  :value="role.value"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                />
+            <div class="flex flex-wrap gap-2">
+              <span
+                v-for="role in googleGroupRoleOptions"
+                :key="role.value"
+                class="flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              >
                 {{ role.label }}
-              </label>
+                <button type="button" class="text-gray-400 hover:text-red-500" @click="removeRoleOption(role.value)">×</button>
+              </span>
+              <span v-if="googleGroupRoleOptions.length === 0" class="text-xs text-gray-400">No roles configured</span>
             </div>
           </div>
 
           <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.02]">
             <div class="mb-3 flex items-center justify-between">
               <h4 class="text-sm font-semibold text-gray-800 dark:text-white/90">Activities</h4>
-              <button
-                type="button"
-                class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-                @click="saveMemberOptions"
-              >
-                Save Activities
-              </button>
+              <div class="flex items-center gap-2">
+                <select
+                  v-model="newActivityOption"
+                  class="h-9 rounded-lg border border-gray-300 bg-transparent px-3 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                >
+                  <option value="">Add activity...</option>
+                  <option v-for="activity in availableActivityOptions" :key="activity.value" :value="activity.value">
+                    {{ activity.label }}
+                  </option>
+                </select>
+                <button
+                  type="button"
+                  class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                  @click="addActivityOption"
+                >
+                  Add
+                </button>
+              </div>
             </div>
-            <div class="grid gap-2 sm:grid-cols-2">
-              <label v-for="activity in baseActivityOptions" :key="activity.value" class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
-                <input
-                  v-model="memberOptionSettings.activities"
-                  type="checkbox"
-                  :value="activity.value"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                />
+            <div class="flex flex-wrap gap-2">
+              <span
+                v-for="activity in googleGroupActivityOptions"
+                :key="activity.value"
+                class="flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              >
                 {{ activity.label }}
-              </label>
+                <button type="button" class="text-gray-400 hover:text-red-500" @click="removeActivityOption(activity.value)">×</button>
+              </span>
+              <span v-if="googleGroupActivityOptions.length === 0" class="text-xs text-gray-400">No activities configured</span>
             </div>
           </div>
         </div>
@@ -1188,6 +1210,8 @@ const memberOptionSettings = ref({
   roles: baseRoleOptions.map(option => option.value),
   activities: baseActivityOptions.map(option => option.value)
 })
+const newRoleOption = ref('')
+const newActivityOption = ref('')
 
 const googleGroupRoleOptions = computed(() => {
   return baseRoleOptions.filter(option => memberOptionSettings.value.roles.includes(option.value))
@@ -1195,6 +1219,14 @@ const googleGroupRoleOptions = computed(() => {
 
 const googleGroupActivityOptions = computed(() => {
   return baseActivityOptions.filter(option => memberOptionSettings.value.activities.includes(option.value))
+})
+
+const availableRoleOptions = computed(() => {
+  return baseRoleOptions.filter(option => !memberOptionSettings.value.roles.includes(option.value))
+})
+
+const availableActivityOptions = computed(() => {
+  return baseActivityOptions.filter(option => !memberOptionSettings.value.activities.includes(option.value))
 })
 
 const formatMemberTypeRoles = (type: any) => {
@@ -1244,6 +1276,34 @@ const saveMemberOptions = async () => {
       console.error('Error saving member options:', error)
     }
   }
+}
+
+const addRoleOption = async () => {
+  if (!newRoleOption.value) return
+  if (!memberOptionSettings.value.roles.includes(newRoleOption.value)) {
+    memberOptionSettings.value.roles.push(newRoleOption.value)
+  }
+  newRoleOption.value = ''
+  await saveMemberOptions()
+}
+
+const removeRoleOption = async (value: string) => {
+  memberOptionSettings.value.roles = memberOptionSettings.value.roles.filter(role => role !== value)
+  await saveMemberOptions()
+}
+
+const addActivityOption = async () => {
+  if (!newActivityOption.value) return
+  if (!memberOptionSettings.value.activities.includes(newActivityOption.value)) {
+    memberOptionSettings.value.activities.push(newActivityOption.value)
+  }
+  newActivityOption.value = ''
+  await saveMemberOptions()
+}
+
+const removeActivityOption = async (value: string) => {
+  memberOptionSettings.value.activities = memberOptionSettings.value.activities.filter(activity => activity !== value)
+  await saveMemberOptions()
 }
 
 
