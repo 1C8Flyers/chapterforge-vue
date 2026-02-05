@@ -1775,6 +1775,44 @@ app.post('/api/settings/google-groups/sync', async (req, res) => {
   }
 });
 
+app.get('/api/settings/google-groups/groups', async (req, res) => {
+  try {
+    const config = await getGoogleGroupsConfig();
+    const adminEmail = config.adminEmail;
+    if (!adminEmail) {
+      return res.status(400).json({ error: 'Admin email is required to load groups' });
+    }
+
+    const adminClient = await getGoogleAdminClient(adminEmail);
+    const query = typeof req.query.query === 'string' ? req.query.query.trim() : '';
+
+    const groups = [];
+    let pageToken = undefined;
+    do {
+      const response = await adminClient.groups.list({
+        customer: 'my_customer',
+        maxResults: 200,
+        pageToken,
+        query: query || undefined
+      });
+      const dataGroups = response.data?.groups || [];
+      for (const group of dataGroups) {
+        if (group?.email) {
+          groups.push({
+            email: String(group.email).trim().toLowerCase(),
+            name: group?.name ? String(group.name) : ''
+          });
+        }
+      }
+      pageToken = response.data?.nextPageToken;
+    } while (pageToken);
+
+    res.json({ groups });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: Scheduled report settings
 app.get('/api/settings/report-schedule', async (req, res) => {
   try {

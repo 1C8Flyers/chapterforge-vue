@@ -229,6 +229,13 @@
               {{ syncingGoogleGroups ? 'Syncing...' : 'Sync Now' }}
             </button>
             <button
+              @click="fetchGoogleGroupsList"
+              class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-800 dark:text-gray-200"
+              :disabled="loadingGoogleGroups || !googleGroupsSettings.adminEmail"
+            >
+              {{ loadingGoogleGroups ? 'Loading...' : 'Load Groups' }}
+            </button>
+            <button
               @click="saveGoogleGroupsSettings"
               class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
               :disabled="savingGoogleGroupsSettings"
@@ -311,12 +318,22 @@
               </div>
               <div class="min-w-[260px] flex-[2]">
                 <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Google Group Email(s)</label>
-                <input
+                <select
                   v-model="mapping.groups"
-                  type="text"
-                  placeholder="group@domain.org, another@domain.org"
-                  class="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                />
+                  multiple
+                  class="mt-1 h-28 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                >
+                  <option
+                    v-for="group in availableGoogleGroups"
+                    :key="group.email"
+                    :value="group.email"
+                  >
+                    {{ group.name ? `${group.name} (${group.email})` : group.email }}
+                  </option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Load groups to select. Hold Ctrl/Cmd to select multiple.
+                </p>
               </div>
               <button
                 type="button"
@@ -1092,10 +1109,12 @@ const googleGroupsSettings = ref({
   enabled: false,
   adminEmail: '',
   removeUnmatched: false,
-  mappings: [] as Array<{ memberType: string; groups: string }>
+  mappings: [] as Array<{ memberType: string; groups: string[] }>
 })
 const savingGoogleGroupsSettings = ref(false)
 const syncingGoogleGroups = ref(false)
+const loadingGoogleGroups = ref(false)
+const availableGoogleGroups = ref<Array<{ email: string; name: string }>>([])
 
 // Audit Log state
 const auditLogs = ref<AuditLog[]>([])
@@ -1255,7 +1274,9 @@ const fetchGoogleGroupsSettings = async () => {
         removeUnmatched: Boolean(data.removeUnmatched),
         mappings: mappings.map((mapping: any) => ({
           memberType: mapping.memberType || '',
-          groups: Array.isArray(mapping.groups) ? mapping.groups.join(', ') : (mapping.groups || '')
+          groups: Array.isArray(mapping.groups)
+            ? mapping.groups
+            : String(mapping.groups || '').split(',').map((group: string) => group.trim()).filter(Boolean)
         }))
       }
     }
@@ -1265,6 +1286,30 @@ const fetchGoogleGroupsSettings = async () => {
     } else {
       console.error('Error fetching Google Groups settings:', error)
     }
+  }
+}
+
+const fetchGoogleGroupsList = async () => {
+  if (!googleGroupsSettings.value.adminEmail) return
+  try {
+    loadingGoogleGroups.value = true
+    const headers = await getAuthHeaders()
+    const response = await apiFetch('/api/settings/google-groups/groups', { headers })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to load Google Groups')
+    }
+    const data = await response.json()
+    availableGoogleGroups.value = Array.isArray(data.groups) ? data.groups : []
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error loading Google Groups:', error)
+      alert(error instanceof Error ? error.message : 'Failed to load Google Groups')
+    }
+  } finally {
+    loadingGoogleGroups.value = false
   }
 }
 
@@ -1417,7 +1462,7 @@ const syncGoogleGroupsNow = async () => {
 }
 
 const addGoogleGroupMapping = () => {
-  googleGroupsSettings.value.mappings.push({ memberType: '', groups: '' })
+  googleGroupsSettings.value.mappings.push({ memberType: '', groups: [] })
 }
 
 const removeGoogleGroupMapping = (index: number) => {
