@@ -229,13 +229,6 @@
               {{ syncingGoogleGroups ? 'Syncing...' : 'Sync Now' }}
             </button>
             <button
-              @click="fetchGoogleGroupsList"
-              class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-800 dark:text-gray-200"
-              :disabled="loadingGoogleGroups || !googleGroupsSettings.adminEmail"
-            >
-              {{ loadingGoogleGroups ? 'Loading...' : 'Load Groups' }}
-            </button>
-            <button
               @click="saveGoogleGroupsSettings"
               class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
               :disabled="savingGoogleGroupsSettings"
@@ -287,90 +280,18 @@
             Remove members that no longer match the mapped type
           </label>
 
-          <div class="space-y-3">
-            <div class="flex items-center justify-between">
-              <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Group mappings</p>
-              <button
-                type="button"
-                class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-                @click="addGoogleGroupMapping"
-              >
-                Add mapping
-              </button>
-            </div>
+          <RuleBuilderList
+            :mappings="googleGroupsSettings.mappings"
+            :memberTypes="memberTypes"
+            :roleOptions="googleGroupRoleOptions"
+            :activityOptions="googleGroupActivityOptions"
+            :availableGroups="availableGoogleGroups"
+            @update:mappings="googleGroupsSettings.mappings = $event"
+          />
 
-            <div
-              v-for="(mapping, index) in googleGroupsSettings.mappings"
-              :key="`mapping-${index}`"
-              class="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-800"
-            >
-              <div class="min-w-[260px] flex-[2] space-y-2">
-                <div>
-                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Member Types (optional)</label>
-                  <select
-                    v-model="mapping.memberTypes"
-                    multiple
-                    class="mt-1 h-24 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                  >
-                    <option v-for="type in memberTypes" :key="type.MemberTypeID" :value="type.Name">
-                      {{ type.Name }}
-                    </option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Roles (optional)</label>
-                  <div class="mt-1 flex flex-wrap gap-3 text-xs text-gray-700 dark:text-gray-300">
-                    <label v-for="role in googleGroupRoleOptions" :key="role.value" class="flex items-center gap-2">
-                      <input v-model="mapping.roles" type="checkbox" :value="role.value" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" />
-                      {{ role.label }}
-                    </label>
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Activities (optional)</label>
-                  <div class="mt-1 flex flex-wrap gap-3 text-xs text-gray-700 dark:text-gray-300">
-                    <label v-for="activity in googleGroupActivityOptions" :key="activity.value" class="flex items-center gap-2">
-                      <input v-model="mapping.activities" type="checkbox" :value="activity.value" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" />
-                      {{ activity.label }}
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div class="min-w-[260px] flex-[2] space-y-2">
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400">Google Groups</label>
-                <input
-                  v-model="mapping.groupSearch"
-                  type="text"
-                  placeholder="Search groups..."
-                  class="mt-1 h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                />
-                <div class="max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-2 text-xs text-gray-700 dark:border-gray-800 dark:text-gray-300">
-                  <label
-                    v-for="group in filteredGoogleGroups(mapping.groupSearch)"
-                    :key="group.email"
-                    class="flex items-center gap-2 py-1"
-                  >
-                    <input v-model="mapping.groups" type="checkbox" :value="group.email" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" />
-                    <span>{{ group.name ? `${group.name} (${group.email})` : group.email }}</span>
-                  </label>
-                </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                  {{ mapping.groups.length }} selected
-                </p>
-              </div>
-              <button
-                type="button"
-                class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-900/20"
-                @click="removeGoogleGroupMapping(index)"
-              >
-                Remove
-              </button>
-            </div>
-
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              Only active members with an email address are synced to groups.
-            </p>
-          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            Only active members with an email address are synced to groups.
+          </p>
         </div>
       </div>
     </div>
@@ -1074,6 +995,7 @@ import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import RuleBuilderList from '@/components/google-groups/RuleBuilderList.vue'
 import { getAuthHeaders, apiFetch, AuthError } from '@/utils/apiAuth'
 
 const router = useRouter()
@@ -1520,27 +1442,6 @@ const syncGoogleGroupsNow = async () => {
   }
 }
 
-const addGoogleGroupMapping = () => {
-  googleGroupsSettings.value.mappings.push({
-    memberTypes: [],
-    roles: [],
-    activities: [],
-    groups: [],
-    groupSearch: ''
-  })
-}
-
-const filteredGoogleGroups = (search: string) => {
-  const normalized = String(search || '').trim().toLowerCase()
-  if (!normalized) return availableGoogleGroups.value
-  return availableGoogleGroups.value.filter(group => {
-    return group.email.includes(normalized) || (group.name || '').toLowerCase().includes(normalized)
-  })
-}
-
-const removeGoogleGroupMapping = (index: number) => {
-  googleGroupsSettings.value.mappings.splice(index, 1)
-}
 
 const sendReportNow = async () => {
   try {
