@@ -183,7 +183,7 @@ class EmailService {
     return results;
   }
 
-  async sendReportEmail({ recipients, subject, html, attachments = [] }) {
+  async sendReportEmail({ recipients, subject, html, attachments = [], replyTo = '' }) {
     const normalizedRecipients = Array.isArray(recipients)
       ? recipients.map(r => String(r).trim()).filter(Boolean)
       : String(recipients || '')
@@ -202,6 +202,10 @@ class EmailService {
       html,
       attachments
     };
+
+    if (replyTo) {
+      mailOptions.replyTo = replyTo;
+    }
 
     try {
       const info = await this.transporter.sendMail(mailOptions);

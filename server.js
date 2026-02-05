@@ -58,6 +58,139 @@ app.use((req, res, next) => {
   next();
 });
 
+// Public member signup form (no auth)
+app.get('/public/member-signup/form', async (req, res) => {
+  try {
+    const config = await getPublicSignupConfig();
+    if (!config.enabled) {
+      return res.status(403).send('Signup form is currently disabled.');
+    }
+    const actionUrl = `${req.protocol}://${req.get('host')}/public/member-signup`;
+    res.setHeader('Content-Type', 'text/html');
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>New Member Signup</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; color: #1f2937; }
+          .field { margin-bottom: 12px; }
+          label { display: block; font-size: 14px; margin-bottom: 6px; }
+          input { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; }
+          button { background: #3b82f6; color: white; border: 0; padding: 10px 18px; border-radius: 6px; cursor: pointer; }
+        </style>
+      </head>
+      <body>
+        <form method="POST" action="${actionUrl}">
+          <div class="field"><label>First Name</label><input name="FirstName" required /></div>
+          <div class="field"><label>Last Name</label><input name="LastName" required /></div>
+          <div class="field"><label>Email</label><input name="Email" type="email" required /></div>
+          <div class="field"><label>EAA Number</label><input name="EAANumber" required /></div>
+          <div class="field"><label>Street Address</label><input name="Street" required /></div>
+          <div class="field"><label>City</label><input name="City" required /></div>
+          <div class="field"><label>State</label><input name="State" required /></div>
+          <div class="field"><label>ZIP</label><input name="Zip" required /></div>
+          <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off" />
+          <button type="submit">Submit</button>
+        </form>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Unable to render form');
+  }
+});
+
+app.post('/public/member-signup', async (req, res) => {
+  try {
+    const config = await getPublicSignupConfig();
+    if (!config.enabled) {
+      return res.status(403).send('Signup form is currently disabled.');
+    }
+
+    if (req.body?.website) {
+      return res.status(200).send('Thank you for your submission.');
+    }
+
+    const FirstName = String(req.body?.FirstName || '').trim();
+    const LastName = String(req.body?.LastName || '').trim();
+    const Email = String(req.body?.Email || '').trim();
+    const EAANumber = String(req.body?.EAANumber || '').trim();
+    const Street = String(req.body?.Street || '').trim();
+    const City = String(req.body?.City || '').trim();
+    const State = String(req.body?.State || '').trim();
+    const Zip = String(req.body?.Zip || '').trim();
+
+    if (!FirstName || !LastName || !Email || !EAANumber || !Street || !City || !State || !Zip) {
+      return res.status(400).send('Missing required fields.');
+    }
+
+    const memberType = config.defaultMemberType || 'Prospect';
+    const createdMember = await db.createMember({
+      FirstName,
+      LastName,
+      Email,
+      EAANumber,
+      Street,
+      City,
+      State,
+      Zip,
+      MemberType: memberType,
+      Status: 'Prospect',
+      Notes: 'Public signup'
+    });
+
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || '';
+    await db.createPublicSignup({
+      MemberID: createdMember.id,
+      FirstName,
+      LastName,
+      Email,
+      EAANumber,
+      Street,
+      City,
+      State,
+      Zip,
+      AssignedMemberType: memberType,
+      RawPayload: JSON.stringify({ FirstName, LastName, Email, EAANumber, Street, City, State, Zip }),
+      CreatedIp: ipAddress,
+      UserAgent: userAgent
+    });
+
+    if (config.notificationEmail) {
+      const html = `
+        <p>A new member signup was received.</p>
+        <ul>
+          <li>Name: ${FirstName} ${LastName}</li>
+          <li>Email: ${Email}</li>
+          <li>EAA Number: ${EAANumber}</li>
+          <li>Address: ${Street}, ${City}, ${State} ${Zip}</li>
+          <li>Member Type: ${memberType}</li>
+        </ul>
+      `;
+      await emailService.sendReportEmail({
+        recipients: config.notificationEmail,
+        subject: `New Member Signup: ${FirstName} ${LastName}`,
+        html
+      });
+    }
+
+    scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
+
+    const wantsJson = String(req.headers.accept || '').includes('application/json');
+    if (wantsJson) {
+      return res.json({ success: true });
+    }
+    return res.send('Thank you for your submission.');
+  } catch (error) {
+    res.status(500).send('Unable to process signup.');
+  }
+});
+
 // Auth middleware for API routes
 app.use('/api', async (req, res, next) => {
   const publicPaths = ['/payments/square/webhook'];
@@ -132,6 +265,7 @@ app.use('/api', async (req, res, next) => {
   const GOOGLE_GROUPS_SETTING_KEY = 'google_groups_config';
   const MEMBER_ROLE_OPTIONS_KEY = 'member_role_options';
   const MEMBER_ACTIVITY_OPTIONS_KEY = 'member_activity_options';
+  const PUBLIC_SIGNUP_SETTING_KEY = 'public_signup_config';
   const DEFAULT_REPORT_SCHEDULE = {
     enabled: false,
     recipients: [],
@@ -168,6 +302,25 @@ app.use('/api', async (req, res, next) => {
     'EaglePilot',
     'EagleFlightVolunteer'
   ];
+
+  const DEFAULT_PUBLIC_SIGNUP_CONFIG = {
+    enabled: false,
+    defaultMemberType: 'Prospect',
+    notificationEmail: ''
+  };
+
+  const normalizePublicSignupConfig = (input = {}) => {
+    const merged = { ...DEFAULT_PUBLIC_SIGNUP_CONFIG, ...(input || {}) };
+    return {
+      enabled: Boolean(merged.enabled),
+      defaultMemberType: typeof merged.defaultMemberType === 'string'
+        ? merged.defaultMemberType.trim()
+        : DEFAULT_PUBLIC_SIGNUP_CONFIG.defaultMemberType,
+      notificationEmail: typeof merged.notificationEmail === 'string'
+        ? merged.notificationEmail.trim()
+        : ''
+    };
+  };
 
   const normalizeGoogleSheetsConfig = (input = {}) => {
     const merged = { ...DEFAULT_GOOGLE_SHEETS_CONFIG, ...(input || {}) };
@@ -280,6 +433,16 @@ app.use('/api', async (req, res, next) => {
       return normalizeGoogleGroupsConfig(JSON.parse(raw));
     } catch (error) {
       return { ...DEFAULT_GOOGLE_GROUPS_CONFIG };
+    }
+  };
+
+  const getPublicSignupConfig = async () => {
+    const raw = await db.getSetting(PUBLIC_SIGNUP_SETTING_KEY);
+    if (!raw) return { ...DEFAULT_PUBLIC_SIGNUP_CONFIG };
+    try {
+      return normalizePublicSignupConfig(JSON.parse(raw));
+    } catch (error) {
+      return { ...DEFAULT_PUBLIC_SIGNUP_CONFIG };
     }
   };
 
@@ -1927,6 +2090,92 @@ app.post('/api/settings/member-options', async (req, res) => {
     scheduleGoogleSheetsSync();
     scheduleGoogleGroupsSync();
     res.json({ success: true, roles, activities });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Public member signup settings
+app.get('/api/settings/public-signup', async (req, res) => {
+  try {
+    const config = await getPublicSignupConfig();
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings/public-signup', async (req, res) => {
+  try {
+    const normalized = normalizePublicSignupConfig(req.body || {});
+    if (normalized.enabled && !normalized.defaultMemberType) {
+      return res.status(400).json({ error: 'Default member type is required when signup is enabled' });
+    }
+
+    const oldValue = await db.getSetting(PUBLIC_SIGNUP_SETTING_KEY);
+    await db.setSetting(PUBLIC_SIGNUP_SETTING_KEY, JSON.stringify(normalized));
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(
+      req.user.email,
+      'UPDATE',
+      'app_settings',
+      null,
+      { publicSignup: oldValue },
+      { publicSignup: normalized },
+      ipAddress,
+      'Updated public signup settings'
+    );
+    res.json({ success: true, config: normalized });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Public signup submissions
+app.get('/api/public-signups', async (req, res) => {
+  try {
+    const limit = req.query?.limit ? Number(req.query.limit) : 200;
+    const rows = await db.listPublicSignups(limit);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/public-signups/:id/reply', async (req, res) => {
+  try {
+    const signup = await db.getPublicSignupById(req.params.id);
+    if (!signup) {
+      return res.status(404).json({ error: 'Signup not found' });
+    }
+    const subject = String(req.body?.subject || '').trim();
+    const body = String(req.body?.body || '').trim();
+    if (!subject || !body) {
+      return res.status(400).json({ error: 'Subject and body are required' });
+    }
+
+    const html = body
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map(line => `<p>${line}</p>`)
+      .join('');
+
+    const replyToEmail = String(req.body?.replyToEmail || '').trim() || (process.env.CHAPTER_EMAIL || '');
+
+    const sendResult = await emailService.sendReportEmail({
+      recipients: signup.Email,
+      subject,
+      html,
+      replyTo: replyToEmail
+    });
+
+    if (!sendResult.success) {
+      return res.status(500).json({ error: sendResult.error || 'Failed to send reply' });
+    }
+
+    await db.savePublicSignupReply(req.params.id, { subject, body, replyToEmail });
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

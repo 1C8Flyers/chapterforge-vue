@@ -73,6 +73,35 @@ class Database {
       addMemberColumn('State', 'TEXT');
       addMemberColumn('Zip', 'TEXT');
 
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS public_member_signups (
+          SignupID INTEGER PRIMARY KEY AUTOINCREMENT,
+          MemberID INTEGER,
+          FirstName TEXT NOT NULL,
+          LastName TEXT NOT NULL,
+          Email TEXT NOT NULL,
+          EAANumber TEXT,
+          Street TEXT,
+          City TEXT,
+          State TEXT,
+          Zip TEXT,
+          AssignedMemberType TEXT,
+          Status TEXT DEFAULT 'new',
+          Notes TEXT,
+          RawPayload TEXT,
+          ReplySubject TEXT,
+          ReplyBody TEXT,
+          ReplyToEmail TEXT,
+          CreatedIp TEXT,
+          UserAgent TEXT,
+          CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          RepliedAt DATETIME,
+          FOREIGN KEY (MemberID) REFERENCES members(MemberID)
+        )
+      `);
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_public_signup_email ON public_member_signups(Email)`);
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_public_signup_created ON public_member_signups(CreatedAt)`);
+
       // Remove legacy AdditionalFamilyMembers column if present
       this.db.all('PRAGMA table_info(members)', [], (err, columns) => {
         if (err) return;
@@ -529,7 +558,7 @@ class Database {
         Phone, Email, MemberType, Status, DuesRate, LastPaidYear,
         AmountDue, YouthProtectionExpiration, BackgroundCheckExpiration,
         YoungEaglePilot, YoungEagleVolunteer, EaglePilot, EagleFlightVolunteer,
-        BoardMember, Officer, Notes
+        BoardMember, Officer, Notes, Street, City, State, Zip
       } = member;
 
       const lastPaidYearValue = LastPaidYear !== undefined && LastPaidYear !== null && LastPaidYear !== ''
@@ -542,8 +571,9 @@ class Database {
           Phone, Email, MemberType, Status, DuesRate, LastPaidYear,
           AmountDue, YouthProtectionExpiration, BackgroundCheckExpiration,
           YoungEaglePilot, YoungEagleVolunteer, EaglePilot, EagleFlightVolunteer,
-          BoardMember, Officer, Notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          BoardMember, Officer, Notes,
+          Street, City, State, Zip
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       this.db.run(
@@ -552,7 +582,8 @@ class Database {
          Phone, Email, MemberType, Status, DuesRate, lastPaidYearValue,
          AmountDue, YouthProtectionExpiration || null, BackgroundCheckExpiration || null,
          YoungEaglePilot ? 1 : 0, YoungEagleVolunteer ? 1 : 0, EaglePilot ? 1 : 0, EagleFlightVolunteer ? 1 : 0,
-         BoardMember ? 1 : 0, Officer ? 1 : 0, Notes],
+         BoardMember ? 1 : 0, Officer ? 1 : 0, Notes,
+         Street || null, City || null, State || null, Zip || null],
         function(err) {
           if (err) reject(err);
           else resolve({ id: this.lastID });
@@ -569,7 +600,7 @@ class Database {
         Phone, Email, MemberType, Status, DuesRate, LastPaidYear,
         AmountDue, YouthProtectionExpiration, BackgroundCheckExpiration,
         YoungEaglePilot, YoungEagleVolunteer, EaglePilot, EagleFlightVolunteer,
-        BoardMember, Officer, Notes
+        BoardMember, Officer, Notes, Street, City, State, Zip
       } = member;
 
       const lastPaidYearValue = LastPaidYear !== undefined && LastPaidYear !== null && LastPaidYear !== ''
@@ -584,7 +615,9 @@ class Database {
           YouthProtectionExpiration = ?, BackgroundCheckExpiration = ?,
           YoungEaglePilot = ?, YoungEagleVolunteer = ?, EaglePilot = ?, EagleFlightVolunteer = ?,
           BoardMember = ?, Officer = ?,
-          Notes = ?, UpdatedAt = CURRENT_TIMESTAMP
+          Notes = ?,
+          Street = ?, City = ?, State = ?, Zip = ?,
+          UpdatedAt = CURRENT_TIMESTAMP
         WHERE MemberID = ?
       `;
 
@@ -595,7 +628,108 @@ class Database {
          AmountDue, YouthProtectionExpiration || null, BackgroundCheckExpiration || null,
          YoungEaglePilot ? 1 : 0, YoungEagleVolunteer ? 1 : 0, EaglePilot ? 1 : 0, EagleFlightVolunteer ? 1 : 0,
          BoardMember ? 1 : 0, Officer ? 1 : 0,
-         Notes, id],
+         Notes,
+         Street || null, City || null, State || null, Zip || null,
+         id],
+        (err) => {
+          if (err) reject(err);
+          else resolve({ updated: true });
+        }
+      );
+    });
+  }
+
+  createPublicSignup(signup) {
+    return new Promise((resolve, reject) => {
+      const {
+        MemberID,
+        FirstName,
+        LastName,
+        Email,
+        EAANumber,
+        Street,
+        City,
+        State,
+        Zip,
+        AssignedMemberType,
+        Status,
+        Notes,
+        RawPayload,
+        CreatedIp,
+        UserAgent
+      } = signup;
+
+      const sql = `
+        INSERT INTO public_member_signups (
+          MemberID, FirstName, LastName, Email, EAANumber,
+          Street, City, State, Zip,
+          AssignedMemberType, Status, Notes, RawPayload,
+          CreatedIp, UserAgent
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      this.db.run(
+        sql,
+        [
+          MemberID || null,
+          FirstName,
+          LastName,
+          Email,
+          EAANumber || null,
+          Street || null,
+          City || null,
+          State || null,
+          Zip || null,
+          AssignedMemberType || null,
+          Status || 'new',
+          Notes || null,
+          RawPayload || null,
+          CreatedIp || null,
+          UserAgent || null
+        ],
+        function(err) {
+          if (err) reject(err);
+          else resolve({ id: this.lastID });
+        }
+      );
+    });
+  }
+
+  listPublicSignups(limit = 200) {
+    return new Promise((resolve, reject) => {
+      const safeLimit = Number.isFinite(Number(limit)) ? Number(limit) : 200;
+      this.db.all(
+        `SELECT * FROM public_member_signups ORDER BY CreatedAt DESC LIMIT ?`,
+        [safeLimit],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        }
+      );
+    });
+  }
+
+  getPublicSignupById(id) {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `SELECT * FROM public_member_signups WHERE SignupID = ?`,
+        [id],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row || null);
+        }
+      );
+    });
+  }
+
+  savePublicSignupReply(id, { subject, body, replyToEmail }) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `UPDATE public_member_signups
+         SET ReplySubject = ?, ReplyBody = ?, ReplyToEmail = ?,
+             Status = 'replied', RepliedAt = CURRENT_TIMESTAMP
+         WHERE SignupID = ?`,
+        [subject || null, body || null, replyToEmail || null, id],
         (err) => {
           if (err) reject(err);
           else resolve({ updated: true });
