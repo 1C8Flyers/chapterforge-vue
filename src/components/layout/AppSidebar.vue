@@ -257,6 +257,12 @@ const allMenuItems = [
     adminOnly: true,
   },
   {
+    icon: HorizontalDots,
+    name: "Forms",
+    path: "/forms",
+    adminOnly: true,
+  },
+  {
     icon: SettingsIcon,
     name: "Settings",
     path: "/settings",
