@@ -124,21 +124,38 @@
               <tr v-else-if="publicSignups.length === 0">
                 <td colspan="6" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">No signups yet.</td>
               </tr>
-              <tr v-else v-for="signup in publicSignups" :key="signup.SignupID" class="border-b border-gray-100 dark:border-gray-800">
-                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ formatSignupDate(signup.CreatedAt) }}</td>
-                <td class="px-4 py-3 text-sm text-gray-800 dark:text-white/90">{{ signup.FirstName }} {{ signup.LastName }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.Email }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.AssignedMemberType || '-' }}</td>
-                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.Status || 'new' }}</td>
-                <td class="px-4 py-3 text-right">
-                  <button
-                    class="rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300"
-                    @click="openSignupReply(signup)"
-                  >
-                    Reply
-                  </button>
-                </td>
-              </tr>
+              <template v-else v-for="signup in publicSignups" :key="signup.SignupID">
+                <tr
+                  class="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-white/[0.03] cursor-pointer"
+                  @click="toggleSignupRow(signup.SignupID)"
+                >
+                  <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ formatSignupDate(signup.CreatedAt) }}</td>
+                  <td class="px-4 py-3 text-sm text-gray-800 dark:text-white/90">
+                    {{ signup.FirstName }} {{ signup.LastName }}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.Email }}</td>
+                  <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.AssignedMemberType || '-' }}</td>
+                  <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.Status || 'new' }}</td>
+                  <td class="px-4 py-3 text-right">
+                    <button
+                      class="rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300"
+                      @click.stop="openSignupReply(signup)"
+                    >
+                      Reply
+                    </button>
+                  </td>
+                </tr>
+                <tr v-if="isSignupExpanded(signup.SignupID)" class="border-b border-gray-100 dark:border-gray-800">
+                  <td colspan="6" class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+                    <div class="grid gap-3 md:grid-cols-2">
+                      <div><span class="font-semibold text-gray-700 dark:text-gray-200">EAA Number:</span> {{ signup.EAANumber || '—' }}</div>
+                      <div><span class="font-semibold text-gray-700 dark:text-gray-200">Heard about us:</span> {{ getHearAbout(signup) || '—' }}</div>
+                      <div class="md:col-span-2"><span class="font-semibold text-gray-700 dark:text-gray-200">Address:</span> {{ formatAddress(signup) }}</div>
+                      <div class="md:col-span-2"><span class="font-semibold text-gray-700 dark:text-gray-200">Notes:</span> {{ signup.Notes || '—' }}</div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -223,6 +240,7 @@ const selectedSignup = ref<any | null>(null)
 const signupReplyForm = ref({ subject: '', body: '' })
 const sendingSignupReply = ref(false)
 const publicSignupBaseUrl = ref('')
+const expandedSignups = ref<Set<number>>(new Set())
 
 const publicSignupFormAction = computed(() => {
   if (!publicSignupBaseUrl.value) return ''
@@ -405,6 +423,37 @@ const formatSignupDate = (dateString: string) => {
   if (!dateString) return '-'
   const date = new Date(dateString)
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+const toggleSignupRow = (id: number) => {
+  if (expandedSignups.value.has(id)) {
+    expandedSignups.value.delete(id)
+  } else {
+    expandedSignups.value.add(id)
+  }
+  expandedSignups.value = new Set(expandedSignups.value)
+}
+
+const isSignupExpanded = (id: number) => expandedSignups.value.has(id)
+
+const parseSignupPayload = (signup: any) => {
+  try {
+    return signup?.RawPayload ? JSON.parse(signup.RawPayload) : {}
+  } catch (error) {
+    return {}
+  }
+}
+
+const getHearAbout = (signup: any) => {
+  const payload = parseSignupPayload(signup)
+  return payload?.HearAbout || ''
+}
+
+const formatAddress = (signup: any) => {
+  const parts = [signup?.Street, signup?.City, signup?.State, signup?.Zip]
+    .map((value: string) => String(value || '').trim())
+    .filter(Boolean)
+  return parts.length ? parts.join(', ') : '—'
 }
 
 onMounted(() => {
