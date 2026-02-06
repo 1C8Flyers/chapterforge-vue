@@ -4,7 +4,7 @@ Professional EAA Chapter Management System - Modern SPA Architecture
 
 **Status**: ✅ Production-ready with Vue 3 + Vite frontend, headless API backend, TailAdmin UI
 
-_Last updated: 2026-02-04_
+_Last updated: 2026-02-05_
 
 ---
 
@@ -32,6 +32,10 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - ✅ **Scheduled report emails** - Configure recipients, reports, and schedule in Settings (with “Send Report Now”)
 - ✅ **Payment fee configuration** - Configurable in Settings → Payment Settings
 - ✅ **Google Sheets sync** - Optional auto-sync of all tables to a Google Sheet
+- ✅ **Google Groups sync** - Map member types/roles/activities to Google Groups
+- ✅ **Public member signup form** - Embed on public site with automatic member creation
+- ✅ **Forms page** - View responses, reply by email, and configure signup settings
+- ✅ **Response notifications** - Optional notification email on new submissions
 - ✅ Configurable member types with dues management
 - ✅ Stacked dues-by-year visualization (Family vs Individual)
 - ✅ Paid members by year chart (stacked by member type)
@@ -100,6 +104,7 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `Renewals.vue` → Renewal list with year filter + bulk send
 - `Reports.vue` → Charts + export links (CSV)
 - `SquareAnalytics.vue` → Square Payment Data (transactions + items chart + payouts)
+- `Forms.vue` → Public signup responses + settings
 
 **Features**:
 - Reactive data binding (no jQuery)
@@ -164,6 +169,18 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `GET /api/settings/google-sheets` → Google Sheets settings
 - `POST /api/settings/google-sheets` → Save Google Sheets settings
 - `POST /api/settings/google-sheets/sync` → Manual Google Sheets sync
+- `GET /api/settings/google-groups` → Google Groups settings
+- `POST /api/settings/google-groups` → Save Google Groups settings
+- `POST /api/settings/google-groups/sync` → Manual Google Groups sync
+- `GET /api/settings/member-options` → Member role/activity options
+- `POST /api/settings/member-options` → Save member role/activity options
+- `GET /api/settings/public-signup` → Public signup settings
+- `POST /api/settings/public-signup` → Save public signup settings
+- `GET /api/public-signups` → List public signup responses
+- `GET /api/public-signups/summary` → New response count
+- `POST /api/public-signups/:id/reply` → Reply to a signup by email
+- `GET /public/member-signup/form` → Hosted public signup form (no auth)
+- `POST /public/member-signup` → Public signup submission endpoint (no auth)
 
 **Database Helpers** (`database.js`):
 - Member CRUD operations
@@ -208,6 +225,10 @@ CREATE TABLE members (
   Officer INTEGER DEFAULT 0,
   RenewalNoticeSentAt DATETIME,
   RenewalNoticeSentYear INTEGER,
+  Street TEXT,
+  City TEXT,
+  State TEXT,
+  Zip TEXT,
   Notes TEXT,
   Dues_2026 REAL, Dues_2025 REAL, ..., Dues_2018 REAL (legacy payment history),
   CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -281,6 +302,33 @@ CREATE TABLE user_accounts (
   UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (MemberID) REFERENCES members(MemberID)
 );
+
+### public_member_signups table
+```sql
+CREATE TABLE public_member_signups (
+  SignupID INTEGER PRIMARY KEY,
+  MemberID INTEGER,
+  FirstName TEXT NOT NULL,
+  LastName TEXT NOT NULL,
+  Email TEXT NOT NULL,
+  EAANumber TEXT,
+  Street TEXT,
+  City TEXT,
+  State TEXT,
+  Zip TEXT,
+  AssignedMemberType TEXT,
+  Status TEXT DEFAULT 'new',
+  Notes TEXT,
+  RawPayload TEXT,
+  ReplySubject TEXT,
+  ReplyBody TEXT,
+  ReplyToEmail TEXT,
+  CreatedIp TEXT,
+  UserAgent TEXT,
+  CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  RepliedAt DATETIME
+);
+```
 ```
 
 **Seed Data**: Individual ($30), Family ($40), Student ($15)

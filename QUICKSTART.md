@@ -62,7 +62,16 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
    - Sync all tables to a Google Sheet
    - Auto-sync on changes or manual “Sync Now”
 
-8. **CSV Import**
+9. **Google Groups Sync (optional)**
+   - Map member types/roles/activities to Google Groups
+   - Auto-sync on member changes or manual “Sync Now”
+
+10. **Public Member Signup (optional)**
+   - Embed a public signup form on your website
+   - Automatic member creation + notification email
+   - View responses and reply from the Forms page
+
+11. **CSV Import**
    - Drag-and-drop CSV upload
    - Download template CSV
    - Bulk upload with validation
@@ -260,6 +269,11 @@ This runs the production build on `http://localhost:3000` and persists the SQLit
 - Click an export button to download a CSV.
 - Dues by member/year CSV export available.
 - Reports page is marked as in active development.
+
+### Forms (`/forms`)
+- **Responses**: Click a row to expand full details.
+- **Reply**: Send a response email directly from the list.
+- **Settings tab**: Enable the public signup form, set the default member type, and copy the embed snippet.
 
 ### Import (`/import`)
 - **Download Template**: Get CSV format with all required fields

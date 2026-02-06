@@ -1,6 +1,6 @@
 # ChapterForge Front‑End User Manual
 
-_Last updated: 2026-02-04_
+_Last updated: 2026-02-05_
 
 ## Who this is for
 This guide is for chapter staff using the ChapterForge web app to manage members, renewals, and reports.
@@ -138,6 +138,21 @@ Use Reports to view and download various reports and visualizations.
 
 ---
 
+## Forms
+Manage public signup responses and settings.
+
+### Responses
+- Click a row to expand and view full submission details.
+- Use the **Reply** button to email the submitter.
+
+### Settings
+- Enable the public signup form.
+- Choose the default member type (e.g., Prospect).
+- Set an optional notification email address.
+- Copy the embed snippet for your public website.
+
+---
+
 ## Renewal Payments
 Use this page to view and manually record dues payments.
 
@@ -192,6 +207,11 @@ Manage configuration and email templates.
 ### Google Sheets
 - Enable sync, set the Spreadsheet ID, and (optionally) a sheet name prefix.
 - Use **Sync Now** to push the latest data on demand.
+
+### Google Groups
+- Enable sync and configure mappings of member types/roles/activities to groups.
+- Enter an admin email to impersonate for Admin SDK access.
+- Use **Sync Now** to run an immediate sync.
 
 ---
 

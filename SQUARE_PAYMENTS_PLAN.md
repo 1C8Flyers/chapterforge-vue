@@ -1,6 +1,6 @@
 # Square Payments Integration Plan (Implemented)
 
-_Last updated: 2026-02-04_
+_Last updated: 2026-02-05_
 
 ## Goals
 - Accept payments via Square (card + optionally ACH) for membership dues.
@@ -137,6 +137,10 @@ Response:
 - ✅ **Square Payouts Tab**: Bank deposit list with status, destination, and totals
 - ✅ **Payout Details**: Entry-level breakdown per payout
 - ✅ **Payout Exports**: CSV export for payout entries from the payouts list
+
+## Related Platform Updates (February 2026)
+- ✅ **Public Signup Forms**: Embedded public member signup with notifications
+- ✅ **Forms Page**: Responses + settings in a dedicated navigation item
 
 ## Future Enhancements
 - Subscriptions for auto-renewal.

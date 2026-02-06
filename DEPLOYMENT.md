@@ -167,6 +167,7 @@ docker ps | grep chapterforge
    - ✅ Dashboard loads
    - ✅ Members page loads
    - ✅ Settings page accessible
+   - ✅ Forms page accessible (public signup responses)
    - ✅ Renewals page works
    - ✅ Reports page loads
    - ✅ Scheduled Reports tab loads (Settings → Scheduled Reports)
@@ -208,6 +209,11 @@ docker logs chapterforge-vue-chapterforge-1 --tail 20
 - Share the target Google Sheet with the service account email.
 - Configure **Settings → Google Sheets** with the Spreadsheet ID.
 - Use **Sync Now** to verify data flow.
+
+## Public Signup Form (optional)
+- Enable and configure under **Forms → Settings**.
+- Copy the embed snippet into your public website.
+- The hosted form is available at `/public/member-signup/form`.
 
 ---
 
