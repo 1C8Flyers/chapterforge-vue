@@ -709,6 +709,19 @@ class Database {
     });
   }
 
+  countPublicSignupsByStatus(status = 'new') {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `SELECT COUNT(*) as count FROM public_member_signups WHERE Status = ?`,
+        [status],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(Number(row?.count || 0));
+        }
+      );
+    });
+  }
+
   getPublicSignupById(id) {
     return new Promise((resolve, reject) => {
       this.db.get(

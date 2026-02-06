@@ -2183,6 +2183,15 @@ app.get('/api/public-signups', async (req, res) => {
   }
 });
 
+app.get('/api/public-signups/summary', async (req, res) => {
+  try {
+    const newCount = await db.countPublicSignupsByStatus('new');
+    res.json({ newCount });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/public-signups/:id/reply', async (req, res) => {
   try {
     const signup = await db.getPublicSignupById(req.params.id);

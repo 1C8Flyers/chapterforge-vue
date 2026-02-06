@@ -121,6 +121,12 @@
                     class="menu-item-text"
                     >{{ item.name }}</span
                   >
+                  <span
+                    v-if="(isExpanded || isHovered || isMobileOpen) && item.path === '/forms' && formNewCount > 0"
+                    class="ml-auto rounded-full bg-brand-500 px-2 py-0.5 text-[10px] font-semibold text-white"
+                  >
+                    {{ formNewCount }}
+                  </span>
                 </router-link>
                 <transition
                   @enter="startTransition"
@@ -200,7 +206,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRoute } from "vue-router";
 
 import {
@@ -214,11 +220,41 @@ import {
 } from "../../icons";
 import { useSidebar } from "@/composables/useSidebar";
 import { useAuth } from "@/composables/useAuth";
+import { getAuthHeaders, apiFetch, AuthError } from "@/utils/apiAuth";
 
 const route = useRoute();
 const { isAdmin } = useAuth();
 
 const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar();
+
+const formNewCount = ref(0);
+let formsInterval = null;
+
+const fetchFormSummary = async () => {
+  if (!isAdmin.value) return;
+  try {
+    const headers = await getAuthHeaders();
+    const response = await apiFetch('/api/public-signups/summary', { headers });
+    if (!response.ok) return;
+    const data = await response.json();
+    formNewCount.value = Number(data?.newCount || 0);
+  } catch (error) {
+    if (error instanceof AuthError) return;
+    console.error('Error fetching form summary:', error);
+  }
+};
+
+onMounted(() => {
+  fetchFormSummary();
+  formsInterval = setInterval(fetchFormSummary, 60000);
+});
+
+onBeforeUnmount(() => {
+  if (formsInterval) {
+    clearInterval(formsInterval);
+    formsInterval = null;
+  }
+});
 
 const allMenuItems = [
   {
