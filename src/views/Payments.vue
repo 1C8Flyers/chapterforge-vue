@@ -75,13 +75,22 @@
       <div class="border-b border-gray-200 p-6 dark:border-gray-800">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Payment History</h3>
-          <button
-            @click="refreshPayments"
-            :disabled="loading"
-            class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
-          >
-            {{ loading ? 'Loading...' : 'Refresh' }}
-          </button>
+          <div class="flex flex-wrap gap-2">
+            <button
+              @click="exportPaymentsCsv"
+              :disabled="loading || filteredPayments.length === 0"
+              class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+            >
+              Export CSV
+            </button>
+            <button
+              @click="refreshPayments"
+              :disabled="loading"
+              class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
+            >
+              {{ loading ? 'Loading...' : 'Refresh' }}
+            </button>
+          </div>
         </div>
         
         <!-- Filter Options -->
@@ -450,6 +459,68 @@ const filteredPayments = computed(() => {
 
 const refreshPayments = () => {
   fetchPayments()
+}
+
+const exportPaymentsCsv = () => {
+  const rows = filteredPayments.value
+  if (rows.length === 0) return
+
+  const headers = [
+    'PaymentID',
+    'MemberID',
+    'MemberName',
+    'Year',
+    'DuesAmount',
+    'SquareFee',
+    'Amount',
+    'Provider',
+    'Method',
+    'ProviderStatus',
+    'ProviderPaymentId',
+    'ProviderOrderId',
+    'ProviderInvoiceId',
+    'ProviderLinkId',
+    'CreatedAt'
+  ]
+
+  const escapeCsv = (value: unknown) => {
+    const str = value === null || value === undefined ? '' : String(value)
+    if (/[",\n]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`
+    }
+    return str
+  }
+
+  const csvRows = rows.map(payment => ([
+    payment.PaymentID,
+    payment.MemberID,
+    payment.MemberID > 0 ? getMemberName(payment.MemberID) : 'unmatched',
+    payment.Year,
+    (payment.DuesAmount || 0).toFixed(2),
+    (payment.SquareFee || 0).toFixed(2),
+    (payment.Amount || 0).toFixed(2),
+    payment.Provider || '',
+    payment.Method || '',
+    payment.ProviderStatus || '',
+    payment.ProviderPaymentId || '',
+    payment.ProviderOrderId || '',
+    payment.ProviderInvoiceId || '',
+    payment.ProviderLinkId || '',
+    payment.CreatedAt || ''
+  ].map(escapeCsv).join(',')))
+
+  const content = [headers.join(','), ...csvRows].join('\n')
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  const now = new Date()
+  const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  a.download = `payments-${stamp}.csv`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 const filteredMembersForSearch = computed(() => {
