@@ -1289,7 +1289,7 @@ app.post('/api/members/import', upload.single('file'), async (req, res) => {
       const DuesRate = r.DuesRate !== undefined && r.DuesRate !== '' ? Number(r.DuesRate) : 0;
       const EAANumber = r.EAANumber?.trim() || null;
       const Notes = r.Notes?.trim() || null;
-      const HouseholdID = r.HouseholdID !== undefined && r.HouseholdID !== '' ? Number(r.HouseholdID) : null;
+      let HouseholdID = r.HouseholdID !== undefined && r.HouseholdID !== '' ? Number(r.HouseholdID) : null;
       const LastPaidYear = r.LastPaidYear !== undefined && r.LastPaidYear !== '' ? Number(r.LastPaidYear) : null;
       const AmountDue = r.AmountDue !== undefined && r.AmountDue !== '' ? Number(r.AmountDue) : 0;
       const YouthProtectionExpiration = r.YouthProtectionExpiration?.trim() || null;
@@ -1303,6 +1303,10 @@ app.post('/api/members/import', upload.single('file'), async (req, res) => {
         return acc;
       }, {});
       const Payments = parsePayments(r.Payments);
+
+      if (!HouseholdID && String(MemberType).toLowerCase() === 'family') {
+        HouseholdID = await db.getNextHouseholdId();
+      }
 
       if (!FirstName || !LastName) {
         errors.push(`Row ${index + 2}: Missing FirstName/LastName`);
@@ -1378,9 +1382,13 @@ app.post('/api/members', async (req, res) => {
   try {
     const optionKeys = await getMemberOptionKeys();
     await db.ensureMemberOptionColumns(optionKeys);
-    const result = await db.createMember(req.body, optionKeys);
+    const memberPayload = { ...req.body };
+    if (!memberPayload.HouseholdID && String(memberPayload.MemberType || '').toLowerCase() === 'family') {
+      memberPayload.HouseholdID = await db.getNextHouseholdId();
+    }
+    const result = await db.createMember(memberPayload, optionKeys);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
-    await db.logAudit(req.user.email, 'CREATE', 'members', result.id, null, req.body, ipAddress, 'Created new member');
+    await db.logAudit(req.user.email, 'CREATE', 'members', result.id, null, memberPayload, ipAddress, 'Created new member');
     scheduleGoogleSheetsSync();
     scheduleGoogleGroupsSync();
     res.json({ success: true, id: result.id });
@@ -1395,9 +1403,13 @@ app.put('/api/members/:id', async (req, res) => {
     const oldMember = await db.getMemberById(req.params.id);
     const optionKeys = await getMemberOptionKeys();
     await db.ensureMemberOptionColumns(optionKeys);
-    await db.updateMember(req.params.id, req.body, optionKeys);
+    const memberPayload = { ...req.body };
+    if (!memberPayload.HouseholdID && String(memberPayload.MemberType || '').toLowerCase() === 'family') {
+      memberPayload.HouseholdID = await db.getNextHouseholdId();
+    }
+    await db.updateMember(req.params.id, memberPayload, optionKeys);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
-    await db.logAudit(req.user.email, 'UPDATE', 'members', req.params.id, oldMember, req.body, ipAddress, 'Updated member');
+    await db.logAudit(req.user.email, 'UPDATE', 'members', req.params.id, oldMember, memberPayload, ipAddress, 'Updated member');
     scheduleGoogleSheetsSync();
     scheduleGoogleGroupsSync();
     res.json({ success: true });
