@@ -167,6 +167,8 @@ app.post('/public/member-signup', async (req, res) => {
       ? `Public signup. Heard about us: ${HearAbout}`
       : 'Public signup';
 
+    const optionKeys = await getMemberOptionKeys();
+    await db.ensureMemberOptionColumns(optionKeys);
     const createdMember = await db.createMember({
       FirstName,
       LastName,
@@ -179,7 +181,7 @@ app.post('/public/member-signup', async (req, res) => {
       MemberType: memberType,
       Status: 'Prospect',
       Notes: notes
-    });
+    }, optionKeys);
 
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || '';
@@ -336,12 +338,15 @@ app.use('/api', async (req, res, next) => {
     mappings: []
   };
 
-  const DEFAULT_MEMBER_ROLE_OPTIONS = ['BoardMember', 'Officer'];
+  const DEFAULT_MEMBER_ROLE_OPTIONS = [
+    { value: 'BoardMember', label: 'Board Member' },
+    { value: 'Officer', label: 'Officer' }
+  ];
   const DEFAULT_MEMBER_ACTIVITY_OPTIONS = [
-    'YoungEaglePilot',
-    'YoungEagleVolunteer',
-    'EaglePilot',
-    'EagleFlightVolunteer'
+    { value: 'YoungEaglePilot', label: 'Young Eagle Pilot' },
+    { value: 'YoungEagleVolunteer', label: 'Young Eagle Volunteer' },
+    { value: 'EaglePilot', label: 'Eagle Pilot' },
+    { value: 'EagleFlightVolunteer', label: 'Eagle Flight Volunteer' }
   ];
 
   const DEFAULT_PUBLIC_SIGNUP_CONFIG = {
@@ -487,20 +492,65 @@ app.use('/api', async (req, res, next) => {
     }
   };
 
-  const normalizeOptionList = (value, allowed) => {
-    const rawList = Array.isArray(value) ? value : String(value || '').split(',');
-    const normalized = rawList
-      .map(item => String(item || '').trim())
+  const toOptionLabel = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const spaced = raw
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/[_-]+/g, ' ')
+      .trim();
+    return spaced
+      .split(' ')
       .filter(Boolean)
-      .filter(item => allowed.includes(item));
-    return normalized.length > 0 ? normalized : [...allowed];
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const normalizeOptionValue = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^[A-Za-z][A-Za-z0-9_]*$/.test(raw)) return raw;
+    const cleaned = raw.replace(/[^A-Za-z0-9_ ]+/g, ' ');
+    const words = cleaned.replace(/[_-]+/g, ' ').split(' ').filter(Boolean);
+    if (words.length === 0) return '';
+    const pascal = words.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+    if (!pascal) return '';
+    if (!/^[A-Za-z]/.test(pascal)) return `Option${pascal}`;
+    return pascal;
+  };
+
+  const normalizeOptionDefinitions = (value, defaults) => {
+    const rawList = Array.isArray(value) ? value : [];
+    const normalized = [];
+    const seen = new Set();
+
+    const addOption = (item) => {
+      if (!item) return;
+      const rawValue = typeof item === 'string' ? item : item.value || item.label || '';
+      const value = normalizeOptionValue(rawValue);
+      if (!value || seen.has(value)) return;
+      const label = typeof item === 'object' && item?.label
+        ? String(item.label).trim()
+        : toOptionLabel(value);
+      if (!label) return;
+      normalized.push({ value, label });
+      seen.add(value);
+    };
+
+    rawList.forEach(addOption);
+
+    if (normalized.length === 0) {
+      defaults.forEach(addOption);
+    }
+
+    return normalized;
   };
 
   const getMemberRoleOptions = async () => {
     const raw = await db.getSetting(MEMBER_ROLE_OPTIONS_KEY);
     if (!raw) return [...DEFAULT_MEMBER_ROLE_OPTIONS];
     try {
-      return normalizeOptionList(JSON.parse(raw), DEFAULT_MEMBER_ROLE_OPTIONS);
+      return normalizeOptionDefinitions(JSON.parse(raw), DEFAULT_MEMBER_ROLE_OPTIONS);
     } catch (error) {
       return [...DEFAULT_MEMBER_ROLE_OPTIONS];
     }
@@ -510,10 +560,27 @@ app.use('/api', async (req, res, next) => {
     const raw = await db.getSetting(MEMBER_ACTIVITY_OPTIONS_KEY);
     if (!raw) return [...DEFAULT_MEMBER_ACTIVITY_OPTIONS];
     try {
-      return normalizeOptionList(JSON.parse(raw), DEFAULT_MEMBER_ACTIVITY_OPTIONS);
+      return normalizeOptionDefinitions(JSON.parse(raw), DEFAULT_MEMBER_ACTIVITY_OPTIONS);
     } catch (error) {
       return [...DEFAULT_MEMBER_ACTIVITY_OPTIONS];
     }
+  };
+
+  const getMemberOptionKeys = async () => {
+    const roles = await getMemberRoleOptions();
+    const activities = await getMemberActivityOptions();
+    return [...roles, ...activities].map(option => option.value);
+  };
+
+  const buildOptionFlagPayload = (source, options) => {
+    const flags = {};
+    (options || []).forEach(option => {
+      if (!option?.value) return;
+      const raw = source?.[option.value];
+      const numeric = Number(raw);
+      flags[option.value] = Number.isFinite(numeric) ? (numeric ? 1 : 0) : (raw ? 1 : 0);
+    });
+    return flags;
   };
 
   const getGoogleAdminClient = async (adminEmail) => {
@@ -680,20 +747,14 @@ app.use('/api', async (req, res, next) => {
 
       if (mapping.roles.length > 0) {
         const hasRole = mapping.roles.some(role => {
-          if (role === 'BoardMember') return Number(member.BoardMember) === 1;
-          if (role === 'Officer') return Number(member.Officer) === 1;
-          return false;
+          return Number(member?.[role]) === 1;
         });
         if (!hasRole) return false;
       }
 
       if (mapping.activities.length > 0) {
         const hasActivity = mapping.activities.some(activity => {
-          if (activity === 'YoungEaglePilot') return Number(member.YoungEaglePilot) === 1;
-          if (activity === 'YoungEagleVolunteer') return Number(member.YoungEagleVolunteer) === 1;
-          if (activity === 'EaglePilot') return Number(member.EaglePilot) === 1;
-          if (activity === 'EagleFlightVolunteer') return Number(member.EagleFlightVolunteer) === 1;
-          return false;
+          return Number(member?.[activity]) === 1;
         });
         if (!hasActivity) return false;
       }
@@ -1161,15 +1222,21 @@ app.get('/api/members/yp-expiring', async (req, res) => {
 });
 
 // CSV template download
-app.get('/api/members/import/template', (req, res) => {
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="members-template.csv"');
-  const header = [
-    'FirstName','LastName','Email','Phone','Street','City','State','Zip','MemberType','Status','DuesRate','EAANumber','Notes','HouseholdID','LastPaidYear','AmountDue',
-    'YouthProtectionExpiration','BackgroundCheckExpiration','YoungEaglePilot','YoungEagleVolunteer','EaglePilot','EagleFlightVolunteer',
-    'BoardMember','Officer','Payments'
-  ].join(',');
-  res.send(`${header}\n`);
+app.get('/api/members/import/template', async (req, res) => {
+  try {
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="members-template.csv"');
+    const optionKeys = await getMemberOptionKeys();
+    const header = [
+      'FirstName','LastName','Email','Phone','Street','City','State','Zip','MemberType','Status','DuesRate','EAANumber','Notes','HouseholdID','LastPaidYear','AmountDue',
+      'YouthProtectionExpiration','BackgroundCheckExpiration',
+      ...optionKeys,
+      'Payments'
+    ].join(',');
+    res.send(`${header}\n`);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Handle CSV import
@@ -1189,6 +1256,8 @@ app.post('/api/members/import', upload.single('file'), async (req, res) => {
 
     const errors = [];
     let imported = 0;
+    const optionKeys = await getMemberOptionKeys();
+    await db.ensureMemberOptionColumns(optionKeys);
 
     const parsePayments = (raw) => {
       if (!raw) return [];
@@ -1225,12 +1294,14 @@ app.post('/api/members/import', upload.single('file'), async (req, res) => {
       const AmountDue = r.AmountDue !== undefined && r.AmountDue !== '' ? Number(r.AmountDue) : 0;
       const YouthProtectionExpiration = r.YouthProtectionExpiration?.trim() || null;
       const BackgroundCheckExpiration = r.BackgroundCheckExpiration?.trim() || null;
-      const YoungEaglePilot = r.YoungEaglePilot !== undefined && r.YoungEaglePilot !== '' ? Number(r.YoungEaglePilot) : 0;
-      const YoungEagleVolunteer = r.YoungEagleVolunteer !== undefined && r.YoungEagleVolunteer !== '' ? Number(r.YoungEagleVolunteer) : 0;
-      const EaglePilot = r.EaglePilot !== undefined && r.EaglePilot !== '' ? Number(r.EaglePilot) : 0;
-      const EagleFlightVolunteer = r.EagleFlightVolunteer !== undefined && r.EagleFlightVolunteer !== '' ? Number(r.EagleFlightVolunteer) : 0;
-      const BoardMember = r.BoardMember !== undefined && r.BoardMember !== '' ? Number(r.BoardMember) : 0;
-      const Officer = r.Officer !== undefined && r.Officer !== '' ? Number(r.Officer) : 0;
+      const optionFlags = optionKeys.reduce((acc, key) => {
+        if (r[key] !== undefined && r[key] !== '') {
+          acc[key] = Number(r[key]);
+        } else {
+          acc[key] = 0;
+        }
+        return acc;
+      }, {});
       const Payments = parsePayments(r.Payments);
 
       if (!FirstName || !LastName) {
@@ -1257,14 +1328,9 @@ app.post('/api/members/import', upload.single('file'), async (req, res) => {
           AmountDue,
           YouthProtectionExpiration,
           BackgroundCheckExpiration,
-          YoungEaglePilot,
-          YoungEagleVolunteer,
-          EaglePilot,
-          EagleFlightVolunteer,
-          BoardMember,
-          Officer,
+          ...optionFlags,
           Notes
-        });
+        }, optionKeys);
         if (Payments.length > 0) {
           let maxYear = LastPaidYear || null;
           for (const payment of Payments) {
@@ -1310,7 +1376,9 @@ app.get('/api/members/:id', async (req, res) => {
 // API: Create member
 app.post('/api/members', async (req, res) => {
   try {
-    const result = await db.createMember(req.body);
+    const optionKeys = await getMemberOptionKeys();
+    await db.ensureMemberOptionColumns(optionKeys);
+    const result = await db.createMember(req.body, optionKeys);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'CREATE', 'members', result.id, null, req.body, ipAddress, 'Created new member');
     scheduleGoogleSheetsSync();
@@ -1325,7 +1393,9 @@ app.post('/api/members', async (req, res) => {
 app.put('/api/members/:id', async (req, res) => {
   try {
     const oldMember = await db.getMemberById(req.params.id);
-    await db.updateMember(req.params.id, req.body);
+    const optionKeys = await getMemberOptionKeys();
+    await db.ensureMemberOptionColumns(optionKeys);
+    await db.updateMember(req.params.id, req.body, optionKeys);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'members', req.params.id, oldMember, req.body, ipAddress, 'Updated member');
     scheduleGoogleSheetsSync();
@@ -1373,14 +1443,17 @@ app.post('/api/members/:id/family', async (req, res) => {
       return res.status(404).json({ error: 'Main member not found' });
     }
 
+    const optionKeys = await getMemberOptionKeys();
+    await db.ensureMemberOptionColumns(optionKeys);
+
     let householdId = mainMember.HouseholdID;
     // If main member doesn't have a household ID, create one
     if (!householdId) {
       householdId = await db.getNextHouseholdId();
-      await db.updateMember(req.params.id, { ...mainMember, HouseholdID: householdId });
+      await db.updateMember(req.params.id, { ...mainMember, HouseholdID: householdId }, optionKeys);
     }
 
-    const familyMember = await db.addFamilyMember(householdId, req.body);
+    const familyMember = await db.addFamilyMember(householdId, req.body, optionKeys);
     scheduleGoogleSheetsSync();
     scheduleGoogleGroupsSync();
     res.json(familyMember);
@@ -1886,18 +1959,17 @@ app.post('/api/settings/member-types', async (req, res) => {
     if (!Name || !Name.trim()) {
       return res.status(400).json({ error: 'Name is required' });
     }
-    const toFlag = (value) => Number(Boolean(value));
+    const roleOptions = await getMemberRoleOptions();
+    const activityOptions = await getMemberActivityOptions();
+    const optionKeys = [...roleOptions, ...activityOptions].map(option => option.value);
+    const optionFlags = buildOptionFlagPayload(req.body, [...roleOptions, ...activityOptions]);
+    await db.ensureMemberOptionColumns(optionKeys);
     const result = await db.createMemberType({
       Name: Name.trim(),
       DuesRate: Number(DuesRate) || 0,
       SortOrder: Number(SortOrder) || 0,
-      BoardMember: toFlag(req.body.BoardMember),
-      Officer: toFlag(req.body.Officer),
-      YoungEaglePilot: toFlag(req.body.YoungEaglePilot),
-      YoungEagleVolunteer: toFlag(req.body.YoungEagleVolunteer),
-      EaglePilot: toFlag(req.body.EaglePilot),
-      EagleFlightVolunteer: toFlag(req.body.EagleFlightVolunteer)
-    });
+      ...optionFlags
+    }, optionKeys);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'CREATE', 'member_types', result.id, null, req.body, ipAddress, 'Created member type');
     scheduleGoogleSheetsSync();
@@ -1914,18 +1986,17 @@ app.put('/api/settings/member-types/:id', async (req, res) => {
     if (!Name || !Name.trim()) {
       return res.status(400).json({ error: 'Name is required' });
     }
-    const toFlag = (value) => Number(Boolean(value));
+    const roleOptions = await getMemberRoleOptions();
+    const activityOptions = await getMemberActivityOptions();
+    const optionKeys = [...roleOptions, ...activityOptions].map(option => option.value);
+    const optionFlags = buildOptionFlagPayload(req.body, [...roleOptions, ...activityOptions]);
+    await db.ensureMemberOptionColumns(optionKeys);
     await db.updateMemberType(req.params.id, {
       Name: Name.trim(),
       DuesRate: Number(DuesRate) || 0,
       SortOrder: Number(SortOrder) || 0,
-      BoardMember: toFlag(req.body.BoardMember),
-      Officer: toFlag(req.body.Officer),
-      YoungEaglePilot: toFlag(req.body.YoungEaglePilot),
-      YoungEagleVolunteer: toFlag(req.body.YoungEagleVolunteer),
-      EaglePilot: toFlag(req.body.EaglePilot),
-      EagleFlightVolunteer: toFlag(req.body.EagleFlightVolunteer)
-    });
+      ...optionFlags
+    }, optionKeys);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(req.user.email, 'UPDATE', 'member_types', req.params.id, null, req.body, ipAddress, 'Updated member type');
     scheduleGoogleSheetsSync();
@@ -2128,13 +2199,16 @@ app.get('/api/settings/member-options', async (req, res) => {
 
 app.post('/api/settings/member-options', async (req, res) => {
   try {
-    const roles = normalizeOptionList(req.body?.roles, DEFAULT_MEMBER_ROLE_OPTIONS);
-    const activities = normalizeOptionList(req.body?.activities, DEFAULT_MEMBER_ACTIVITY_OPTIONS);
+    const roles = normalizeOptionDefinitions(req.body?.roles, DEFAULT_MEMBER_ROLE_OPTIONS);
+    const activities = normalizeOptionDefinitions(req.body?.activities, DEFAULT_MEMBER_ACTIVITY_OPTIONS);
 
     const oldRoles = await db.getSetting(MEMBER_ROLE_OPTIONS_KEY);
     const oldActivities = await db.getSetting(MEMBER_ACTIVITY_OPTIONS_KEY);
     await db.setSetting(MEMBER_ROLE_OPTIONS_KEY, JSON.stringify(roles));
     await db.setSetting(MEMBER_ACTIVITY_OPTIONS_KEY, JSON.stringify(activities));
+
+    const optionKeys = [...roles, ...activities].map(option => option.value);
+    await db.ensureMemberOptionColumns(optionKeys);
 
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
     await db.logAudit(

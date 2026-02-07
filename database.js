@@ -1,6 +1,29 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
+const OPTION_KEY_REGEX = /^[A-Za-z][A-Za-z0-9_]*$/;
+
+const normalizeOptionKeys = (keys = []) => {
+  const normalized = Array.isArray(keys) ? keys : [];
+  const result = [];
+  const seen = new Set();
+  normalized.forEach((key) => {
+    const value = String(key || '').trim();
+    if (!value || !OPTION_KEY_REGEX.test(value) || seen.has(value)) return;
+    seen.add(value);
+    result.push(value);
+  });
+  return result;
+};
+
+const toFlag = (value) => {
+  if (value === true) return 1;
+  if (value === false || value === null || value === undefined) return 0;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return numeric ? 1 : 0;
+  return value ? 1 : 0;
+};
+
 class Database {
   constructor() {
     const dbPath = path.join(__dirname, 'chapterforge.db');
@@ -378,6 +401,22 @@ class Database {
     });
   }
 
+  ensureMemberOptionColumns(optionKeys = []) {
+    return new Promise((resolve) => {
+      const keys = normalizeOptionKeys(optionKeys);
+      if (keys.length === 0) return resolve({ updated: false });
+      let pending = keys.length * 2;
+      const done = () => {
+        pending -= 1;
+        if (pending <= 0) resolve({ updated: true });
+      };
+      keys.forEach((key) => {
+        this.db.run(`ALTER TABLE members ADD COLUMN ${key} INTEGER DEFAULT 0`, [], () => done());
+        this.db.run(`ALTER TABLE member_types ADD COLUMN ${key} INTEGER DEFAULT 0`, [], () => done());
+      });
+    });
+  }
+
   // Get all members
   getAllMembers() {
     return new Promise((resolve, reject) => {
@@ -551,39 +590,42 @@ class Database {
   }
 
   // Create new member
-  createMember(member) {
+  createMember(member, optionKeys = []) {
     return new Promise((resolve, reject) => {
       const {
         HouseholdID, FirstName, LastName, EAANumber,
         Phone, Email, MemberType, Status, DuesRate, LastPaidYear,
         AmountDue, YouthProtectionExpiration, BackgroundCheckExpiration,
-        YoungEaglePilot, YoungEagleVolunteer, EaglePilot, EagleFlightVolunteer,
-        BoardMember, Officer, Notes, Street, City, State, Zip
+        Notes, Street, City, State, Zip
       } = member;
 
       const lastPaidYearValue = LastPaidYear !== undefined && LastPaidYear !== null && LastPaidYear !== ''
         ? Number(LastPaidYear)
         : null;
 
-      const sql = `
-        INSERT INTO members (
-          HouseholdID, FirstName, LastName, EAANumber,
-          Phone, Email, MemberType, Status, DuesRate, LastPaidYear,
-          AmountDue, YouthProtectionExpiration, BackgroundCheckExpiration,
-          YoungEaglePilot, YoungEagleVolunteer, EaglePilot, EagleFlightVolunteer,
-          BoardMember, Officer, Notes,
-          Street, City, State, Zip
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
+      const baseColumns = [
+        'HouseholdID', 'FirstName', 'LastName', 'EAANumber',
+        'Phone', 'Email', 'MemberType', 'Status', 'DuesRate', 'LastPaidYear',
+        'AmountDue', 'YouthProtectionExpiration', 'BackgroundCheckExpiration',
+        'Notes', 'Street', 'City', 'State', 'Zip'
+      ];
+      const baseValues = [
+        HouseholdID, FirstName, LastName, EAANumber,
+        Phone, Email, MemberType, Status, DuesRate, lastPaidYearValue,
+        AmountDue, YouthProtectionExpiration || null, BackgroundCheckExpiration || null,
+        Notes, Street || null, City || null, State || null, Zip || null
+      ];
+
+      const optionColumns = normalizeOptionKeys(optionKeys);
+      const optionValues = optionColumns.map(key => toFlag(member?.[key]));
+
+      const columns = [...baseColumns, ...optionColumns];
+      const placeholders = columns.map(() => '?').join(', ');
+      const sql = `INSERT INTO members (${columns.join(', ')}) VALUES (${placeholders})`;
 
       this.db.run(
         sql,
-        [HouseholdID, FirstName, LastName, EAANumber,
-         Phone, Email, MemberType, Status, DuesRate, lastPaidYearValue,
-         AmountDue, YouthProtectionExpiration || null, BackgroundCheckExpiration || null,
-         YoungEaglePilot ? 1 : 0, YoungEagleVolunteer ? 1 : 0, EaglePilot ? 1 : 0, EagleFlightVolunteer ? 1 : 0,
-         BoardMember ? 1 : 0, Officer ? 1 : 0, Notes,
-         Street || null, City || null, State || null, Zip || null],
+        [...baseValues, ...optionValues],
         function(err) {
           if (err) reject(err);
           else resolve({ id: this.lastID });
@@ -593,44 +635,48 @@ class Database {
   }
 
   // Update member
-  updateMember(id, member) {
+  updateMember(id, member, optionKeys = []) {
     return new Promise((resolve, reject) => {
       const {
         HouseholdID, FirstName, LastName, EAANumber,
         Phone, Email, MemberType, Status, DuesRate, LastPaidYear,
         AmountDue, YouthProtectionExpiration, BackgroundCheckExpiration,
-        YoungEaglePilot, YoungEagleVolunteer, EaglePilot, EagleFlightVolunteer,
-        BoardMember, Officer, Notes, Street, City, State, Zip
+        Notes, Street, City, State, Zip
       } = member;
 
       const lastPaidYearValue = LastPaidYear !== undefined && LastPaidYear !== null && LastPaidYear !== ''
         ? Number(LastPaidYear)
         : null;
 
+      const baseColumns = [
+        'HouseholdID', 'FirstName', 'LastName', 'EAANumber',
+        'Phone', 'Email', 'MemberType', 'Status', 'DuesRate', 'LastPaidYear',
+        'AmountDue', 'YouthProtectionExpiration', 'BackgroundCheckExpiration',
+        'Notes', 'Street', 'City', 'State', 'Zip'
+      ];
+      const baseValues = [
+        HouseholdID, FirstName, LastName, EAANumber,
+        Phone, Email, MemberType, Status, DuesRate, lastPaidYearValue,
+        AmountDue, YouthProtectionExpiration || null, BackgroundCheckExpiration || null,
+        Notes, Street || null, City || null, State || null, Zip || null
+      ];
+
+      const optionColumns = normalizeOptionKeys(optionKeys);
+      const optionValues = optionColumns.map(key => toFlag(member?.[key]));
+
+      const setClauses = [...baseColumns, ...optionColumns]
+        .map(column => `${column} = ?`)
+        .join(', ');
       const sql = `
         UPDATE members SET
-          HouseholdID = ?, FirstName = ?, LastName = ?,
-           EAANumber = ?, Phone = ?, Email = ?, MemberType = ?, Status = ?,
-           DuesRate = ?, LastPaidYear = ?, AmountDue = ?,
-          YouthProtectionExpiration = ?, BackgroundCheckExpiration = ?,
-          YoungEaglePilot = ?, YoungEagleVolunteer = ?, EaglePilot = ?, EagleFlightVolunteer = ?,
-          BoardMember = ?, Officer = ?,
-          Notes = ?,
-          Street = ?, City = ?, State = ?, Zip = ?,
+          ${setClauses},
           UpdatedAt = CURRENT_TIMESTAMP
         WHERE MemberID = ?
       `;
 
       this.db.run(
         sql,
-        [HouseholdID, FirstName, LastName, EAANumber,
-         Phone, Email, MemberType, Status, DuesRate, lastPaidYearValue,
-         AmountDue, YouthProtectionExpiration || null, BackgroundCheckExpiration || null,
-         YoungEaglePilot ? 1 : 0, YoungEagleVolunteer ? 1 : 0, EaglePilot ? 1 : 0, EagleFlightVolunteer ? 1 : 0,
-         BoardMember ? 1 : 0, Officer ? 1 : 0,
-         Notes,
-         Street || null, City || null, State || null, Zip || null,
-         id],
+        [...baseValues, ...optionValues, id],
         (err) => {
           if (err) reject(err);
           else resolve({ updated: true });
@@ -888,67 +934,61 @@ class Database {
   }
 
   // Add family member to household
-  addFamilyMember(householdId, familyMember) {
+  addFamilyMember(householdId, familyMember, optionKeys = []) {
     return new Promise((resolve, reject) => {
       const {
         FirstName,
         LastName,
         EAANumber,
         YouthProtectionExpiration,
-        BackgroundCheckExpiration,
-        YoungEaglePilot,
-        YoungEagleVolunteer,
-        EaglePilot,
-        EagleFlightVolunteer,
-        BoardMember,
-        Officer
+        BackgroundCheckExpiration
       } = familyMember;
-      const sql = `
-        INSERT INTO members (
-          HouseholdID, FirstName, LastName, EAANumber, MemberType, Status, DuesRate,
-          YouthProtectionExpiration, BackgroundCheckExpiration,
-          YoungEaglePilot, YoungEagleVolunteer, EaglePilot, EagleFlightVolunteer,
-          BoardMember, Officer
-        )
-        VALUES (?, ?, ?, ?, 'Family Member', 'Active', 0, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
+
+      const baseColumns = [
+        'HouseholdID', 'FirstName', 'LastName', 'EAANumber', 'MemberType', 'Status', 'DuesRate',
+        'YouthProtectionExpiration', 'BackgroundCheckExpiration'
+      ];
+      const baseValues = [
+        householdId,
+        FirstName,
+        LastName,
+        EAANumber || null,
+        'Family Member',
+        'Active',
+        0,
+        YouthProtectionExpiration || null,
+        BackgroundCheckExpiration || null
+      ];
+
+      const optionColumns = normalizeOptionKeys(optionKeys);
+      const optionValues = optionColumns.map(key => toFlag(familyMember?.[key]));
+
+      const columns = [...baseColumns, ...optionColumns];
+      const placeholders = columns.map(() => '?').join(', ');
+      const sql = `INSERT INTO members (${columns.join(', ')}) VALUES (${placeholders})`;
+
       this.db.run(
         sql,
-        [
-          householdId,
-          FirstName,
-          LastName,
-          EAANumber || null,
-          YouthProtectionExpiration || null,
-          BackgroundCheckExpiration || null,
-          YoungEaglePilot ? 1 : 0,
-          YoungEagleVolunteer ? 1 : 0,
-          EaglePilot ? 1 : 0,
-          EagleFlightVolunteer ? 1 : 0,
-          BoardMember ? 1 : 0,
-          Officer ? 1 : 0
-        ],
+        [...baseValues, ...optionValues],
         function(err) {
-        if (err) reject(err);
-        else resolve({
-          MemberID: this.lastID,
-          HouseholdID: householdId,
-          FirstName,
-          LastName,
-          EAANumber,
-          MemberType: 'Family Member',
-          Status: 'Active',
-          DuesRate: 0,
-          YouthProtectionExpiration,
-          BackgroundCheckExpiration,
-          YoungEaglePilot: YoungEaglePilot ? 1 : 0,
-          YoungEagleVolunteer: YoungEagleVolunteer ? 1 : 0,
-          EaglePilot: EaglePilot ? 1 : 0,
-          EagleFlightVolunteer: EagleFlightVolunteer ? 1 : 0,
-          BoardMember: BoardMember ? 1 : 0,
-          Officer: Officer ? 1 : 0
+          if (err) reject(err);
+          else resolve({
+            MemberID: this.lastID,
+            HouseholdID: householdId,
+            FirstName,
+            LastName,
+            EAANumber,
+            MemberType: 'Family Member',
+            Status: 'Active',
+            DuesRate: 0,
+            YouthProtectionExpiration,
+            BackgroundCheckExpiration,
+            ...optionColumns.reduce((acc, key, index) => {
+              acc[key] = optionValues[index];
+              return acc;
+            }, {})
+          });
         });
-      });
     });
   }
 
@@ -1325,46 +1365,26 @@ class Database {
     });
   }
 
-  createMemberType(type) {
+  createMemberType(type, optionKeys = []) {
     return new Promise((resolve, reject) => {
       const {
         Name,
         DuesRate = 0,
-        SortOrder = 0,
-        BoardMember = 0,
-        Officer = 0,
-        YoungEaglePilot = 0,
-        YoungEagleVolunteer = 0,
-        EaglePilot = 0,
-        EagleFlightVolunteer = 0
+        SortOrder = 0
       } = type;
-      const sql = `
-        INSERT INTO member_types (
-          Name,
-          DuesRate,
-          SortOrder,
-          BoardMember,
-          Officer,
-          YoungEaglePilot,
-          YoungEagleVolunteer,
-          EaglePilot,
-          EagleFlightVolunteer
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
+
+      const baseColumns = ['Name', 'DuesRate', 'SortOrder'];
+      const baseValues = [Name, DuesRate, SortOrder];
+      const optionColumns = normalizeOptionKeys(optionKeys);
+      const optionValues = optionColumns.map(key => toFlag(type?.[key]));
+
+      const columns = [...baseColumns, ...optionColumns];
+      const placeholders = columns.map(() => '?').join(', ');
+      const sql = `INSERT INTO member_types (${columns.join(', ')}) VALUES (${placeholders})`;
+
       this.db.run(
         sql,
-        [
-          Name,
-          DuesRate,
-          SortOrder,
-          BoardMember,
-          Officer,
-          YoungEaglePilot,
-          YoungEagleVolunteer,
-          EaglePilot,
-          EagleFlightVolunteer
-        ],
+        [...baseValues, ...optionValues],
         function(err) {
         if (err) reject(err);
         else resolve({ id: this.lastID });
@@ -1372,47 +1392,32 @@ class Database {
     });
   }
 
-  updateMemberType(id, type) {
+  updateMemberType(id, type, optionKeys = []) {
     return new Promise((resolve, reject) => {
       const {
         Name,
         DuesRate = 0,
-        SortOrder = 0,
-        BoardMember = 0,
-        Officer = 0,
-        YoungEaglePilot = 0,
-        YoungEagleVolunteer = 0,
-        EaglePilot = 0,
-        EagleFlightVolunteer = 0
+        SortOrder = 0
       } = type;
+
+      const baseColumns = ['Name', 'DuesRate', 'SortOrder'];
+      const baseValues = [Name, DuesRate, SortOrder];
+      const optionColumns = normalizeOptionKeys(optionKeys);
+      const optionValues = optionColumns.map(key => toFlag(type?.[key]));
+
+      const setClauses = [...baseColumns, ...optionColumns]
+        .map(column => `${column} = ?`)
+        .join(', ');
       const sql = `
         UPDATE member_types
-        SET Name = ?,
-            DuesRate = ?,
-            SortOrder = ?,
-            BoardMember = ?,
-            Officer = ?,
-            YoungEaglePilot = ?,
-            YoungEagleVolunteer = ?,
-            EaglePilot = ?,
-            EagleFlightVolunteer = ?,
+        SET ${setClauses},
             UpdatedAt = CURRENT_TIMESTAMP
         WHERE MemberTypeID = ?
       `;
+
       this.db.run(
         sql,
-        [
-          Name,
-          DuesRate,
-          SortOrder,
-          BoardMember,
-          Officer,
-          YoungEaglePilot,
-          YoungEagleVolunteer,
-          EaglePilot,
-          EagleFlightVolunteer,
-          id
-        ],
+        [...baseValues, ...optionValues, id],
         (err) => {
         if (err) reject(err);
         else resolve({ updated: true });

@@ -504,78 +504,50 @@
           <!-- Roles & Activities -->
           <div class="mb-6">
             <h4 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Roles & Activities</h4>
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
-                <input
-                  v-model="formData.YoungEaglePilot"
-                  type="checkbox"
-                  :true-value="1"
-                  :false-value="0"
-                  :disabled="isViewOnly"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                />
-                Young Eagle Pilot
-              </label>
-              
-              <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
-                <input
-                  v-model="formData.YoungEagleVolunteer"
-                  type="checkbox"
-                  :true-value="1"
-                  :false-value="0"
-                  :disabled="isViewOnly"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                />
-                YE Volunteer
-              </label>
-              
-              <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
-                <input
-                  v-model="formData.EaglePilot"
-                  type="checkbox"
-                  :true-value="1"
-                  :false-value="0"
-                  :disabled="isViewOnly"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                />
-                Eagle Pilot
-              </label>
-              
-              <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
-                <input
-                  v-model="formData.EagleFlightVolunteer"
-                  type="checkbox"
-                  :true-value="1"
-                  :false-value="0"
-                  :disabled="isViewOnly"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                />
-                Eagle Flight Volunteer
-              </label>
-              
-              <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
-                <input
-                  v-model="formData.BoardMember"
-                  type="checkbox"
-                  :true-value="1"
-                  :false-value="0"
-                  :disabled="isViewOnly"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                />
-                Board Member
-              </label>
-              
-              <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
-                <input
-                  v-model="formData.Officer"
-                  type="checkbox"
-                  :true-value="1"
-                  :false-value="0"
-                  :disabled="isViewOnly"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                />
-                Officer
-              </label>
+            <div class="space-y-4">
+              <div>
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Roles</p>
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <label
+                    v-for="role in roleOptions"
+                    :key="role.value"
+                    class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400"
+                  >
+                    <input
+                      v-model="formData[role.value]"
+                      type="checkbox"
+                      :true-value="1"
+                      :false-value="0"
+                      :disabled="isViewOnly"
+                      class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                    />
+                    {{ role.label }}
+                  </label>
+                </div>
+                <p v-if="roleOptions.length === 0" class="text-xs text-gray-400">No roles configured.</p>
+              </div>
+
+              <div>
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Activities</p>
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <label
+                    v-for="activity in activityOptions"
+                    :key="activity.value"
+                    class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400"
+                  >
+                    <input
+                      v-model="formData[activity.value]"
+                      type="checkbox"
+                      :true-value="1"
+                      :false-value="0"
+                      :disabled="isViewOnly"
+                      class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                    />
+                    {{ activity.label }}
+                  </label>
+                </div>
+                <p v-if="activityOptions.length === 0" class="text-xs text-gray-400">No activities configured.</p>
+              </div>
             </div>
           </div>
 
@@ -680,35 +652,85 @@ const memberTypes = ref<any[]>([])
 const sortColumn = ref<'name' | 'email' | 'status' | 'lastPaid' | null>(null)
 const sortDirection = ref<'asc' | 'desc'>('asc')
 
+type MemberOption = { value: string; label: string }
+
+const defaultRoleOptions: MemberOption[] = [
+  { value: 'BoardMember', label: 'Board Member' },
+  { value: 'Officer', label: 'Officer' }
+]
+
+const defaultActivityOptions: MemberOption[] = [
+  { value: 'YoungEaglePilot', label: 'Young Eagle Pilot' },
+  { value: 'YoungEagleVolunteer', label: 'Young Eagle Volunteer' },
+  { value: 'EaglePilot', label: 'Eagle Pilot' },
+  { value: 'EagleFlightVolunteer', label: 'Eagle Flight Volunteer' }
+]
+
+const memberOptionSettings = ref<{ roles: MemberOption[]; activities: MemberOption[] }>({
+  roles: [...defaultRoleOptions],
+  activities: [...defaultActivityOptions]
+})
+
+const roleOptions = computed(() => memberOptionSettings.value.roles)
+const activityOptions = computed(() => memberOptionSettings.value.activities)
+
+const toOptionLabel = (value: string) => {
+  if (!value) return ''
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+const toOptionValue = (label: string) => {
+  const raw = String(label || '').trim()
+  if (!raw) return ''
+  if (/^[A-Za-z][A-Za-z0-9_]*$/.test(raw)) return raw
+  const cleaned = raw.replace(/[^A-Za-z0-9_ ]+/g, ' ')
+  const words = cleaned.replace(/[_-]+/g, ' ').split(' ').filter(Boolean)
+  if (words.length === 0) return ''
+  const pascal = words.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('')
+  if (!pascal) return ''
+  return /^[A-Za-z]/.test(pascal) ? pascal : `Option${pascal}`
+}
+
+const buildMemberForm = (overrides: Record<string, any> = {}) => {
+  const base: Record<string, any> = {
+    MemberID: null,
+    HouseholdID: null,
+    FirstName: '',
+    LastName: '',
+    Email: '',
+    Phone: '',
+    EAANumber: '',
+    Street: '',
+    City: '',
+    State: '',
+    Zip: '',
+    MemberType: 'Individual',
+    Status: 'Active',
+    DuesRate: 0,
+    LastPaidYear: null,
+    AmountDue: 0,
+    YouthProtectionExpiration: '',
+    BackgroundCheckExpiration: '',
+    Notes: ''
+  }
+
+  const options = [...roleOptions.value, ...activityOptions.value]
+  options.forEach(option => {
+    base[option.value] = 0
+  })
+
+  return { ...base, ...overrides }
+}
+
 const isFamilyMember = computed(() => formData.value.MemberType === 'Family Member')
 
-const formData = ref({
-  MemberID: null,
-  HouseholdID: null,
-  FirstName: '',
-  LastName: '',
-  Email: '',
-  Phone: '',
-  EAANumber: '',
-  Street: '',
-  City: '',
-  State: '',
-  Zip: '',
-  MemberType: 'Individual',
-  Status: 'Active',
-  DuesRate: 0,
-  LastPaidYear: null,
-  AmountDue: 0,
-  YouthProtectionExpiration: '',
-  BackgroundCheckExpiration: '',
-  YoungEaglePilot: 0,
-  YoungEagleVolunteer: 0,
-  EaglePilot: 0,
-  EagleFlightVolunteer: 0,
-  BoardMember: 0,
-  Officer: 0,
-  Notes: ''
-})
+const formData = ref(buildMemberForm())
 
 const filteredMembers = computed(() => {
   let filtered = members.value
@@ -865,6 +887,45 @@ const fetchMemberTypes = async () => {
   }
 }
 
+const fetchMemberOptions = async () => {
+  try {
+    const headers = await getAuthHeaders()
+    const response = await apiFetch('/api/settings/member-options', { headers })
+    if (response.ok) {
+      const data = await response.json()
+      const normalizeOptions = (items: any, defaults: MemberOption[]) => {
+        const list = Array.isArray(items) ? items : []
+        const normalized: MemberOption[] = []
+        const seen = new Set<string>()
+        list.forEach((item: any) => {
+          const rawValue = typeof item === 'string' ? item : item?.value || item?.label || ''
+          const value = toOptionValue(rawValue)
+          if (!value || seen.has(value)) return
+          const label = typeof item === 'object' && item?.label ? String(item.label).trim() : toOptionLabel(value)
+          if (!label) return
+          normalized.push({ value, label })
+          seen.add(value)
+        })
+        if (normalized.length === 0) {
+          return [...defaults]
+        }
+        return normalized
+      }
+
+      memberOptionSettings.value = {
+        roles: normalizeOptions(data.roles, defaultRoleOptions),
+        activities: normalizeOptions(data.activities, defaultActivityOptions)
+      }
+    }
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching member options:', error)
+    }
+  }
+}
+
 // Watch for member type changes and update dues rate
 watch(() => formData.value.MemberType, (newType) => {
   if (newType === 'Family Member') return
@@ -874,35 +935,18 @@ watch(() => formData.value.MemberType, (newType) => {
   }
 })
 
+watch([roleOptions, activityOptions], () => {
+  const optionKeys = [...roleOptions.value, ...activityOptions.value].map(option => option.value)
+  optionKeys.forEach(key => {
+    if (!(key in formData.value)) {
+      formData.value[key] = 0
+    }
+  })
+})
+
 const openAddModal = () => {
   isEditing.value = false
-  formData.value = {
-    MemberID: null,
-    HouseholdID: null,
-    FirstName: '',
-    LastName: '',
-    Email: '',
-    Phone: '',
-    EAANumber: '',
-    Street: '',
-    City: '',
-    State: '',
-    Zip: '',
-    MemberType: 'Individual',
-    Status: 'Active',
-    DuesRate: 0,
-    LastPaidYear: null,
-    AmountDue: 0,
-    YouthProtectionExpiration: '',
-    BackgroundCheckExpiration: '',
-    YoungEaglePilot: 0,
-    YoungEagleVolunteer: 0,
-    EaglePilot: 0,
-    EagleFlightVolunteer: 0,
-    BoardMember: 0,
-    Officer: 0,
-    Notes: ''
-  }
+  formData.value = buildMemberForm()
   showModal.value = true
 }
 
@@ -910,33 +954,10 @@ const openAddFamilyModal = (primaryMember: any) => {
   isEditing.value = false
   isViewOnly.value = false
   familyPrimaryId.value = primaryMember.MemberID
-  formData.value = {
-    MemberID: null,
+  formData.value = buildMemberForm({
     HouseholdID: primaryMember.HouseholdID || primaryMember.MemberID,
-    FirstName: '',
-    LastName: '',
-    Email: '',
-    Phone: '',
-    EAANumber: '',
-    Street: '',
-    City: '',
-    State: '',
-    Zip: '',
-    MemberType: 'Family Member',
-    Status: 'Active',
-    DuesRate: 0,
-    LastPaidYear: null,
-    AmountDue: 0,
-    YouthProtectionExpiration: '',
-    BackgroundCheckExpiration: '',
-    YoungEaglePilot: 0,
-    YoungEagleVolunteer: 0,
-    EaglePilot: 0,
-    EagleFlightVolunteer: 0,
-    BoardMember: 0,
-    Officer: 0,
-    Notes: ''
-  }
+    MemberType: 'Family Member'
+  })
   showModal.value = true
 }
 
@@ -944,7 +965,7 @@ const openEditModal = (member: any) => {
   isEditing.value = true
   isViewOnly.value = false
   familyPrimaryId.value = null
-  formData.value = { ...member }
+  formData.value = buildMemberForm(member)
   showModal.value = true
 }
 
@@ -952,7 +973,7 @@ const openViewModal = (member: any) => {
   isEditing.value = false
   isViewOnly.value = true
   familyPrimaryId.value = null
-  formData.value = { ...member }
+  formData.value = buildMemberForm(member)
   showModal.value = true
 }
 
@@ -961,33 +982,7 @@ const closeModal = () => {
   isViewOnly.value = false
   isEditing.value = false
   familyPrimaryId.value = null
-  formData.value = {
-    MemberID: null,
-    HouseholdID: null,
-    FirstName: '',
-    LastName: '',
-    Email: '',
-    Phone: '',
-    EAANumber: '',
-    Street: '',
-    City: '',
-    State: '',
-    Zip: '',
-    MemberType: 'Individual',
-    Status: 'Active',
-    DuesRate: 0,
-    LastPaidYear: null,
-    AmountDue: 0,
-    YouthProtectionExpiration: '',
-    BackgroundCheckExpiration: '',
-    YoungEaglePilot: 0,
-    YoungEagleVolunteer: 0,
-    EaglePilot: 0,
-    EagleFlightVolunteer: 0,
-    BoardMember: 0,
-    Officer: 0,
-    Notes: ''
-  }
+  formData.value = buildMemberForm()
 }
 
 const enterEditMode = () => {
@@ -1123,5 +1118,6 @@ const formatYear = (year: number | string | null) => {
 onMounted(() => {
   fetchMembers()
   fetchMemberTypes()
+  fetchMemberOptions()
 })
 </script>

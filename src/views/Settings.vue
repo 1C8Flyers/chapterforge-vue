@@ -1102,24 +1102,20 @@
           Add {{ optionPickerType === 'role' ? 'Role' : 'Activity' }}
         </h3>
 
-        <div class="space-y-4">
-          <div v-if="optionPickerOptions.length === 0" class="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-xs text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">
-            No more {{ optionPickerType === 'role' ? 'roles' : 'activities' }} available to add.
+        <div class="space-y-3">
+          <div>
+            <label class="mb-1.5 block text-xs font-medium text-gray-700 dark:text-gray-400">Name</label>
+            <input
+              v-model="optionPickerLabel"
+              type="text"
+              placeholder="Enter a name"
+              class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            />
           </div>
-          <select
-            v-else
-            v-model="optionPickerValue"
-            class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-          >
-            <option value="">Select...</option>
-            <option
-              v-for="option in optionPickerOptions"
-              :key="option.value"
-              :value="option.value"
-            >
-              {{ option.label }}
-            </option>
-          </select>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            Key: <span class="font-medium">{{ optionValuePreview || '—' }}</span>
+          </p>
+          <p v-if="optionPickerError" class="text-xs text-red-500">{{ optionPickerError }}</p>
         </div>
 
         <div class="mt-6 flex justify-end gap-3">
@@ -1133,7 +1129,7 @@
           <button
             type="button"
             class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
-            :disabled="!optionPickerValue"
+            :disabled="!optionPickerLabel"
             @click="confirmOptionPicker"
           >
             Add
@@ -1224,47 +1220,57 @@ const loadingGoogleGroups = ref(false)
 const availableGoogleGroups = ref<Array<{ email: string; name: string }>>([])
 const lastLoadedGroupsEmail = ref('')
 
-const baseRoleOptions = [
+type MemberOption = { value: string; label: string }
+
+const defaultRoleOptions: MemberOption[] = [
   { value: 'BoardMember', label: 'Board Member' },
   { value: 'Officer', label: 'Officer' }
 ]
 
-const baseActivityOptions = [
+const defaultActivityOptions: MemberOption[] = [
   { value: 'YoungEaglePilot', label: 'Young Eagle Pilot' },
   { value: 'YoungEagleVolunteer', label: 'Young Eagle Volunteer' },
   { value: 'EaglePilot', label: 'Eagle Pilot' },
   { value: 'EagleFlightVolunteer', label: 'Eagle Flight Volunteer' }
 ]
 
-const memberOptionSettings = ref({
-  roles: baseRoleOptions.map(option => option.value),
-  activities: baseActivityOptions.map(option => option.value)
+const memberOptionSettings = ref<{ roles: MemberOption[]; activities: MemberOption[] }>({
+  roles: [...defaultRoleOptions],
+  activities: [...defaultActivityOptions]
 })
 const showOptionPicker = ref(false)
 const optionPickerType = ref<'role' | 'activity'>('role')
-const optionPickerValue = ref('')
+const optionPickerLabel = ref('')
+const optionPickerError = ref('')
 
-const googleGroupRoleOptions = computed(() => {
-  return baseRoleOptions.filter(option => memberOptionSettings.value.roles.includes(option.value))
-})
+const googleGroupRoleOptions = computed(() => memberOptionSettings.value.roles)
 
-const googleGroupActivityOptions = computed(() => {
-  return baseActivityOptions.filter(option => memberOptionSettings.value.activities.includes(option.value))
-})
+const googleGroupActivityOptions = computed(() => memberOptionSettings.value.activities)
 
-const availableRoleOptions = computed(() => {
-  return baseRoleOptions.filter(option => !memberOptionSettings.value.roles.includes(option.value))
-})
+const toOptionLabel = (value: string) => {
+  if (!value) return ''
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
 
-const availableActivityOptions = computed(() => {
-  return baseActivityOptions.filter(option => !memberOptionSettings.value.activities.includes(option.value))
-})
+const toOptionValue = (label: string) => {
+  const raw = String(label || '').trim()
+  if (!raw) return ''
+  if (/^[A-Za-z][A-Za-z0-9_]*$/.test(raw)) return raw
+  const cleaned = raw.replace(/[^A-Za-z0-9_ ]+/g, ' ')
+  const words = cleaned.replace(/[_-]+/g, ' ').split(' ').filter(Boolean)
+  if (words.length === 0) return ''
+  const pascal = words.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('')
+  if (!pascal) return ''
+  return /^[A-Za-z]/.test(pascal) ? pascal : `Option${pascal}`
+}
 
-const optionPickerOptions = computed(() => {
-  return optionPickerType.value === 'role'
-    ? availableRoleOptions.value
-    : availableActivityOptions.value
-})
+const optionValuePreview = computed(() => toOptionValue(optionPickerLabel.value))
 
 const formatMemberTypeRoles = (type: any) => {
   return googleGroupRoleOptions.value
@@ -1284,9 +1290,28 @@ const fetchMemberOptions = async () => {
     const response = await apiFetch('/api/settings/member-options', { headers })
     if (response.ok) {
       const data = await response.json()
+      const normalizeOptions = (items: any, defaults: MemberOption[]) => {
+        const list = Array.isArray(items) ? items : []
+        const normalized: MemberOption[] = []
+        const seen = new Set<string>()
+        list.forEach((item: any) => {
+          const rawValue = typeof item === 'string' ? item : item?.value || item?.label || ''
+          const value = toOptionValue(rawValue)
+          if (!value || seen.has(value)) return
+          const label = typeof item === 'object' && item?.label ? String(item.label).trim() : toOptionLabel(value)
+          if (!label) return
+          normalized.push({ value, label })
+          seen.add(value)
+        })
+        if (normalized.length === 0) {
+          return [...defaults]
+        }
+        return normalized
+      }
+
       memberOptionSettings.value = {
-        roles: Array.isArray(data.roles) ? data.roles : baseRoleOptions.map(option => option.value),
-        activities: Array.isArray(data.activities) ? data.activities : baseActivityOptions.map(option => option.value)
+        roles: normalizeOptions(data.roles, defaultRoleOptions),
+        activities: normalizeOptions(data.activities, defaultActivityOptions)
       }
     }
   } catch (error) {
@@ -1317,13 +1342,15 @@ const saveMemberOptions = async () => {
 
 const openRolePicker = () => {
   optionPickerType.value = 'role'
-  optionPickerValue.value = availableRoleOptions.value[0]?.value || ''
+  optionPickerLabel.value = ''
+  optionPickerError.value = ''
   showOptionPicker.value = true
 }
 
 const openActivityPicker = () => {
   optionPickerType.value = 'activity'
-  optionPickerValue.value = availableActivityOptions.value[0]?.value || ''
+  optionPickerLabel.value = ''
+  optionPickerError.value = ''
   showOptionPicker.value = true
 }
 
@@ -1332,27 +1359,34 @@ const closeOptionPicker = () => {
 }
 
 const confirmOptionPicker = async () => {
-  if (!optionPickerValue.value) return
-  if (optionPickerType.value === 'role') {
-    if (!memberOptionSettings.value.roles.includes(optionPickerValue.value)) {
-      memberOptionSettings.value.roles.push(optionPickerValue.value)
-    }
-  } else {
-    if (!memberOptionSettings.value.activities.includes(optionPickerValue.value)) {
-      memberOptionSettings.value.activities.push(optionPickerValue.value)
-    }
+  const label = optionPickerLabel.value.trim()
+  const value = toOptionValue(label)
+  if (!label || !value) {
+    optionPickerError.value = 'Enter a valid name for the option.'
+    return
   }
+
+  const list = optionPickerType.value === 'role'
+    ? memberOptionSettings.value.roles
+    : memberOptionSettings.value.activities
+
+  if (list.some(option => option.value.toLowerCase() === value.toLowerCase())) {
+    optionPickerError.value = 'That option already exists.'
+    return
+  }
+
+  list.push({ value, label })
   await saveMemberOptions()
   closeOptionPicker()
 }
 
 const removeRoleOption = async (value: string) => {
-  memberOptionSettings.value.roles = memberOptionSettings.value.roles.filter(role => role !== value)
+  memberOptionSettings.value.roles = memberOptionSettings.value.roles.filter(role => role.value !== value)
   await saveMemberOptions()
 }
 
 const removeActivityOption = async (value: string) => {
-  memberOptionSettings.value.activities = memberOptionSettings.value.activities.filter(activity => activity !== value)
+  memberOptionSettings.value.activities = memberOptionSettings.value.activities.filter(activity => activity.value !== value)
   await saveMemberOptions()
 }
 
@@ -1382,17 +1416,25 @@ const reportScheduleCron = computed(() => {
   return `${safeMinute} ${safeHour} * * *`
 })
 
-const memberTypeForm = ref({
-  Name: '',
-  DuesRate: 0,
-  SortOrder: 0,
-  BoardMember: false,
-  Officer: false,
-  YoungEaglePilot: false,
-  YoungEagleVolunteer: false,
-  EaglePilot: false,
-  EagleFlightVolunteer: false
-})
+const buildMemberTypeForm = (type: any = null) => {
+  const base: Record<string, any> = {
+    Name: type?.Name || '',
+    DuesRate: type?.DuesRate ?? 0,
+    SortOrder: type?.SortOrder ?? 0
+  }
+
+  googleGroupRoleOptions.value.forEach(option => {
+    base[option.value] = type ? Number(type?.[option.value]) === 1 : false
+  })
+
+  googleGroupActivityOptions.value.forEach(option => {
+    base[option.value] = type ? Number(type?.[option.value]) === 1 : false
+  })
+
+  return base
+}
+
+const memberTypeForm = ref(buildMemberTypeForm())
 
 const userForm = ref({
   email: '',
@@ -1826,49 +1868,19 @@ const fetchEmailTemplate = async () => {
 
 const openMemberTypeModal = () => {
   editingMemberTypeId.value = null
-  memberTypeForm.value = {
-    Name: '',
-    DuesRate: 0,
-    SortOrder: 0,
-    BoardMember: false,
-    Officer: false,
-    YoungEaglePilot: false,
-    YoungEagleVolunteer: false,
-    EaglePilot: false,
-    EagleFlightVolunteer: false
-  }
+  memberTypeForm.value = buildMemberTypeForm()
   showMemberTypeModal.value = true
 }
 
 const editMemberType = (type: any) => {
   editingMemberTypeId.value = type.MemberTypeID
-  memberTypeForm.value = {
-    Name: type.Name,
-    DuesRate: type.DuesRate,
-    SortOrder: type.SortOrder,
-    BoardMember: Number(type.BoardMember) === 1,
-    Officer: Number(type.Officer) === 1,
-    YoungEaglePilot: Number(type.YoungEaglePilot) === 1,
-    YoungEagleVolunteer: Number(type.YoungEagleVolunteer) === 1,
-    EaglePilot: Number(type.EaglePilot) === 1,
-    EagleFlightVolunteer: Number(type.EagleFlightVolunteer) === 1
-  }
+  memberTypeForm.value = buildMemberTypeForm(type)
   showMemberTypeModal.value = true
 }
 
 const closeMemberTypeModal = () => {
   showMemberTypeModal.value = false
-  memberTypeForm.value = {
-    Name: '',
-    DuesRate: 0,
-    SortOrder: 0,
-    BoardMember: false,
-    Officer: false,
-    YoungEaglePilot: false,
-    YoungEagleVolunteer: false,
-    EaglePilot: false,
-    EagleFlightVolunteer: false
-  }
+  memberTypeForm.value = buildMemberTypeForm()
 }
 
 const saveMemberType = async () => {
