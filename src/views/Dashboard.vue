@@ -48,7 +48,7 @@
         </div>
       </div>
 
-      <!-- Youth Protection Card -->
+      <!-- Youth Protection / Background Check Card -->
       <div
         role="button"
         tabindex="0"
@@ -60,7 +60,7 @@
         <div class="flex items-center justify-between">
           <div>
             <h4 class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ stats.youthProtectionExpiring }}</h4>
-            <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">YP Expiring Soon</span>
+            <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">YP / Background Expiring Soon</span>
             <span class="mt-2 inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-600 dark:bg-red-500/10 dark:text-red-300">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -86,7 +86,7 @@
       <div class="w-full max-w-2xl my-8 rounded-xl bg-white p-6 dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-xl font-semibold text-gray-800 dark:text-white/90">
-            Youth Protection Expiring Soon (30 days)
+            YP / Background Expiring Soon (30 days)
           </h3>
           <button
             @click="showYPDetailsModal = false"
@@ -99,7 +99,7 @@
 
         <div v-if="loadingYPDetails" class="text-sm text-gray-500">Loading details...</div>
         <div v-else-if="ypDetailsError" class="text-sm text-red-600">{{ ypDetailsError }}</div>
-        <div v-else-if="!ypExpiringMembers.length" class="text-sm text-gray-500">No members with expiring YP certifications.</div>
+        <div v-else-if="!ypExpiringMembers.length" class="text-sm text-gray-500">No members with expiring YP or background checks.</div>
         <div v-else class="overflow-x-auto">
           <table class="w-full">
             <thead>
@@ -108,6 +108,7 @@
                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Email</th>
                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Status</th>
                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">YP Expires</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Background Expires</th>
               </tr>
             </thead>
             <tbody>
@@ -132,6 +133,9 @@
                 </td>
                 <td class="px-4 py-4 text-sm font-medium text-red-600 dark:text-red-400">
                   {{ formatDate(member.YouthProtectionExpiration) }}
+                </td>
+                <td class="px-4 py-4 text-sm font-medium text-red-600 dark:text-red-400">
+                  {{ formatDate(member.BackgroundCheckExpiration) }}
                 </td>
               </tr>
             </tbody>

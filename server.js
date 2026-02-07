@@ -1094,16 +1094,22 @@ app.get('/api/members/stats', async (req, res) => {
     const members = await db.getAllMembers();
     const now = new Date();
     const currentYear = now.getFullYear();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const isExpiringSoon = (dateString) => {
+      if (!dateString) return false;
+      const expirationDate = new Date(dateString);
+      if (Number.isNaN(expirationDate.getTime())) return false;
+      return expirationDate <= thirtyDaysFromNow;
+    };
     
     const stats = {
       totalMembers: members.length,
       activeMembers: members.filter(m => m.Status === 'Active').length,
       renewalsDue: members.filter(m => m.LastPaidYear < currentYear && m.MemberType !== 'Family Member').length,
       youthProtectionExpiring: members.filter(m => {
-        if (!m.YouthProtectionExpiration) return false;
-        const expirationDate = new Date(m.YouthProtectionExpiration);
-        const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        return expirationDate <= thirtyDaysFromNow;
+        return isExpiringSoon(m.YouthProtectionExpiration)
+          || isExpiringSoon(m.BackgroundCheckExpiration);
       }).length
     };
     
@@ -1120,16 +1126,30 @@ app.get('/api/members/yp-expiring', async (req, res) => {
     const members = await db.getAllMembers();
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const isExpiringSoon = (dateString) => {
+      if (!dateString) return false;
+      const expirationDate = new Date(dateString);
+      if (Number.isNaN(expirationDate.getTime())) return false;
+      return expirationDate <= thirtyDaysFromNow;
+    };
+
+    const getSoonestDate = (member) => {
+      const dates = [member.YouthProtectionExpiration, member.BackgroundCheckExpiration]
+        .map(val => (val ? new Date(val) : null))
+        .filter(date => date && !Number.isNaN(date.getTime()));
+      if (dates.length === 0) return null;
+      return dates.sort((a, b) => a.getTime() - b.getTime())[0];
+    };
     
     const expiringMembers = members
-      .filter(m => {
-        if (!m.YouthProtectionExpiration) return false;
-        const expirationDate = new Date(m.YouthProtectionExpiration);
-        return expirationDate <= thirtyDaysFromNow;
-      })
+      .filter(m => isExpiringSoon(m.YouthProtectionExpiration) || isExpiringSoon(m.BackgroundCheckExpiration))
       .sort((a, b) => {
-        const dateA = new Date(a.YouthProtectionExpiration);
-        const dateB = new Date(b.YouthProtectionExpiration);
+        const dateA = getSoonestDate(a);
+        const dateB = getSoonestDate(b);
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
         return dateA.getTime() - dateB.getTime();
       });
     
