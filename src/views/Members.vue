@@ -737,10 +737,20 @@ const filteredMembers = computed(() => {
   
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
+    const matchedOptions = [...roleOptions.value, ...activityOptions.value].filter(option => {
+      const label = option.label?.toLowerCase() || ''
+      const value = option.value?.toLowerCase() || ''
+      return label.includes(query) || value.includes(query)
+    })
+
+    const matchesRoleActivity = (member: any) =>
+      matchedOptions.some(option => Number(member?.[option.value]) === 1)
+
     const isMatch = (member: any) =>
       member.FirstName?.toLowerCase().includes(query) ||
       member.LastName?.toLowerCase().includes(query) ||
-      member.Email?.toLowerCase().includes(query)
+      member.Email?.toLowerCase().includes(query) ||
+      matchesRoleActivity(member)
 
     const matchingMembers = members.value.filter(isMatch)
     const matchingHouseholds = new Set(
