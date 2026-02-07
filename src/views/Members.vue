@@ -27,6 +27,13 @@
               Download Sample CSV
             </button>
             <button
+              @click="exportMembersCsv"
+              :disabled="filteredMembers.length === 0"
+              class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              Export CSV
+            </button>
+            <button
               @click="showImportHelp = true"
               class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
@@ -800,11 +807,14 @@ const groupedMembers = computed(() => {
   const individuals: any[] = []
   
   filteredMembers.value.forEach(member => {
-    if (member.HouseholdID) {
-      if (!households.has(member.HouseholdID)) {
-        households.set(member.HouseholdID, [])
+    const hasHousehold = Boolean(member.HouseholdID)
+    const isFamilyPrimary = String(member.MemberType || '').toLowerCase() === 'family'
+    if (hasHousehold || isFamilyPrimary) {
+      const householdKey = Number(member.HouseholdID || member.MemberID)
+      if (!households.has(householdKey)) {
+        households.set(householdKey, [])
       }
-      households.get(member.HouseholdID)!.push(member)
+      households.get(householdKey)!.push(member)
     } else {
       individuals.push(member)
     }
@@ -1110,6 +1120,82 @@ const downloadSampleCsv = async () => {
       alert('Failed to download template')
     }
   }
+}
+
+const exportMembersCsv = () => {
+  const rows = filteredMembers.value
+  if (rows.length === 0) return
+
+  const optionKeys = [...roleOptions.value, ...activityOptions.value].map(option => option.value)
+  const headers = [
+    'MemberID',
+    'HouseholdID',
+    'FirstName',
+    'LastName',
+    'Email',
+    'Phone',
+    'Street',
+    'City',
+    'State',
+    'Zip',
+    'MemberType',
+    'Status',
+    'DuesRate',
+    'EAANumber',
+    'LastPaidYear',
+    'AmountDue',
+    'YouthProtectionExpiration',
+    'BackgroundCheckExpiration',
+    ...optionKeys,
+    'Notes'
+  ]
+
+  const escapeCsv = (value: unknown) => {
+    const str = value === null || value === undefined ? '' : String(value)
+    if (/[",\n]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`
+    }
+    return str
+  }
+
+  const csvRows = rows.map(member => {
+    const baseValues = [
+      member.MemberID,
+      member.HouseholdID,
+      member.FirstName,
+      member.LastName,
+      member.Email,
+      member.Phone,
+      member.Street,
+      member.City,
+      member.State,
+      member.Zip,
+      member.MemberType,
+      member.Status,
+      member.DuesRate,
+      member.EAANumber,
+      member.LastPaidYear,
+      member.AmountDue,
+      member.YouthProtectionExpiration,
+      member.BackgroundCheckExpiration
+    ]
+    const optionValues = optionKeys.map(key => Number(member?.[key]) || 0)
+    const values = [...baseValues, ...optionValues, member.Notes]
+    return values.map(escapeCsv).join(',')
+  })
+
+  const content = [headers.join(','), ...csvRows].join('\n')
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  const now = new Date()
+  const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  a.download = `members-${stamp}.csv`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 const formatDate = (dateString: string | null) => {
