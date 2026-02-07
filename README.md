@@ -4,7 +4,7 @@ Professional EAA Chapter Management System - Modern SPA Architecture
 
 **Status**: ✅ Production-ready with Vue 3 + Vite frontend, headless API backend, TailAdmin UI
 
-_Last updated: 2026-02-05_
+_Last updated: 2026-02-07_
 
 ---
 
@@ -20,6 +20,7 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - ✅ Member CRUD with instant updates (no page reloads)
 - ✅ Household management with individual family member records
 - ✅ Click-to-expand family members in Members table
+- ✅ Automatic household IDs for Family members
 - ✅ Firebase Authentication with Google sign-in only
 - ✅ Allowlist-based access control (only approved users can access)
 - ✅ User management in Settings (roles + member linking)
@@ -33,6 +34,8 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - ✅ **Payment fee configuration** - Configurable in Settings → Payment Settings
 - ✅ **Google Sheets sync** - Optional auto-sync of all tables to a Google Sheet
 - ✅ **Google Groups sync** - Map member types/roles/activities to Google Groups
+- ✅ **Custom roles & activities** - Configure role/activity labels used across members, member types, and rules
+- ✅ **Member search by roles/activities** - Universal search matches assigned roles and activities
 - ✅ **Public member signup form** - Embed on public site with automatic member creation
 - ✅ **Forms page** - View responses, reply by email, and configure signup settings
 - ✅ **Response notifications** - Optional notification email on new submissions
@@ -217,12 +220,14 @@ CREATE TABLE members (
   InvoiceNeeded INTEGER DEFAULT 0,
   YouthProtectionExpiration TEXT,
   BackgroundCheckExpiration TEXT,
+  -- Role/activity flags (configurable via Settings → Member Types)
   YoungEaglePilot INTEGER DEFAULT 0,
   YoungEagleVolunteer INTEGER DEFAULT 0,
   EaglePilot INTEGER DEFAULT 0,
   EagleFlightVolunteer INTEGER DEFAULT 0,
   BoardMember INTEGER DEFAULT 0,
   Officer INTEGER DEFAULT 0,
+  -- Additional role/activity columns are added automatically when configured
   RenewalNoticeSentAt DATETIME,
   RenewalNoticeSentYear INTEGER,
   Street TEXT,

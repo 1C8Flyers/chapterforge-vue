@@ -1,6 +1,6 @@
 # ChapterForge Front‑End User Manual
 
-_Last updated: 2026-02-05_
+_Last updated: 2026-02-07_
 
 ## Who this is for
 This guide is for chapter staff using the ChapterForge web app to manage members, renewals, and reports.
@@ -38,7 +38,7 @@ The Dashboard shows key metrics and system status.
 This is the main place to add, edit, and manage members.
 
 ### Search & Filter
-- Use the search box to find members by name, email, or EAA number.
+- Use the search box to find members by name, email, EAA number, or role/activity (e.g., Officer).
 - Use the status filter to show Active/Inactive/Deceased.
 
 ### Add a Member
@@ -56,18 +56,14 @@ This is the main place to add, edit, and manage members.
 ### Household Members (Family)
 - If a member is **Family**, click the **👥** button to manage household members.
 - Household members are stored as separate records with Member Type = Family Member.
+- Family members automatically receive a Household ID if one was not set.
 - Household member edit hides **Member Type**, **Status**, **Dues**, **Last Paid Year**, and **Payments** because those are tied to the primary member.
 
 ### Activities & Info
 For each member, you can record:
 - Youth Protection Expiration
 - Background Check Expiration
-- Young Eagle Pilot
-- Young Eagle Volunteer
-- Eagle Pilot
-- Eagle Flight Volunteer
-- Board Member
-- Officer
+- Role and activity flags (configurable in Settings → Member Types)
 
 ### Payments History
 Available for primary members (not household members).
@@ -180,6 +176,7 @@ Bulk import members from a CSV file.
 ### Notes
 - Payments can be imported using `YYYY:amount;YYYY:amount` format.
 - Family members should be separate rows with `MemberType=Family Member` and the same `HouseholdID` as the primary member.
+- If `MemberType=Family` and HouseholdID is blank, a Household ID will be assigned automatically.
 
 ---
 
@@ -189,6 +186,7 @@ Manage configuration and email templates.
 ### Member Types
 - Add/edit/delete member types.
 - Dues are auto-filled based on type.
+- Configure role and activity options used throughout the app.
 
 ### Email Template
 - Edit the renewal email subject and body.

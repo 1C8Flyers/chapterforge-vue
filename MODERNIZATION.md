@@ -12,6 +12,8 @@ ChapterForge now runs as a **Vue 3 + Vite single-page app** with an API-only Exp
 ✅ **Improved Tables & Modals**: Cleaner actions and UX
 ✅ **WYSIWYG Editor**: Quill.js for email templates
 ✅ **Expanded Member Experience**: Row expansion for family members + activity flags
+✅ **Custom Roles & Activities**: Configurable role/activity definitions across the app
+✅ **Auto Household IDs**: Family members automatically receive household IDs
 ✅ **Renewal Tracking**: Last notice sent indicators
 ✅ **Youth Protection Page**: Certification status overview
 ✅ **Docker Deployment**: Container build + compose setup

@@ -15,16 +15,17 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
 
 2. **Member Management**
    - Add/edit/delete members with reactive modals
-   - Search and filter (instant, no page reload)
+   - Search and filter (instant, no page reload), including role/activity search
    - Split name fields (FirstName, LastName)
    - Family members as individual records linked by HouseholdID
    - Household management modal for Family members
+   - Automatic HouseholdID assignment for Family members
    - EAA number, contact info, notes
    - Member types from Settings
    - Status: Active, Inactive, Deceased
    - Payments history with add/edit/delete
    - Click a member row to expand and view family members
-   - Activity flags include board/officer roles
+   - Configurable role/activity flags include board/officer roles
 
 3. **Member Type Configuration**
    - Settings page with tabbed interface
@@ -32,6 +33,7 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
    - Each type has name, annual dues, sort order
    - Member forms auto-populate dues
    - Conditional family members field
+   - Custom roles and activities managed in Member Types
 
 4. **Email Renewal System**
    - WYSIWYG email template editor (Quill.js)
@@ -204,7 +206,7 @@ This runs the production build on `http://localhost:3000` and persists the SQLit
 
 ### Members (`/members`)
 - **Table**: All members with instant search and filter
-- **Search**: Real-time filter by name, email, EAA number (no page reload)
+- **Search**: Real-time filter by name, email, EAA number, role/activity (no page reload)
 - **Status Filter**: Active/Inactive/Deceased dropdown (instant filtering)
 - **Add Member Button**: Opens reactive modal with:
   - First name, last name, email, phone
