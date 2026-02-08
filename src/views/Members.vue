@@ -572,20 +572,29 @@
                     <th class="px-4 py-3">Session</th>
                     <th class="px-4 py-3">Date</th>
                     <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-if="loadingParticipation">
-                    <td colspan="4" class="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Loading participation...</td>
+                    <td colspan="5" class="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Loading participation...</td>
                   </tr>
                   <tr v-else-if="participationItems.length === 0">
-                    <td colspan="4" class="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No participation records yet.</td>
+                    <td colspan="5" class="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No participation records yet.</td>
                   </tr>
                   <tr v-else v-for="item in participationItems" :key="item.key" class="border-b border-gray-100 dark:border-gray-800">
                     <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ item.type }}</td>
                     <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ item.sessionName || '—' }}</td>
                     <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ formatParticipationDate(item.createdAt) }}</td>
                     <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ item.status }}</td>
+                    <td class="px-4 py-3 text-right">
+                      <button
+                        class="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+                        @click="deleteParticipation(item)"
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -1089,6 +1098,35 @@ const formatParticipationDate = (dateString: string) => {
   if (!dateString) return '—'
   const date = new Date(dateString)
   return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+}
+
+const deleteParticipation = async (item: any) => {
+  if (!item?.signupId || item.type !== 'Ground School') {
+    return
+  }
+  if (!confirm('Delete this participation record?')) return
+
+  try {
+    const headers = await getAuthHeaders()
+    const response = await apiFetch(`/api/ground-school-signups/${item.signupId}`, {
+      method: 'DELETE',
+      headers
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to delete participation')
+    }
+    if (formData.value.MemberID) {
+      await fetchParticipation(formData.value.MemberID)
+    }
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error deleting participation:', error)
+      alert(error instanceof Error ? error.message : 'Failed to delete participation')
+    }
+  }
 }
 
 const saveMember = async () => {

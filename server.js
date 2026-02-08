@@ -2722,6 +2722,20 @@ app.post('/api/ground-school-signups/:id/reply', async (req, res) => {
   }
 });
 
+app.delete('/api/ground-school-signups/:id', async (req, res) => {
+  try {
+    const signup = await db.getGroundSchoolSignupById(req.params.id);
+    if (!signup) {
+      return res.status(404).json({ error: 'Signup not found' });
+    }
+
+    await db.deleteGroundSchoolSignup(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/settings/google-groups/groups', async (req, res) => {
   try {
     const config = await getGoogleGroupsConfig();

@@ -967,6 +967,19 @@ class Database {
     });
   }
 
+  deleteGroundSchoolSignup(id) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `DELETE FROM ground_school_signups WHERE SignupID = ?`,
+        [id],
+        (err) => {
+          if (err) reject(err);
+          else resolve({ deleted: true });
+        }
+      );
+    });
+  }
+
   // Update dues payment
   updateDuesPayment(id, year, amount) {
     return new Promise((resolve, reject) => {
