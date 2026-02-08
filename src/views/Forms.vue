@@ -475,6 +475,7 @@
                 v-model="customFormDraft.slug"
                 type="text"
                 placeholder="form-spring"
+                @input="customFormSlugTouched = true"
                 class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
               />
             </div>
@@ -505,6 +506,7 @@
                 v-model="customFormDraft.sessionName"
                 type="text"
                 placeholder="Spring 2026"
+                @input="customFormSessionTouched = true"
                 class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
               />
             </div>
@@ -640,6 +642,8 @@ const customFormDraft = ref({
   assignedRoles: [] as string[],
   assignedActivities: [] as string[]
 })
+const customFormSlugTouched = ref(false)
+const customFormSessionTouched = ref(false)
 const customFormSignups = ref<any[]>([])
 const loadingCustomFormSignups = ref(false)
 const selectedCustomFormSlug = ref('')
@@ -838,6 +842,8 @@ const saveCustomForms = async () => {
 const openCustomFormModal = (form: any | null = null) => {
   editingCustomForm.value = form
   if (form) {
+    customFormSlugTouched.value = true
+    customFormSessionTouched.value = true
     customFormDraft.value = {
       name: form.name || '',
       slug: form.slug || '',
@@ -850,6 +856,8 @@ const openCustomFormModal = (form: any | null = null) => {
       assignedActivities: Array.isArray(form.assignedActivities) ? [...form.assignedActivities] : []
     }
   } else {
+    customFormSlugTouched.value = false
+    customFormSessionTouched.value = false
     customFormDraft.value = {
       name: '',
       slug: '',
@@ -869,6 +877,26 @@ const closeCustomFormModal = () => {
   showCustomFormModal.value = false
   editingCustomForm.value = null
 }
+
+const slugifyFormName = (value: string) => String(value || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9\s-_]/g, '')
+  .replace(/\s+/g, '-')
+  .replace(/-+/g, '-')
+  .replace(/^-|-$|_/g, '')
+  .slice(0, 48)
+
+watch(
+  () => customFormDraft.value.name,
+  (name) => {
+    if (!customFormSlugTouched.value) {
+      customFormDraft.value.slug = slugifyFormName(name)
+    }
+    if (!customFormSessionTouched.value) {
+      customFormDraft.value.sessionName = String(name || '').trim()
+    }
+  }
+)
 
 const saveCustomFormDraft = () => {
   const draft = { ...customFormDraft.value }
