@@ -227,7 +227,12 @@
           <div>
             <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Custom Form Responses</h3>
             <p class="text-xs text-gray-500 dark:text-gray-400">
-              {{ selectedCustomForm?.name ? `Responses for: ${selectedCustomForm.name}` : 'No custom forms yet.' }}
+              {{ customForms.length === 0
+                ? 'No custom forms yet.'
+                : (selectedCustomFormSlug === 'all'
+                  ? 'Responses for: All forms'
+                  : `Responses for: ${selectedCustomForm?.name || 'Form'}`)
+              }}
             </p>
           </div>
           <div class="flex gap-2">
@@ -255,6 +260,7 @@
                 v-model="selectedCustomFormSlug"
                 class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
               >
+                <option value="all">All forms</option>
                 <option value="">Select form...</option>
                 <option v-for="form in customForms" :key="form.slug" :value="form.slug">{{ form.name }}</option>
               </select>
@@ -769,7 +775,7 @@ const fetchCustomForms = async () => {
       const data = await response.json()
       customForms.value = Array.isArray(data.forms) ? data.forms : []
       if (!selectedCustomFormSlug.value && customForms.value.length > 0) {
-        selectedCustomFormSlug.value = customForms.value[0].slug
+        selectedCustomFormSlug.value = 'all'
       }
     }
   } catch (error) {
@@ -932,7 +938,10 @@ const fetchCustomFormSignups = async () => {
   try {
     loadingCustomFormSignups.value = true
     const headers = await getAuthHeaders()
-    const response = await apiFetch(`/api/forms/${selectedCustomFormSlug.value}/signups?limit=200`, { headers })
+    const endpoint = selectedCustomFormSlug.value === 'all'
+      ? '/api/forms/signups?limit=200'
+      : `/api/forms/${selectedCustomFormSlug.value}/signups?limit=200`
+    const response = await apiFetch(endpoint, { headers })
     if (!response.ok) {
       throw new Error('Failed to fetch form signups')
     }
@@ -966,7 +975,7 @@ const closeSignupReply = () => {
 
 const openCustomFormReply = (signup: any) => {
   selectedCustomFormSignup.value = signup
-  const formName = selectedCustomForm.value?.name || 'Form'
+  const formName = signup?.FormName || selectedCustomForm.value?.name || 'Form'
   const sessionSuffix = signup?.SessionName ? ` (${signup.SessionName})` : ''
   customFormReplyForm.value = {
     subject: `${formName} Sign-Up${sessionSuffix}`,
@@ -1018,7 +1027,13 @@ const sendCustomFormReply = async () => {
   try {
     sendingCustomFormReply.value = true
     const headers = await getAuthHeaders()
-    const response = await apiFetch(`/api/forms/${selectedCustomFormSlug.value}/signups/${selectedCustomFormSignup.value.SignupID}/reply`, {
+    const formKey = selectedCustomFormSlug.value === 'all'
+      ? selectedCustomFormSignup.value.FormKey
+      : selectedCustomFormSlug.value
+    if (!formKey) {
+      throw new Error('Form key is missing')
+    }
+    const response = await apiFetch(`/api/forms/${formKey}/signups/${selectedCustomFormSignup.value.SignupID}/reply`, {
       method: 'POST',
       headers,
       body: JSON.stringify({

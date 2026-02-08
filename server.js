@@ -2747,6 +2747,16 @@ app.post('/api/forms', async (req, res) => {
 });
 
 // API: Custom form signups
+app.get('/api/forms/signups', async (req, res) => {
+  try {
+    const limit = req.query?.limit ? Number(req.query.limit) : 200;
+    const rows = await db.listCustomFormSignupsAll(limit);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/forms/:slug/signups', async (req, res) => {
   try {
     const forms = await getCustomFormsConfig();

@@ -919,6 +919,20 @@ class Database {
     });
   }
 
+  listCustomFormSignupsAll(limit = 200) {
+    return new Promise((resolve, reject) => {
+      const safeLimit = Number.isFinite(Number(limit)) ? Number(limit) : 200;
+      this.db.all(
+        `SELECT * FROM custom_form_signups ORDER BY CreatedAt DESC LIMIT ?`,
+        [safeLimit],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        }
+      );
+    });
+  }
+
   listCustomFormSignupsByMemberId(memberId) {
     return new Promise((resolve, reject) => {
       this.db.all(
