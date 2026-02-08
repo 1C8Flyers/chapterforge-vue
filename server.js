@@ -58,7 +58,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Public member signup form (no auth)
+// New member registration form (no auth)
 app.get('/public/member-signup/form', async (req, res) => {
   try {
     const config = await getPublicSignupConfig();
@@ -73,7 +73,7 @@ app.get('/public/member-signup/form', async (req, res) => {
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>New Member Signup</title>
+        <title>New Member Registration</title>
         <style>
           :root { color-scheme: light; }
           body { font-family: "Inter", "Segoe UI", Arial, sans-serif; background: #f3f4f6; color: #111827; padding: 24px; }
@@ -95,7 +95,7 @@ app.get('/public/member-signup/form', async (req, res) => {
       </head>
       <body>
         <div class="card">
-          <h1>New Member Signup</h1>
+          <h1>New Member Registration</h1>
           <p class="sub">Please complete the form below. We will follow up soon.</p>
           <form method="POST" action="${actionUrl}">
             <div class="grid">
@@ -164,8 +164,8 @@ app.post('/public/member-signup', async (req, res) => {
 
     const memberType = config.defaultMemberType || 'Prospect';
     const notes = HearAbout
-      ? `Public signup. Heard about us: ${HearAbout}`
-      : 'Public signup';
+      ? `New member registration. Heard about us: ${HearAbout}`
+      : 'New member registration';
 
     const optionKeys = await getMemberOptionKeys();
     await db.ensureMemberOptionColumns(optionKeys);
@@ -204,7 +204,7 @@ app.post('/public/member-signup', async (req, res) => {
 
     if (config.notificationEmail) {
       const html = `
-        <p>A new member signup was received.</p>
+        <p>A new member registration was received.</p>
         <ul>
           <li>Name: ${FirstName} ${LastName}</li>
           <li>Email: ${Email}</li>
@@ -216,7 +216,7 @@ app.post('/public/member-signup', async (req, res) => {
       `;
       await emailService.sendReportEmail({
         recipients: config.notificationEmail,
-        subject: `New Member Signup: ${FirstName} ${LastName}`,
+        subject: `New Member Registration: ${FirstName} ${LastName}`,
         html
       });
     }
@@ -2617,7 +2617,7 @@ app.post('/api/settings/member-options', async (req, res) => {
   }
 });
 
-// API: Public member signup settings
+// API: New member registration settings
 app.get('/api/settings/public-signup', async (req, res) => {
   try {
     const config = await getPublicSignupConfig();
@@ -2645,7 +2645,7 @@ app.post('/api/settings/public-signup', async (req, res) => {
       { publicSignup: oldValue },
       { publicSignup: normalized },
       ipAddress,
-      'Updated public signup settings'
+      'Updated new member registration settings'
     );
     res.json({ success: true, config: normalized });
   } catch (error) {
@@ -2653,7 +2653,7 @@ app.post('/api/settings/public-signup', async (req, res) => {
   }
 });
 
-// API: Public signup submissions
+// API: New member registration submissions
 app.get('/api/public-signups', async (req, res) => {
   try {
     const limit = req.query?.limit ? Number(req.query.limit) : 200;

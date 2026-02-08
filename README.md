@@ -36,7 +36,7 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - ✅ **Google Groups sync** - Map member types/roles/activities to Google Groups
 - ✅ **Custom roles & activities** - Configure role/activity labels used across members, member types, and rules
 - ✅ **Member search by roles/activities** - Universal search matches assigned roles and activities
-- ✅ **Public member signup form** - Embed on public site with automatic member creation
+- ✅ **New Member Registration form** - Embed on public site with automatic member creation
 - ✅ **Forms page** - View responses, reply by email, and configure signup settings
 - ✅ **Custom forms builder** - Create public forms with session name, assigned roles/activities, and response tracking
 - ✅ **Participation toggle per form** - Decide whether a form adds entries to Participation
@@ -110,7 +110,7 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `Renewals.vue` → Renewal list with year filter + bulk send
 - `Reports.vue` → Charts + export links (CSV)
 - `SquareAnalytics.vue` → Square Payment Data (transactions + items chart + payouts)
-- `Forms.vue` → Public signup responses + settings
+- `Forms.vue` → New Member Registration responses + settings
 
 **Features**:
 - Reactive data binding (no jQuery)
@@ -181,13 +181,13 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `POST /api/settings/google-groups/sync` → Manual Google Groups sync
 - `GET /api/settings/member-options` → Member role/activity options
 - `POST /api/settings/member-options` → Save member role/activity options
-- `GET /api/settings/public-signup` → Public signup settings
-- `POST /api/settings/public-signup` → Save public signup settings
-- `GET /api/public-signups` → List public signup responses
+- `GET /api/settings/public-signup` → New member registration settings
+- `POST /api/settings/public-signup` → Save new member registration settings
+- `GET /api/public-signups` → List new member registration responses
 - `GET /api/public-signups/summary` → New response count
 - `POST /api/public-signups/:id/reply` → Reply to a signup by email
-- `GET /public/member-signup/form` → Hosted public signup form (no auth)
-- `POST /public/member-signup` → Public signup submission endpoint (no auth)
+- `GET /public/member-signup/form` → Hosted New Member Registration form (no auth)
+- `POST /public/member-signup` → New member registration submission endpoint (no auth)
 - `GET /api/forms` → List custom forms config
 - `POST /api/forms` → Save custom forms config
 - `GET /api/forms/:slug/signups` → List custom form signup responses

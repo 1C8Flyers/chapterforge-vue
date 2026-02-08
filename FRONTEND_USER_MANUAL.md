@@ -138,7 +138,7 @@ Use Reports to view and download various reports and visualizations.
 ---
 
 ## Forms
-Manage public signup responses and settings.
+Manage new member registration responses and settings.
 
 ### Responses
 - Click a row to expand and view full submission details.
@@ -146,7 +146,7 @@ Manage public signup responses and settings.
 - Custom form responses show session name and assigned roles/activities.
 
 ### Settings
-- Enable the public signup form.
+- Enable the New Member Registration form.
 - Choose the default member type (e.g., Prospect).
 - Set an optional notification email address.
 - Copy the embed snippet for your public website.

@@ -69,8 +69,8 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
    - Map member types/roles/activities to Google Groups
    - Auto-sync on member changes or manual “Sync Now”
 
-10. **Public Member Signup (optional)**
-   - Embed a public signup form on your website
+10. **New Member Registration (optional)**
+   - Embed a public registration form on your website
    - Automatic member creation + notification email
    - View responses and reply from the Forms page
 
@@ -282,7 +282,7 @@ This runs the production build on `http://localhost:3000` and persists the SQLit
 ### Forms (`/forms`)
 - **Responses**: Click a row to expand full details.
 - **Reply**: Send a response email directly from the list.
-- **Settings tab**: Enable the public signup form, set the default member type, and copy the embed snippet.
+- **Settings tab**: Enable the New Member Registration form, set the default member type, and copy the embed snippet.
 
 ### Import (`/import`)
 - **Download Template**: Get CSV format with all required fields

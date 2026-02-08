@@ -139,7 +139,7 @@ Response:
 - ✅ **Payout Exports**: CSV export for payout entries from the payouts list
 
 ## Related Platform Updates (February 2026)
-- ✅ **Public Signup Forms**: Embedded public member signup with notifications
+- ✅ **New Member Registration**: Embedded new member registration with notifications
 - ✅ **Forms Page**: Responses + settings in a dedicated navigation item
 
 ## Future Enhancements

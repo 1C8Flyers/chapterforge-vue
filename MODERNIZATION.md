@@ -31,7 +31,7 @@ ChapterForge now runs as a **Vue 3 + Vite single-page app** with an API-only Exp
 ✅ **Spreadsheet View**: Inline dues/member spreadsheet tab in Reports
 ✅ **Google Sheets Sync**: Optional auto-sync of tables to Google Sheets
 ✅ **Google Groups Sync**: Map member types/roles/activities to Google Groups
-✅ **Public Signup Forms**: Embedded public member signup with notifications
+✅ **New Member Registration**: Embedded new member registration with notifications
 ✅ **Forms Page**: Responses + settings in a dedicated navigation item
 ✅ **Menu Badge**: New response count indicator on Forms
 ✅ **Custom Forms**: Dedicated public forms with session name and assigned roles/activities

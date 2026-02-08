@@ -32,7 +32,7 @@
     <div v-if="activeTab === 'settings'" class="space-y-6">
       <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="mb-4 flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Public Member Signup</h3>
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">New Member Registration</h3>
           <button
             @click="savePublicSignupSettings"
             class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
@@ -49,7 +49,7 @@
               type="checkbox"
               class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
             />
-            Enable public signup form
+            Enable new member registration form
           </label>
 
           <div class="grid gap-4 md:grid-cols-2">
@@ -155,7 +155,7 @@
     <div v-if="activeTab === 'responses'" class="space-y-6">
       <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="mb-4 flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Public Signup Responses</h3>
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">New Member Registration Responses</h3>
           <button
             @click="fetchPublicSignups"
             class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-800 dark:text-gray-200"
@@ -858,7 +858,7 @@ const fetchPublicSignupSettings = async () => {
     if (error instanceof AuthError) {
       router.push('/signin')
     } else {
-      console.error('Error fetching public signup settings:', error)
+      console.error('Error fetching new member registration settings:', error)
     }
   }
 }
@@ -874,15 +874,15 @@ const savePublicSignupSettings = async () => {
     })
     if (!response.ok) {
       const error = await response.json()
-      throw new Error(error.error || 'Failed to save public signup settings')
+      throw new Error(error.error || 'Failed to save new member registration settings')
     }
-    alert('Public signup settings saved')
+    alert('New member registration settings saved')
   } catch (error) {
     if (error instanceof AuthError) {
       router.push('/signin')
     } else {
-      console.error('Error saving public signup settings:', error)
-      alert(error instanceof Error ? error.message : 'Failed to save public signup settings')
+      console.error('Error saving new member registration settings:', error)
+      alert(error instanceof Error ? error.message : 'Failed to save new member registration settings')
     }
   } finally {
     savingPublicSignupSettings.value = false
@@ -895,14 +895,14 @@ const fetchPublicSignups = async () => {
     const headers = await getAuthHeaders()
     const response = await apiFetch('/api/public-signups?limit=200', { headers })
     if (!response.ok) {
-      throw new Error('Failed to fetch public signups')
+      throw new Error('Failed to fetch new member registrations')
     }
     publicSignups.value = await response.json()
   } catch (error) {
     if (error instanceof AuthError) {
       router.push('/signin')
     } else {
-      console.error('Error fetching public signups:', error)
+      console.error('Error fetching new member registrations:', error)
     }
   } finally {
     loadingPublicSignups.value = false
