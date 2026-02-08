@@ -144,6 +144,8 @@ Manage new member registration responses and settings.
 - Click a row to expand and view full submission details.
 - Use the **Reply** button to email the submitter.
 - Custom form responses show session name and assigned roles/activities.
+- Use **Filter** to pick a specific form (defaults to **All forms**).
+- Click a submitter name to open the member record (when linked).
 
 ### Settings
 - Enable the New Member Registration form.
@@ -151,6 +153,7 @@ Manage new member registration responses and settings.
 - Set an optional notification email address.
 - Copy the embed snippet for your public website.
 - Create custom forms with session name, assigned roles/activities, and notification email.
+- Slug and Session Name auto-generate from the Form Name (editable).
 - Toggle whether a form adds to Participation.
 - Copy custom form embed snippets for your public website.
 

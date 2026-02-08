@@ -38,7 +38,8 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - ✅ **Member search by roles/activities** - Universal search matches assigned roles and activities
 - ✅ **New Member Registration form** - Embed on public site with automatic member creation
 - ✅ **Forms page** - View responses, reply by email, and configure signup settings
-- ✅ **Custom forms builder** - Create public forms with session name, assigned roles/activities, and response tracking
+- ✅ **Custom forms builder** - Create public forms with auto-generated slug/session, assigned roles/activities, and response tracking
+- ✅ **Form response member links** - Open member records directly from signup responses
 - ✅ **Participation toggle per form** - Decide whether a form adds entries to Participation
 - ✅ **Response notifications** - Optional notification email on new submissions
 - ✅ **Member participation history** - View class/event participation inside member records
