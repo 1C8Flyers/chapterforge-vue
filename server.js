@@ -234,6 +234,265 @@ app.post('/public/member-signup', async (req, res) => {
   }
 });
 
+// Public ground school signup form (no auth)
+app.get('/public/ground-school/form', async (req, res) => {
+  try {
+    const config = await getGroundSchoolConfig();
+    if (!config.enabled) {
+      return res.status(403).send('Ground school signup form is currently disabled.');
+    }
+    const actionUrl = `${req.protocol}://${req.get('host')}/public/ground-school`;
+    const sessionLabel = config.sessionName ? `Session: ${config.sessionName}` : 'Session details will be shared after signup.';
+    res.setHeader('Content-Type', 'text/html');
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Ground School Sign-Up</title>
+        <style>
+          :root { color-scheme: light; }
+          body { font-family: "Inter", "Segoe UI", Arial, sans-serif; background: #f3f4f6; color: #111827; padding: 24px; }
+          .card { max-width: 720px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08); padding: 24px; }
+          h1 { font-size: 22px; margin: 0 0 6px; }
+          p.sub { margin: 0 0 6px; color: #6b7280; font-size: 14px; }
+          p.session { margin: 0 0 20px; color: #1d4ed8; font-size: 13px; font-weight: 600; }
+          .grid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .field { display: flex; flex-direction: column; gap: 6px; }
+          label { font-size: 13px; color: #374151; font-weight: 600; }
+          input, select { width: 100%; padding: 11px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+          input:focus, select:focus { outline: 2px solid rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
+          .full { grid-column: span 2; }
+          .notice { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: #eff6ff; color: #1e3a8a; font-size: 13px; }
+          .actions { margin-top: 18px; display: flex; justify-content: flex-end; }
+          button { background: #2563eb; color: white; border: 0; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+          button:hover { background: #1d4ed8; }
+          @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } .full { grid-column: span 1; } }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h1>Ground School Sign-Up</h1>
+          <p class="sub">Please complete the form below to reserve your seat.</p>
+          <p class="session">${sessionLabel}</p>
+          <form method="POST" action="${actionUrl}">
+            <div class="grid">
+              <div class="field"><label>First Name</label><input name="FirstName" required /></div>
+              <div class="field"><label>Last Name</label><input name="LastName" required /></div>
+              <div class="field"><label>Email</label><input name="Email" type="email" required /></div>
+              <div class="field"><label>EAA Number (optional)</label><input name="EAANumber" /></div>
+              <div class="field full"><label>Street Address</label><input name="Street" required /></div>
+              <div class="field"><label>City</label><input name="City" required /></div>
+              <div class="field"><label>State</label><input name="State" required /></div>
+              <div class="field"><label>ZIP</label><input name="Zip" required /></div>
+              <div class="field full">
+                <label>How did you hear about us?</label>
+                <select name="HearAbout">
+                  <option value="">Select...</option>
+                  <option>Friend or family</option>
+                  <option>Chapter event</option>
+                  <option>EAA website</option>
+                  <option>Social media</option>
+                  <option>Search engine</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="notice">
+              By submitting this form, you agree to be added to our chapter events email list.
+            </div>
+            <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off" />
+            <div class="actions">
+              <button type="submit">Submit</button>
+            </div>
+          </form>
+        </div>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Unable to render form');
+  }
+});
+
+app.post('/public/ground-school', async (req, res) => {
+  try {
+    const config = await getGroundSchoolConfig();
+    if (!config.enabled) {
+      return res.status(403).send('Ground school signup form is currently disabled.');
+    }
+
+    if (req.body?.website) {
+      return res.status(200).send('Thank you for your submission.');
+    }
+
+    const FirstName = String(req.body?.FirstName || '').trim();
+    const LastName = String(req.body?.LastName || '').trim();
+    const Email = String(req.body?.Email || '').trim();
+    const EAANumber = String(req.body?.EAANumber || '').trim();
+    const Street = String(req.body?.Street || '').trim();
+    const City = String(req.body?.City || '').trim();
+    const State = String(req.body?.State || '').trim();
+    const Zip = String(req.body?.Zip || '').trim();
+    const HearAbout = String(req.body?.HearAbout || '').trim();
+
+    if (!FirstName || !LastName || !Email || !Street || !City || !State || !Zip) {
+      return res.status(400).send('Missing required fields.');
+    }
+
+    const optionKeys = await getMemberOptionKeys();
+    await db.ensureMemberOptionColumns(optionKeys);
+
+    const roleOptions = await getMemberRoleOptions();
+    const activityOptions = await getMemberActivityOptions();
+    const roleAllowlist = new Set(roleOptions.map(option => option.value));
+    const activityAllowlist = new Set(activityOptions.map(option => option.value));
+    const assignedRoles = (config.assignedRoles || []).filter(role => roleAllowlist.has(role));
+    const assignedActivities = (config.assignedActivities || []).filter(activity => activityAllowlist.has(activity));
+    const sessionName = config.sessionName || '';
+
+    const existingMember = await db.getMemberByEmail(Email);
+    let memberId = null;
+    let createdNew = false;
+
+    if (existingMember) {
+      const updatePayload = {
+        FirstName,
+        LastName,
+        Email,
+        EAANumber,
+        Street,
+        City,
+        State,
+        Zip,
+        MemberType: existingMember.MemberType,
+        Status: existingMember.Status,
+        DuesRate: existingMember.DuesRate,
+        LastPaidYear: existingMember.LastPaidYear,
+        AmountDue: existingMember.AmountDue,
+        Notes: existingMember.Notes,
+        HouseholdID: existingMember.HouseholdID
+      };
+      optionKeys.forEach(key => {
+        updatePayload[key] = existingMember[key] ?? 0;
+      });
+      assignedRoles.forEach(role => {
+        updatePayload[role] = 1;
+      });
+      assignedActivities.forEach(activity => {
+        updatePayload[activity] = 1;
+      });
+
+      await db.updateMember(existingMember.MemberID, updatePayload, optionKeys);
+      memberId = existingMember.MemberID;
+    } else {
+      createdNew = true;
+      const memberType = config.defaultMemberType || 'Prospect';
+      const notesParts = ['Ground school signup'];
+      if (sessionName) notesParts.push(`Session: ${sessionName}`);
+      if (HearAbout) notesParts.push(`Heard about us: ${HearAbout}`);
+      const notes = `${notesParts.join('. ')}.`;
+
+      const createPayload = {
+        FirstName,
+        LastName,
+        Email,
+        EAANumber,
+        Street,
+        City,
+        State,
+        Zip,
+        MemberType: memberType,
+        Status: 'Prospect',
+        Notes: notes
+      };
+      optionKeys.forEach(key => {
+        createPayload[key] = 0;
+      });
+      assignedRoles.forEach(role => {
+        createPayload[role] = 1;
+      });
+      assignedActivities.forEach(activity => {
+        createPayload[activity] = 1;
+      });
+
+      const createdMember = await db.createMember(createPayload, optionKeys);
+      memberId = createdMember.id;
+    }
+
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || '';
+    const signupNotes = createdNew ? 'Created new member from ground school signup' : 'Updated existing member from ground school signup';
+    await db.createGroundSchoolSignup({
+      MemberID: memberId,
+      FirstName,
+      LastName,
+      Email,
+      EAANumber,
+      Street,
+      City,
+      State,
+      Zip,
+      SessionName: sessionName,
+      AssignedRoles: JSON.stringify(assignedRoles),
+      AssignedActivities: JSON.stringify(assignedActivities),
+      Status: 'new',
+      Notes: signupNotes,
+      RawPayload: JSON.stringify({
+        FirstName,
+        LastName,
+        Email,
+        EAANumber,
+        Street,
+        City,
+        State,
+        Zip,
+        HearAbout,
+        sessionName,
+        assignedRoles,
+        assignedActivities,
+        createdNew
+      }),
+      CreatedIp: ipAddress,
+      UserAgent: userAgent
+    });
+
+    if (config.notificationEmail) {
+      const html = `
+        <p>A ground school signup was received.</p>
+        <ul>
+          <li>Name: ${FirstName} ${LastName}</li>
+          <li>Email: ${Email}</li>
+          <li>EAA Number: ${EAANumber || '—'}</li>
+          <li>Address: ${Street}, ${City}, ${State} ${Zip}</li>
+          <li>Session: ${sessionName || '—'}</li>
+          <li>Assigned Roles: ${assignedRoles.length ? assignedRoles.join(', ') : '—'}</li>
+          <li>Assigned Activities: ${assignedActivities.length ? assignedActivities.join(', ') : '—'}</li>
+          <li>Existing Member: ${createdNew ? 'No (created new)' : 'Yes (updated)'} </li>
+          <li>Heard about us: ${HearAbout || '—'}</li>
+        </ul>
+      `;
+      await emailService.sendReportEmail({
+        recipients: config.notificationEmail,
+        subject: `Ground School Signup: ${FirstName} ${LastName}`,
+        html
+      });
+    }
+
+    scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
+
+    const wantsJson = String(req.headers.accept || '').includes('application/json');
+    if (wantsJson) {
+      return res.json({ success: true });
+    }
+    return res.send('Thank you for your submission.');
+  } catch (error) {
+    res.status(500).send('Unable to process signup.');
+  }
+});
+
 // Auth middleware for API routes
 app.use('/api', async (req, res, next) => {
   const publicPaths = ['/payments/square/webhook'];
@@ -309,6 +568,7 @@ app.use('/api', async (req, res, next) => {
   const MEMBER_ROLE_OPTIONS_KEY = 'member_role_options';
   const MEMBER_ACTIVITY_OPTIONS_KEY = 'member_activity_options';
   const PUBLIC_SIGNUP_SETTING_KEY = 'public_signup_config';
+  const GROUND_SCHOOL_SETTING_KEY = 'ground_school_signup_config';
   const DEFAULT_REPORT_SCHEDULE = {
     enabled: false,
     recipients: [],
@@ -355,6 +615,15 @@ app.use('/api', async (req, res, next) => {
     notificationEmail: ''
   };
 
+  const DEFAULT_GROUND_SCHOOL_CONFIG = {
+    enabled: false,
+    sessionName: '',
+    defaultMemberType: 'Prospect',
+    notificationEmail: '',
+    assignedRoles: [],
+    assignedActivities: []
+  };
+
   const normalizePublicSignupConfig = (input = {}) => {
     const merged = { ...DEFAULT_PUBLIC_SIGNUP_CONFIG, ...(input || {}) };
     return {
@@ -365,6 +634,27 @@ app.use('/api', async (req, res, next) => {
       notificationEmail: typeof merged.notificationEmail === 'string'
         ? merged.notificationEmail.trim()
         : ''
+    };
+  };
+
+  const normalizeGroundSchoolConfig = (input = {}) => {
+    const merged = { ...DEFAULT_GROUND_SCHOOL_CONFIG, ...(input || {}) };
+    const normalizeList = (value) => (Array.isArray(value)
+      ? value.map(item => String(item || '').trim()).filter(Boolean)
+      : []);
+    return {
+      enabled: Boolean(merged.enabled),
+      sessionName: typeof merged.sessionName === 'string'
+        ? merged.sessionName.trim()
+        : '',
+      defaultMemberType: typeof merged.defaultMemberType === 'string'
+        ? merged.defaultMemberType.trim()
+        : DEFAULT_GROUND_SCHOOL_CONFIG.defaultMemberType,
+      notificationEmail: typeof merged.notificationEmail === 'string'
+        ? merged.notificationEmail.trim()
+        : '',
+      assignedRoles: normalizeList(merged.assignedRoles),
+      assignedActivities: normalizeList(merged.assignedActivities)
     };
   };
 
@@ -489,6 +779,16 @@ app.use('/api', async (req, res, next) => {
       return normalizePublicSignupConfig(JSON.parse(raw));
     } catch (error) {
       return { ...DEFAULT_PUBLIC_SIGNUP_CONFIG };
+    }
+  };
+
+  const getGroundSchoolConfig = async () => {
+    const raw = await db.getSetting(GROUND_SCHOOL_SETTING_KEY);
+    if (!raw) return { ...DEFAULT_GROUND_SCHOOL_CONFIG };
+    try {
+      return normalizeGroundSchoolConfig(JSON.parse(raw));
+    } catch (error) {
+      return { ...DEFAULT_GROUND_SCHOOL_CONFIG };
     }
   };
 
@@ -2337,6 +2637,65 @@ app.post('/api/public-signups/:id/reply', async (req, res) => {
   }
 });
 
+// API: Ground school signup submissions
+app.get('/api/ground-school-signups', async (req, res) => {
+  try {
+    const limit = req.query?.limit ? Number(req.query.limit) : 200;
+    const rows = await db.listGroundSchoolSignups(limit);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/ground-school-signups/summary', async (req, res) => {
+  try {
+    const newCount = await db.countGroundSchoolSignupsByStatus('new');
+    res.json({ newCount });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/ground-school-signups/:id/reply', async (req, res) => {
+  try {
+    const signup = await db.getGroundSchoolSignupById(req.params.id);
+    if (!signup) {
+      return res.status(404).json({ error: 'Signup not found' });
+    }
+    const subject = String(req.body?.subject || '').trim();
+    const body = String(req.body?.body || '').trim();
+    if (!subject || !body) {
+      return res.status(400).json({ error: 'Subject and body are required' });
+    }
+
+    const html = body
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map(line => `<p>${line}</p>`)
+      .join('');
+
+    const replyToEmail = String(req.body?.replyToEmail || '').trim() || (process.env.CHAPTER_EMAIL || '');
+
+    const sendResult = await emailService.sendReportEmail({
+      recipients: signup.Email,
+      subject,
+      html,
+      replyTo: replyToEmail
+    });
+
+    if (!sendResult.success) {
+      return res.status(500).json({ error: sendResult.error || 'Failed to send reply' });
+    }
+
+    await db.saveGroundSchoolSignupReply(req.params.id, { subject, body, replyToEmail });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/settings/google-groups/groups', async (req, res) => {
   try {
     const config = await getGoogleGroupsConfig();
@@ -2370,6 +2729,40 @@ app.get('/api/settings/google-groups/groups', async (req, res) => {
     } while (pageToken);
 
     res.json({ groups });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Ground school signup settings
+app.get('/api/settings/ground-school', async (req, res) => {
+  try {
+    const config = await getGroundSchoolConfig();
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/settings/ground-school', async (req, res) => {
+  try {
+    const normalized = normalizeGroundSchoolConfig(req.body || {});
+    const oldValue = await db.getSetting(GROUND_SCHOOL_SETTING_KEY);
+    await db.setSetting(GROUND_SCHOOL_SETTING_KEY, JSON.stringify(normalized));
+
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(
+      req.user.email,
+      'UPDATE',
+      'app_settings',
+      null,
+      { groundSchool: oldValue },
+      { groundSchool: normalized },
+      ipAddress,
+      'Updated ground school signup settings'
+    );
+
+    res.json({ success: true, config: normalized });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

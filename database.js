@@ -125,6 +125,37 @@ class Database {
       this.db.run(`CREATE INDEX IF NOT EXISTS idx_public_signup_email ON public_member_signups(Email)`);
       this.db.run(`CREATE INDEX IF NOT EXISTS idx_public_signup_created ON public_member_signups(CreatedAt)`);
 
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS ground_school_signups (
+          SignupID INTEGER PRIMARY KEY AUTOINCREMENT,
+          MemberID INTEGER,
+          FirstName TEXT NOT NULL,
+          LastName TEXT NOT NULL,
+          Email TEXT NOT NULL,
+          EAANumber TEXT,
+          Street TEXT,
+          City TEXT,
+          State TEXT,
+          Zip TEXT,
+          SessionName TEXT,
+          AssignedRoles TEXT,
+          AssignedActivities TEXT,
+          Status TEXT DEFAULT 'new',
+          Notes TEXT,
+          RawPayload TEXT,
+          ReplySubject TEXT,
+          ReplyBody TEXT,
+          ReplyToEmail TEXT,
+          CreatedIp TEXT,
+          UserAgent TEXT,
+          CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          RepliedAt DATETIME,
+          FOREIGN KEY (MemberID) REFERENCES members(MemberID)
+        )
+      `);
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_ground_school_signup_email ON ground_school_signups(Email)`);
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_ground_school_signup_created ON ground_school_signups(CreatedAt)`);
+
       // Remove legacy AdditionalFamilyMembers column if present
       this.db.all('PRAGMA table_info(members)', [], (err, columns) => {
         if (err) return;
@@ -433,6 +464,15 @@ class Database {
       this.db.get('SELECT * FROM members WHERE MemberID = ?', [id], (err, row) => {
         if (err) reject(err);
         else resolve(row);
+      });
+    });
+  }
+
+  getMemberByEmail(email) {
+    return new Promise((resolve, reject) => {
+      this.db.get('SELECT * FROM members WHERE LOWER(Email) = LOWER(?)', [email], (err, row) => {
+        if (err) reject(err);
+        else resolve(row || null);
       });
     });
   }
@@ -785,6 +825,123 @@ class Database {
     return new Promise((resolve, reject) => {
       this.db.run(
         `UPDATE public_member_signups
+         SET ReplySubject = ?, ReplyBody = ?, ReplyToEmail = ?,
+             Status = 'replied', RepliedAt = CURRENT_TIMESTAMP
+         WHERE SignupID = ?`,
+        [subject || null, body || null, replyToEmail || null, id],
+        (err) => {
+          if (err) reject(err);
+          else resolve({ updated: true });
+        }
+      );
+    });
+  }
+
+  createGroundSchoolSignup(signup) {
+    return new Promise((resolve, reject) => {
+      const {
+        MemberID,
+        FirstName,
+        LastName,
+        Email,
+        EAANumber,
+        Street,
+        City,
+        State,
+        Zip,
+        SessionName,
+        AssignedRoles,
+        AssignedActivities,
+        Status,
+        Notes,
+        RawPayload,
+        CreatedIp,
+        UserAgent
+      } = signup;
+
+      const sql = `
+        INSERT INTO ground_school_signups (
+          MemberID, FirstName, LastName, Email, EAANumber,
+          Street, City, State, Zip,
+          SessionName, AssignedRoles, AssignedActivities,
+          Status, Notes, RawPayload,
+          CreatedIp, UserAgent
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      this.db.run(
+        sql,
+        [
+          MemberID || null,
+          FirstName,
+          LastName,
+          Email,
+          EAANumber || null,
+          Street || null,
+          City || null,
+          State || null,
+          Zip || null,
+          SessionName || null,
+          AssignedRoles || null,
+          AssignedActivities || null,
+          Status || 'new',
+          Notes || null,
+          RawPayload || null,
+          CreatedIp || null,
+          UserAgent || null
+        ],
+        function(err) {
+          if (err) reject(err);
+          else resolve({ id: this.lastID });
+        }
+      );
+    });
+  }
+
+  listGroundSchoolSignups(limit = 200) {
+    return new Promise((resolve, reject) => {
+      const safeLimit = Number.isFinite(Number(limit)) ? Number(limit) : 200;
+      this.db.all(
+        `SELECT * FROM ground_school_signups ORDER BY CreatedAt DESC LIMIT ?`,
+        [safeLimit],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        }
+      );
+    });
+  }
+
+  countGroundSchoolSignupsByStatus(status = 'new') {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `SELECT COUNT(*) as count FROM ground_school_signups WHERE Status = ?`,
+        [status],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(Number(row?.count || 0));
+        }
+      );
+    });
+  }
+
+  getGroundSchoolSignupById(id) {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `SELECT * FROM ground_school_signups WHERE SignupID = ?`,
+        [id],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row || null);
+        }
+      );
+    });
+  }
+
+  saveGroundSchoolSignupReply(id, { subject, body, replyToEmail }) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `UPDATE ground_school_signups
          SET ReplySubject = ?, ReplyBody = ?, ReplyToEmail = ?,
              Status = 'replied', RepliedAt = CURRENT_TIMESTAMP
          WHERE SignupID = ?`,
