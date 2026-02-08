@@ -91,110 +91,6 @@
         </div>
       </div>
 
-      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-        <div class="mb-4 flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Ground School Sign-Up</h3>
-          <button
-            @click="saveGroundSchoolSettings"
-            class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
-            :disabled="savingGroundSchoolSettings"
-          >
-            {{ savingGroundSchoolSettings ? 'Saving...' : 'Save Settings' }}
-          </button>
-        </div>
-
-        <div class="space-y-4 text-sm text-gray-700 dark:text-gray-200">
-          <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-            <input
-              v-model="groundSchoolSettings.enabled"
-              type="checkbox"
-              class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-            />
-            Enable ground school signup form
-          </label>
-
-          <div class="grid gap-4 md:grid-cols-2">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Session Name</label>
-              <input
-                v-model="groundSchoolSettings.sessionName"
-                type="text"
-                placeholder="Fall 2024 Ground School"
-                class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              />
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Displayed on the public form and stored with each response.</p>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Default Member Type</label>
-              <select
-                v-model="groundSchoolSettings.defaultMemberType"
-                class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              >
-                <option v-for="type in memberTypes" :key="type.MemberTypeID" :value="type.Name">
-                  {{ type.Name }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Notification Email</label>
-            <input
-              v-model="groundSchoolSettings.notificationEmail"
-              type="email"
-              placeholder="notifications@example.com"
-              class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-            />
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Optional. If set, a new signup notification will be emailed.</p>
-          </div>
-
-          <div class="grid gap-4 md:grid-cols-2">
-            <div>
-              <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Assign Roles</p>
-              <div class="mt-2 space-y-2">
-                <label v-for="role in roleOptions" :key="role.value" class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                  <input
-                    v-model="groundSchoolSettings.assignedRoles"
-                    type="checkbox"
-                    :value="role.value"
-                    class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                  />
-                  {{ role.label }}
-                </label>
-                <p v-if="roleOptions.length === 0" class="text-xs text-gray-500 dark:text-gray-400">No roles configured.</p>
-              </div>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Assign Activities</p>
-              <div class="mt-2 space-y-2">
-                <label v-for="activity in activityOptions" :key="activity.value" class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                  <input
-                    v-model="groundSchoolSettings.assignedActivities"
-                    type="checkbox"
-                    :value="activity.value"
-                    class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                  />
-                  {{ activity.label }}
-                </label>
-                <p v-if="activityOptions.length === 0" class="text-xs text-gray-500 dark:text-gray-400">No activities configured.</p>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Embed Snippet</label>
-            <textarea
-              readonly
-              :value="groundSchoolEmbedSnippet"
-              class="mt-1 h-40 w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-xs text-gray-800 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-            ></textarea>
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Copy and paste this HTML into your public website. Submissions will be sent to the configured endpoint.
-            </p>
-          </div>
-        </div>
-      </div>
 
       <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="mb-4 flex items-center justify-between">
@@ -325,75 +221,6 @@
         </div>
       </div>
 
-      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-        <div class="mb-4 flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Ground School Responses</h3>
-          <button
-            @click="fetchGroundSchoolSignups"
-            class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-800 dark:text-gray-200"
-            :disabled="loadingGroundSchoolSignups"
-          >
-            {{ loadingGroundSchoolSignups ? 'Loading...' : 'Refresh' }}
-          </button>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-left text-sm">
-            <thead class="border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:text-gray-400">
-              <tr>
-                <th class="px-4 py-3">Received</th>
-                <th class="px-4 py-3">Name</th>
-                <th class="px-4 py-3">Email</th>
-                <th class="px-4 py-3">Session</th>
-                <th class="px-4 py-3">Status</th>
-                <th class="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="loadingGroundSchoolSignups">
-                <td colspan="6" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">Loading signups...</td>
-              </tr>
-              <tr v-else-if="groundSchoolSignups.length === 0">
-                <td colspan="6" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">No signups yet.</td>
-              </tr>
-              <template v-else v-for="signup in groundSchoolSignups" :key="signup.SignupID">
-                <tr
-                  class="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-white/[0.03] cursor-pointer"
-                  @click="toggleGroundSchoolRow(signup.SignupID)"
-                >
-                  <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ formatSignupDate(signup.CreatedAt) }}</td>
-                  <td class="px-4 py-3 text-sm text-gray-800 dark:text-white/90">
-                    {{ signup.FirstName }} {{ signup.LastName }}
-                  </td>
-                  <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.Email }}</td>
-                  <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.SessionName || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.Status || 'new' }}</td>
-                  <td class="px-4 py-3 text-right">
-                    <button
-                      class="rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300"
-                      @click.stop="openGroundSchoolReply(signup)"
-                    >
-                      Reply
-                    </button>
-                  </td>
-                </tr>
-                <tr v-if="isGroundSchoolExpanded(signup.SignupID)" class="border-b border-gray-100 dark:border-gray-800">
-                  <td colspan="6" class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
-                    <div class="grid gap-3 md:grid-cols-2">
-                      <div><span class="font-semibold text-gray-700 dark:text-gray-200">EAA Number:</span> {{ signup.EAANumber || '—' }}</div>
-                      <div><span class="font-semibold text-gray-700 dark:text-gray-200">Heard about us:</span> {{ getGroundSchoolHearAbout(signup) || '—' }}</div>
-                      <div class="md:col-span-2"><span class="font-semibold text-gray-700 dark:text-gray-200">Address:</span> {{ formatAddress(signup) }}</div>
-                      <div class="md:col-span-2"><span class="font-semibold text-gray-700 dark:text-gray-200">Assigned Roles:</span> {{ formatAssignedList(parseStoredList(signup.AssignedRoles), roleLabelMap) }}</div>
-                      <div class="md:col-span-2"><span class="font-semibold text-gray-700 dark:text-gray-200">Assigned Activities:</span> {{ formatAssignedList(parseStoredList(signup.AssignedActivities), activityLabelMap) }}</div>
-                      <div class="md:col-span-2"><span class="font-semibold text-gray-700 dark:text-gray-200">Notes:</span> {{ signup.Notes || '—' }}</div>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-        </div>
-      </div>
 
       <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -463,7 +290,7 @@
                   <td colspan="6" class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
                     <div class="grid gap-3 md:grid-cols-2">
                       <div><span class="font-semibold text-gray-700 dark:text-gray-200">EAA Number:</span> {{ signup.EAANumber || '—' }}</div>
-                      <div><span class="font-semibold text-gray-700 dark:text-gray-200">Heard about us:</span> {{ getGroundSchoolHearAbout(signup) || '—' }}</div>
+                      <div><span class="font-semibold text-gray-700 dark:text-gray-200">Heard about us:</span> {{ getSignupHearAbout(signup) || '—' }}</div>
                       <div class="md:col-span-2"><span class="font-semibold text-gray-700 dark:text-gray-200">Address:</span> {{ formatAddress(signup) }}</div>
                       <div class="md:col-span-2"><span class="font-semibold text-gray-700 dark:text-gray-200">Assigned Roles:</span> {{ formatAssignedList(parseStoredList(signup.AssignedRoles), roleLabelMap) }}</div>
                       <div class="md:col-span-2"><span class="font-semibold text-gray-700 dark:text-gray-200">Assigned Activities:</span> {{ formatAssignedList(parseStoredList(signup.AssignedActivities), activityLabelMap) }}</div>
@@ -528,55 +355,6 @@
       </div>
     </div>
 
-    <div
-      v-if="showGroundSchoolReplyModal && selectedGroundSchoolSignup"
-      class="fixed inset-0 z-99999 flex items-center justify-center bg-black/50"
-      @click.self="closeGroundSchoolReply"
-    >
-      <div class="w-full max-w-lg rounded-xl bg-white p-6 dark:bg-gray-900">
-        <h3 class="mb-2 text-lg font-semibold text-gray-800 dark:text-white/90">Reply to Ground School Signup</h3>
-        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
-          {{ selectedGroundSchoolSignup.FirstName }} {{ selectedGroundSchoolSignup.LastName }} · {{ selectedGroundSchoolSignup.Email }}
-        </p>
-
-        <div class="space-y-4">
-          <div>
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Subject</label>
-            <input
-              v-model="groundSchoolReplyForm.subject"
-              type="text"
-              class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-            />
-          </div>
-          <div>
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Message</label>
-            <textarea
-              v-model="groundSchoolReplyForm.body"
-              rows="6"
-              class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-            ></textarea>
-          </div>
-        </div>
-
-        <div class="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            @click="closeGroundSchoolReply"
-            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
-            :disabled="sendingGroundSchoolReply || !groundSchoolReplyForm.subject || !groundSchoolReplyForm.body"
-            @click="sendGroundSchoolReply"
-          >
-            {{ sendingGroundSchoolReply ? 'Sending...' : 'Send Reply' }}
-          </button>
-        </div>
-      </div>
-    </div>
 
     <div
       v-if="showCustomFormReplyModal && selectedCustomFormSignup"
@@ -645,7 +423,7 @@
               <input
                 v-model="customFormDraft.name"
                 type="text"
-                placeholder="Ground School - Spring"
+                placeholder="Form - Spring"
                 class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
               />
             </div>
@@ -654,7 +432,7 @@
               <input
                 v-model="customFormDraft.slug"
                 type="text"
-                placeholder="ground-school-spring"
+                placeholder="form-spring"
                 class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
               />
             </div>
@@ -667,6 +445,15 @@
               class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
             />
             Enable this form
+          </label>
+
+          <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <input
+              v-model="customFormDraft.addToParticipation"
+              type="checkbox"
+              class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+            />
+            Add signups to Participation
           </label>
 
           <div class="grid gap-4 md:grid-cols-2">
@@ -796,23 +583,6 @@ const sendingSignupReply = ref(false)
 const publicSignupBaseUrl = ref('')
 const expandedSignups = ref<Set<number>>(new Set())
 
-const groundSchoolSettings = ref({
-  enabled: false,
-  sessionName: '',
-  defaultMemberType: 'Prospect',
-  notificationEmail: '',
-  assignedRoles: [] as string[],
-  assignedActivities: [] as string[]
-})
-const savingGroundSchoolSettings = ref(false)
-const groundSchoolSignups = ref<any[]>([])
-const loadingGroundSchoolSignups = ref(false)
-const showGroundSchoolReplyModal = ref(false)
-const selectedGroundSchoolSignup = ref<any | null>(null)
-const groundSchoolReplyForm = ref({ subject: '', body: '' })
-const sendingGroundSchoolReply = ref(false)
-const expandedGroundSchool = ref<Set<number>>(new Set())
-
 const customForms = ref<any[]>([])
 const savingCustomForms = ref(false)
 const showCustomFormModal = ref(false)
@@ -821,6 +591,7 @@ const customFormDraft = ref({
   name: '',
   slug: '',
   enabled: false,
+  addToParticipation: false,
   sessionName: '',
   defaultMemberType: 'Prospect',
   notificationEmail: '',
@@ -884,58 +655,6 @@ const publicSignupEmbedSnippet = computed(() => {
 </form>`
 })
 
-const groundSchoolFormAction = computed(() => {
-  if (!publicSignupBaseUrl.value) return ''
-  return `${publicSignupBaseUrl.value}/public/ground-school`
-})
-
-const groundSchoolEmbedSnippet = computed(() => {
-  const actionUrl = groundSchoolFormAction.value || 'https://your-domain.example.com/public/ground-school'
-  const sessionLine = groundSchoolSettings.value.sessionName
-    ? `<div class="cf-session">Session: ${groundSchoolSettings.value.sessionName}</div>`
-    : ''
-  return `<style>
-.cf-signup{font-family:Arial,sans-serif;max-width:680px;background:#fff;border-radius:14px;box-shadow:0 16px 30px rgba(15,23,42,.08);padding:22px}
-.cf-grid{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
-.cf-field{display:flex;flex-direction:column;gap:6px}
-.cf-field label{font-size:13px;color:#374151;font-weight:600}
-.cf-field input,.cf-field select{padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px}
-.cf-full{grid-column:span 2}
-.cf-notice{margin-top:10px;padding:10px 12px;border-radius:10px;background:#eff6ff;color:#1e3a8a;font-size:12px}
-.cf-session{margin-top:8px;color:#1d4ed8;font-size:12px;font-weight:600}
-.cf-actions{margin-top:14px;display:flex;justify-content:flex-end}
-.cf-submit{background:#2563eb;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-weight:600;cursor:pointer}
-@media (max-width:640px){.cf-grid{grid-template-columns:1fr}.cf-full{grid-column:span 1}}
-</style>
-<form class="cf-signup" method="POST" action="${actionUrl}">
-  <div class="cf-grid">
-    <div class="cf-field"><label>First Name</label><input name="FirstName" required /></div>
-    <div class="cf-field"><label>Last Name</label><input name="LastName" required /></div>
-    <div class="cf-field"><label>Email</label><input name="Email" type="email" required /></div>
-    <div class="cf-field"><label>EAA Number (optional)</label><input name="EAANumber" /></div>
-    <div class="cf-field cf-full"><label>Street Address</label><input name="Street" required /></div>
-    <div class="cf-field"><label>City</label><input name="City" required /></div>
-    <div class="cf-field"><label>State</label><input name="State" required /></div>
-    <div class="cf-field"><label>ZIP</label><input name="Zip" required /></div>
-    <div class="cf-field cf-full">
-      <label>How did you hear about us?</label>
-      <select name="HearAbout">
-        <option value="">Select...</option>
-        <option>Friend or family</option>
-        <option>Chapter event</option>
-        <option>EAA website</option>
-        <option>Social media</option>
-        <option>Search engine</option>
-        <option>Other</option>
-      </select>
-    </div>
-  </div>
-  ${sessionLine}
-  <div class="cf-notice">By submitting this form, you agree to be added to our chapter events email list.</div>
-  <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off" />
-  <div class="cf-actions"><button class="cf-submit" type="submit">Submit</button></div>
-</form>`
-})
 
 const selectedCustomForm = computed(() =>
   customForms.value.find(form => form.slug === selectedCustomFormSlug.value)
@@ -1080,6 +799,7 @@ const openCustomFormModal = (form: any | null = null) => {
       name: form.name || '',
       slug: form.slug || '',
       enabled: Boolean(form.enabled),
+      addToParticipation: Boolean(form.addToParticipation),
       sessionName: form.sessionName || '',
       defaultMemberType: form.defaultMemberType || 'Prospect',
       notificationEmail: form.notificationEmail || '',
@@ -1091,6 +811,7 @@ const openCustomFormModal = (form: any | null = null) => {
       name: '',
       slug: '',
       enabled: false,
+      addToParticipation: false,
       sessionName: '',
       defaultMemberType: 'Prospect',
       notificationEmail: '',
@@ -1188,75 +909,6 @@ const fetchPublicSignups = async () => {
   }
 }
 
-const fetchGroundSchoolSettings = async () => {
-  try {
-    const headers = await getAuthHeaders()
-    const response = await apiFetch('/api/settings/ground-school', { headers })
-    if (response.ok) {
-      const data = await response.json()
-      groundSchoolSettings.value = {
-        enabled: Boolean(data.enabled),
-        sessionName: data.sessionName || '',
-        defaultMemberType: data.defaultMemberType || 'Prospect',
-        notificationEmail: data.notificationEmail || '',
-        assignedRoles: Array.isArray(data.assignedRoles) ? data.assignedRoles : [],
-        assignedActivities: Array.isArray(data.assignedActivities) ? data.assignedActivities : []
-      }
-    }
-  } catch (error) {
-    if (error instanceof AuthError) {
-      router.push('/signin')
-    } else {
-      console.error('Error fetching ground school settings:', error)
-    }
-  }
-}
-
-const saveGroundSchoolSettings = async () => {
-  try {
-    savingGroundSchoolSettings.value = true
-    const headers = await getAuthHeaders()
-    const response = await apiFetch('/api/settings/ground-school', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(groundSchoolSettings.value)
-    })
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to save ground school settings')
-    }
-    alert('Ground school settings saved')
-  } catch (error) {
-    if (error instanceof AuthError) {
-      router.push('/signin')
-    } else {
-      console.error('Error saving ground school settings:', error)
-      alert(error instanceof Error ? error.message : 'Failed to save ground school settings')
-    }
-  } finally {
-    savingGroundSchoolSettings.value = false
-  }
-}
-
-const fetchGroundSchoolSignups = async () => {
-  try {
-    loadingGroundSchoolSignups.value = true
-    const headers = await getAuthHeaders()
-    const response = await apiFetch('/api/ground-school-signups?limit=200', { headers })
-    if (!response.ok) {
-      throw new Error('Failed to fetch ground school signups')
-    }
-    groundSchoolSignups.value = await response.json()
-  } catch (error) {
-    if (error instanceof AuthError) {
-      router.push('/signin')
-    } else {
-      console.error('Error fetching ground school signups:', error)
-    }
-  } finally {
-    loadingGroundSchoolSignups.value = false
-  }
-}
 
 const fetchCustomFormSignups = async () => {
   if (!selectedCustomFormSlug.value) return
@@ -1294,21 +946,6 @@ const closeSignupReply = () => {
   signupReplyForm.value = { subject: '', body: '' }
 }
 
-const openGroundSchoolReply = (signup: any) => {
-  selectedGroundSchoolSignup.value = signup
-  const sessionSuffix = signup?.SessionName ? ` (${signup.SessionName})` : ''
-  groundSchoolReplyForm.value = {
-    subject: `Ground School Sign-Up${sessionSuffix}`,
-    body: ''
-  }
-  showGroundSchoolReplyModal.value = true
-}
-
-const closeGroundSchoolReply = () => {
-  showGroundSchoolReplyModal.value = false
-  selectedGroundSchoolSignup.value = null
-  groundSchoolReplyForm.value = { subject: '', body: '' }
-}
 
 const openCustomFormReply = (signup: any) => {
   selectedCustomFormSignup.value = signup
@@ -1358,36 +995,6 @@ const sendSignupReply = async () => {
   }
 }
 
-const sendGroundSchoolReply = async () => {
-  if (!selectedGroundSchoolSignup.value) return
-  try {
-    sendingGroundSchoolReply.value = true
-    const headers = await getAuthHeaders()
-    const response = await apiFetch(`/api/ground-school-signups/${selectedGroundSchoolSignup.value.SignupID}/reply`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        subject: groundSchoolReplyForm.value.subject,
-        body: groundSchoolReplyForm.value.body
-      })
-    })
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to send reply')
-    }
-    await fetchGroundSchoolSignups()
-    closeGroundSchoolReply()
-  } catch (error) {
-    if (error instanceof AuthError) {
-      router.push('/signin')
-    } else {
-      console.error('Error sending ground school reply:', error)
-      alert(error instanceof Error ? error.message : 'Failed to send reply')
-    }
-  } finally {
-    sendingGroundSchoolReply.value = false
-  }
-}
 
 const sendCustomFormReply = async () => {
   if (!selectedCustomFormSignup.value || !selectedCustomFormSlug.value) return
@@ -1437,16 +1044,6 @@ const toggleSignupRow = (id: number) => {
 
 const isSignupExpanded = (id: number) => expandedSignups.value.has(id)
 
-const toggleGroundSchoolRow = (id: number) => {
-  if (expandedGroundSchool.value.has(id)) {
-    expandedGroundSchool.value.delete(id)
-  } else {
-    expandedGroundSchool.value.add(id)
-  }
-  expandedGroundSchool.value = new Set(expandedGroundSchool.value)
-}
-
-const isGroundSchoolExpanded = (id: number) => expandedGroundSchool.value.has(id)
 
 const toggleCustomFormRow = (id: number) => {
   if (expandedCustomFormSignups.value.has(id)) {
@@ -1503,7 +1100,7 @@ const getHearAbout = (signup: any) => {
   return payload?.HearAbout || ''
 }
 
-const getGroundSchoolHearAbout = (signup: any) => {
+const getSignupHearAbout = (signup: any) => {
   const payload = parseSignupPayload(signup)
   return payload?.HearAbout || ''
 }
@@ -1523,8 +1120,6 @@ onMounted(() => {
   fetchMemberOptions()
   fetchPublicSignupSettings()
   fetchPublicSignups()
-  fetchGroundSchoolSettings()
-  fetchGroundSchoolSignups()
   fetchCustomForms()
 })
 

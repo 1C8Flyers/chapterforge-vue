@@ -38,7 +38,8 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - ✅ **Member search by roles/activities** - Universal search matches assigned roles and activities
 - ✅ **Public member signup form** - Embed on public site with automatic member creation
 - ✅ **Forms page** - View responses, reply by email, and configure signup settings
-- ✅ **Ground school signup form** - Separate public form with session name, assigned roles/activities, and response tracking
+- ✅ **Custom forms builder** - Create public forms with session name, assigned roles/activities, and response tracking
+- ✅ **Participation toggle per form** - Decide whether a form adds entries to Participation
 - ✅ **Response notifications** - Optional notification email on new submissions
 - ✅ **Member participation history** - View class/event participation inside member records
 - ✅ Configurable member types with dues management
@@ -187,13 +188,13 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `POST /api/public-signups/:id/reply` → Reply to a signup by email
 - `GET /public/member-signup/form` → Hosted public signup form (no auth)
 - `POST /public/member-signup` → Public signup submission endpoint (no auth)
-- `GET /api/settings/ground-school` → Ground school signup settings
-- `POST /api/settings/ground-school` → Save ground school signup settings
-- `GET /api/ground-school-signups` → List ground school signup responses
-- `GET /api/ground-school-signups/summary` → New ground school response count
-- `POST /api/ground-school-signups/:id/reply` → Reply to a ground school signup by email
-- `GET /public/ground-school/form` → Hosted ground school signup form (no auth)
-- `POST /public/ground-school` → Ground school signup submission endpoint (no auth)
+- `GET /api/forms` → List custom forms config
+- `POST /api/forms` → Save custom forms config
+- `GET /api/forms/:slug/signups` → List custom form signup responses
+- `POST /api/forms/:slug/signups/:id/reply` → Reply to a custom form signup by email
+- `DELETE /api/forms/:slug/signups/:id` → Delete a custom form signup
+- `GET /public/forms/:slug/form` → Hosted custom form (no auth)
+- `POST /public/forms/:slug` → Custom form submission endpoint (no auth)
 
 **Database Helpers** (`database.js`):
 - Member CRUD operations

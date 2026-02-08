@@ -66,7 +66,7 @@ For each member, you can record:
 - Role and activity flags (configurable in Settings → Member Types)
 
 ### Participation History
-Inside the member view/edit modal, the **Participation** section lists class/event signups linked to that member. This is read-only and currently includes Ground School signups, with more events added over time.
+Inside the member view/edit modal, the **Participation** section lists class/event signups linked to that member. Entries come from custom forms that have **Add signups to Participation** enabled. When the member is in Edit mode, you can delete a participation entry.
 
 ### Payments History
 Available for primary members (not household members).
@@ -143,15 +143,16 @@ Manage public signup responses and settings.
 ### Responses
 - Click a row to expand and view full submission details.
 - Use the **Reply** button to email the submitter.
-- Ground School responses are shown in a separate table with session name and assigned roles/activities.
+- Custom form responses show session name and assigned roles/activities.
 
 ### Settings
 - Enable the public signup form.
 - Choose the default member type (e.g., Prospect).
 - Set an optional notification email address.
 - Copy the embed snippet for your public website.
-- Configure Ground School settings (session name, assigned roles/activities, default member type, notification email).
-- Copy the Ground School embed snippet for your public website.
+- Create custom forms with session name, assigned roles/activities, and notification email.
+- Toggle whether a form adds to Participation.
+- Copy custom form embed snippets for your public website.
 
 ---
 

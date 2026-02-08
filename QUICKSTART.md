@@ -74,9 +74,10 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
    - Automatic member creation + notification email
    - View responses and reply from the Forms page
 
-11. **Ground School Signup (optional)**
-   - Separate public Ground School form with session name
+11. **Custom Forms (optional)**
+   - Create public forms with session name
    - Assign roles/activities on signup
+   - Toggle whether signups add to Participation
    - View responses and reply from the Forms page
 
 11. **CSV Import**

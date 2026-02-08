@@ -1101,14 +1101,14 @@ const formatParticipationDate = (dateString: string) => {
 }
 
 const deleteParticipation = async (item: any) => {
-  if (!item?.signupId || item.type !== 'Ground School') {
+  if (!item?.signupId || !item.formKey) {
     return
   }
   if (!confirm('Delete this participation record?')) return
 
   try {
     const headers = await getAuthHeaders()
-    const response = await apiFetch(`/api/ground-school-signups/${item.signupId}`, {
+    const response = await apiFetch(`/api/forms/${item.formKey}/signups/${item.signupId}`, {
       method: 'DELETE',
       headers
     })

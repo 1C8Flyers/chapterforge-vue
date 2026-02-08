@@ -34,7 +34,7 @@ ChapterForge now runs as a **Vue 3 + Vite single-page app** with an API-only Exp
 ✅ **Public Signup Forms**: Embedded public member signup with notifications
 ✅ **Forms Page**: Responses + settings in a dedicated navigation item
 ✅ **Menu Badge**: New response count indicator on Forms
-✅ **Ground School Signup**: Dedicated ground school form with session name and assigned roles/activities
+✅ **Custom Forms**: Dedicated public forms with session name and assigned roles/activities
 ✅ **Participation History**: Member-level view of class/event participation
 
 ## Installation
