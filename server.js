@@ -358,21 +358,24 @@ app.post('/public/ground-school', async (req, res) => {
 
     if (existingMember) {
       const updatePayload = {
-        FirstName,
-        LastName,
-        Email,
-        EAANumber,
-        Street,
-        City,
-        State,
-        Zip,
+        HouseholdID: existingMember.HouseholdID,
+        FirstName: existingMember.FirstName,
+        LastName: existingMember.LastName,
+        EAANumber: existingMember.EAANumber,
+        Phone: existingMember.Phone,
+        Email: existingMember.Email,
         MemberType: existingMember.MemberType,
         Status: existingMember.Status,
         DuesRate: existingMember.DuesRate,
         LastPaidYear: existingMember.LastPaidYear,
         AmountDue: existingMember.AmountDue,
+        YouthProtectionExpiration: existingMember.YouthProtectionExpiration,
+        BackgroundCheckExpiration: existingMember.BackgroundCheckExpiration,
         Notes: existingMember.Notes,
-        HouseholdID: existingMember.HouseholdID
+        Street: existingMember.Street,
+        City: existingMember.City,
+        State: existingMember.State,
+        Zip: existingMember.Zip
       };
       optionKeys.forEach(key => {
         updatePayload[key] = existingMember[key] ?? 0;
