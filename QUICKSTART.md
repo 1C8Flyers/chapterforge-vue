@@ -26,6 +26,7 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
    - Payments history with add/edit/delete
    - Click a member row to expand and view family members
    - Configurable role/activity flags include board/officer roles
+   - Participation history visible on member records
 
 3. **Member Type Configuration**
    - Settings page with tabbed interface
@@ -71,6 +72,11 @@ ChapterForge is a modern single-page application (SPA) for EAA Chapter Managemen
 10. **Public Member Signup (optional)**
    - Embed a public signup form on your website
    - Automatic member creation + notification email
+   - View responses and reply from the Forms page
+
+11. **Ground School Signup (optional)**
+   - Separate public Ground School form with session name
+   - Assign roles/activities on signup
    - View responses and reply from the Forms page
 
 11. **CSV Import**

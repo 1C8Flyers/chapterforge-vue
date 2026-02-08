@@ -4,7 +4,7 @@ Professional EAA Chapter Management System - Modern SPA Architecture
 
 **Status**: ✅ Production-ready with Vue 3 + Vite frontend, headless API backend, TailAdmin UI
 
-_Last updated: 2026-02-07_
+_Last updated: 2026-02-08_
 
 ---
 
@@ -38,7 +38,9 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - ✅ **Member search by roles/activities** - Universal search matches assigned roles and activities
 - ✅ **Public member signup form** - Embed on public site with automatic member creation
 - ✅ **Forms page** - View responses, reply by email, and configure signup settings
+- ✅ **Ground school signup form** - Separate public form with session name, assigned roles/activities, and response tracking
 - ✅ **Response notifications** - Optional notification email on new submissions
+- ✅ **Member participation history** - View class/event participation inside member records
 - ✅ Configurable member types with dues management
 - ✅ Stacked dues-by-year visualization (Family vs Individual)
 - ✅ Paid members by year chart (stacked by member type)
@@ -124,6 +126,7 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `GET /api/status` → System health (DB + Email)
 - `GET /api/members` → All members (JSON)
 - `GET /api/members/:id` → Single member
+- `GET /api/members/:id/participation` → Member participation history
 - `GET /api/members/:id/payments` → Payments for a member
 - `POST /api/members` → Create member
 - `PUT /api/members/:id` → Update member
@@ -184,6 +187,13 @@ ChapterForge is a modern single-page application (SPA) for EAA chapter membershi
 - `POST /api/public-signups/:id/reply` → Reply to a signup by email
 - `GET /public/member-signup/form` → Hosted public signup form (no auth)
 - `POST /public/member-signup` → Public signup submission endpoint (no auth)
+- `GET /api/settings/ground-school` → Ground school signup settings
+- `POST /api/settings/ground-school` → Save ground school signup settings
+- `GET /api/ground-school-signups` → List ground school signup responses
+- `GET /api/ground-school-signups/summary` → New ground school response count
+- `POST /api/ground-school-signups/:id/reply` → Reply to a ground school signup by email
+- `GET /public/ground-school/form` → Hosted ground school signup form (no auth)
+- `POST /public/ground-school` → Ground school signup submission endpoint (no auth)
 
 **Database Helpers** (`database.js`):
 - Member CRUD operations

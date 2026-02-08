@@ -214,6 +214,7 @@ docker logs chapterforge-vue-chapterforge-1 --tail 20
 - Enable and configure under **Forms → Settings**.
 - Copy the embed snippet into your public website.
 - The hosted form is available at `/public/member-signup/form`.
+- The Ground School form is available at `/public/ground-school/form`.
 
 ---
 
