@@ -1677,6 +1677,29 @@ app.get('/api/members/:id', async (req, res) => {
   }
 });
 
+// API: Member participation
+app.get('/api/members/:id/participation', async (req, res) => {
+  try {
+    const member = await db.getMemberById(req.params.id);
+    if (!member) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    const groundSchool = await db.listGroundSchoolSignupsByMemberId(req.params.id);
+    const items = groundSchool.map(signup => ({
+      type: 'Ground School',
+      sessionName: signup.SessionName || null,
+      status: signup.Status || 'new',
+      createdAt: signup.CreatedAt,
+      signupId: signup.SignupID
+    }));
+
+    res.json({ items });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: Create member
 app.post('/api/members', async (req, res) => {
   try {

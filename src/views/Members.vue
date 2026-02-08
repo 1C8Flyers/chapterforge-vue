@@ -558,6 +558,40 @@
             </div>
           </div>
 
+          <!-- Participation -->
+          <div class="mb-6">
+            <h4 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Participation</h4>
+            <div v-if="!formData.MemberID" class="text-sm text-gray-500 dark:text-gray-400">
+              Save the member to see participation history.
+            </div>
+            <div v-else class="overflow-x-auto">
+              <table class="min-w-full text-left text-sm">
+                <thead class="border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                  <tr>
+                    <th class="px-4 py-3">Type</th>
+                    <th class="px-4 py-3">Session</th>
+                    <th class="px-4 py-3">Date</th>
+                    <th class="px-4 py-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="loadingParticipation">
+                    <td colspan="4" class="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Loading participation...</td>
+                  </tr>
+                  <tr v-else-if="participationItems.length === 0">
+                    <td colspan="4" class="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No participation records yet.</td>
+                  </tr>
+                  <tr v-else v-for="item in participationItems" :key="item.key" class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ item.type }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ item.sessionName || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ formatParticipationDate(item.createdAt) }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ item.status }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <!-- Notes -->
           <div class="mb-6">
             <h4 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Notes</h4>
@@ -658,6 +692,8 @@ const expandedHouseholds = ref<Set<number>>(new Set())
 const memberTypes = ref<any[]>([])
 const sortColumn = ref<'name' | 'email' | 'status' | 'lastPaid' | null>(null)
 const sortDirection = ref<'asc' | 'desc'>('asc')
+const participationItems = ref<any[]>([])
+const loadingParticipation = ref(false)
 
 type MemberOption = { value: string; label: string }
 
@@ -967,6 +1003,7 @@ watch([roleOptions, activityOptions], () => {
 const openAddModal = () => {
   isEditing.value = false
   formData.value = buildMemberForm()
+  participationItems.value = []
   showModal.value = true
 }
 
@@ -978,6 +1015,7 @@ const openAddFamilyModal = (primaryMember: any) => {
     HouseholdID: primaryMember.HouseholdID || primaryMember.MemberID,
     MemberType: 'Family Member'
   })
+  participationItems.value = []
   showModal.value = true
 }
 
@@ -986,6 +1024,11 @@ const openEditModal = (member: any) => {
   isViewOnly.value = false
   familyPrimaryId.value = null
   formData.value = buildMemberForm(member)
+  if (member?.MemberID) {
+    fetchParticipation(member.MemberID)
+  } else {
+    participationItems.value = []
+  }
   showModal.value = true
 }
 
@@ -994,6 +1037,11 @@ const openViewModal = (member: any) => {
   isViewOnly.value = true
   familyPrimaryId.value = null
   formData.value = buildMemberForm(member)
+  if (member?.MemberID) {
+    fetchParticipation(member.MemberID)
+  } else {
+    participationItems.value = []
+  }
   showModal.value = true
 }
 
@@ -1003,11 +1051,44 @@ const closeModal = () => {
   isEditing.value = false
   familyPrimaryId.value = null
   formData.value = buildMemberForm()
+  participationItems.value = []
 }
 
 const enterEditMode = () => {
   isViewOnly.value = false
   isEditing.value = Boolean(formData.value.MemberID)
+}
+
+const fetchParticipation = async (memberId: number) => {
+  try {
+    loadingParticipation.value = true
+    const headers = await getAuthHeaders()
+    const response = await apiFetch(`/api/members/${memberId}/participation`, { headers })
+    if (!response.ok) {
+      throw new Error('Failed to fetch participation')
+    }
+    const data = await response.json()
+    const items = Array.isArray(data.items) ? data.items : []
+    participationItems.value = items.map((item: any, index: number) => ({
+      key: `${item.type}-${item.signupId || index}`,
+      ...item
+    }))
+  } catch (error) {
+    if (error instanceof AuthError) {
+      router.push('/signin')
+    } else {
+      console.error('Error fetching participation:', error)
+    }
+    participationItems.value = []
+  } finally {
+    loadingParticipation.value = false
+  }
+}
+
+const formatParticipationDate = (dateString: string) => {
+  if (!dateString) return '—'
+  const date = new Date(dateString)
+  return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
 }
 
 const saveMember = async () => {

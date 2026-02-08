@@ -912,6 +912,19 @@ class Database {
     });
   }
 
+  listGroundSchoolSignupsByMemberId(memberId) {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        `SELECT * FROM ground_school_signups WHERE MemberID = ? ORDER BY CreatedAt DESC`,
+        [memberId],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        }
+      );
+    });
+  }
+
   countGroundSchoolSignupsByStatus(status = 'new') {
     return new Promise((resolve, reject) => {
       this.db.get(
