@@ -680,13 +680,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { auth } from '@/firebase'
 import { getAuthHeaders, apiFetch, AuthError } from '@/utils/apiAuth'
 
 const router = useRouter()
+const route = useRoute()
 
 const currentPageTitle = ref('Members')
 const members = ref<any[]>([])
@@ -703,6 +704,7 @@ const sortColumn = ref<'name' | 'email' | 'status' | 'lastPaid' | null>(null)
 const sortDirection = ref<'asc' | 'desc'>('asc')
 const participationItems = ref<any[]>([])
 const loadingParticipation = ref(false)
+const openedFromQuery = ref(false)
 
 type MemberOption = { value: string; label: string }
 
@@ -924,6 +926,7 @@ const fetchMembers = async () => {
             ? Number(member.HouseholdID)
             : null
       }))
+      openMemberFromQuery()
     } else {
       console.error('Failed to fetch members:', response.statusText)
     }
@@ -935,6 +938,26 @@ const fetchMembers = async () => {
     }
   }
 }
+
+const openMemberFromQuery = () => {
+  if (openedFromQuery.value) return
+  const memberId = Number(route.query.memberId)
+  if (!memberId) return
+  const member = members.value.find(item => Number(item.MemberID) === memberId)
+  if (!member) return
+  openViewModal(member)
+  openedFromQuery.value = true
+}
+
+watch(
+  () => route.query.memberId,
+  () => {
+    openedFromQuery.value = false
+    if (members.value.length > 0) {
+      openMemberFromQuery()
+    }
+  }
+)
 
 const fetchMemberTypes = async () => {
   try {

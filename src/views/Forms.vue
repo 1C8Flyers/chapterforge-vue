@@ -191,7 +191,17 @@
                 >
                   <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ formatSignupDate(signup.CreatedAt) }}</td>
                   <td class="px-4 py-3 text-sm text-gray-800 dark:text-white/90">
-                    {{ signup.FirstName }} {{ signup.LastName }}
+                    <router-link
+                      v-if="signup.MemberID"
+                      :to="`/members?memberId=${signup.MemberID}`"
+                      class="text-brand-600 hover:text-brand-700 dark:text-brand-300 dark:hover:text-brand-200"
+                      @click.stop
+                    >
+                      {{ signup.FirstName }} {{ signup.LastName }}
+                    </router-link>
+                    <span v-else>
+                      {{ signup.FirstName }} {{ signup.LastName }}
+                    </span>
                   </td>
                   <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.Email }}</td>
                   <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.AssignedMemberType || '-' }}</td>
@@ -294,7 +304,17 @@
                 >
                   <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ formatSignupDate(signup.CreatedAt) }}</td>
                   <td class="px-4 py-3 text-sm text-gray-800 dark:text-white/90">
-                    {{ signup.FirstName }} {{ signup.LastName }}
+                    <router-link
+                      v-if="signup.MemberID"
+                      :to="`/members?memberId=${signup.MemberID}`"
+                      class="text-brand-600 hover:text-brand-700 dark:text-brand-300 dark:hover:text-brand-200"
+                      @click.stop
+                    >
+                      {{ signup.FirstName }} {{ signup.LastName }}
+                    </router-link>
+                    <span v-else>
+                      {{ signup.FirstName }} {{ signup.LastName }}
+                    </span>
                   </td>
                   <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.Email }}</td>
                   <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ signup.SessionName || '—' }}</td>
