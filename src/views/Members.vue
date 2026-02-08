@@ -572,7 +572,7 @@
                     <th class="px-4 py-3">Session</th>
                     <th class="px-4 py-3">Date</th>
                     <th class="px-4 py-3">Status</th>
-                    <th class="px-4 py-3 text-right">Actions</th>
+                    <th class="px-4 py-3 text-right" v-if="!isViewOnly">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -587,7 +587,7 @@
                     <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ item.sessionName || '—' }}</td>
                     <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ formatParticipationDate(item.createdAt) }}</td>
                     <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ item.status }}</td>
-                    <td class="px-4 py-3 text-right">
+                    <td class="px-4 py-3 text-right" v-if="!isViewOnly">
                       <button
                         class="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
                         @click="deleteParticipation(item)"
