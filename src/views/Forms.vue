@@ -226,16 +226,17 @@
         <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Custom Form Responses</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Select a form to view responses.</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              {{ selectedCustomForm?.name ? `Responses for: ${selectedCustomForm.name}` : 'No custom forms yet.' }}
+            </p>
           </div>
           <div class="flex gap-2">
-            <select
-              v-model="selectedCustomFormSlug"
-              class="h-10 rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+            <button
+              @click="showCustomFormFilters = !showCustomFormFilters"
+              class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
             >
-              <option value="">Select form...</option>
-              <option v-for="form in customForms" :key="form.slug" :value="form.slug">{{ form.name }}</option>
-            </select>
+              Filter
+            </button>
             <button
               @click="fetchCustomFormSignups"
               class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-800 dark:text-gray-200"
@@ -243,6 +244,21 @@
             >
               {{ loadingCustomFormSignups ? 'Loading...' : 'Refresh' }}
             </button>
+          </div>
+        </div>
+
+        <div v-if="showCustomFormFilters" class="mb-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Form</label>
+              <select
+                v-model="selectedCustomFormSlug"
+                class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option value="">Select form...</option>
+                <option v-for="form in customForms" :key="form.slug" :value="form.slug">{{ form.name }}</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -601,6 +617,7 @@ const customFormDraft = ref({
 const customFormSignups = ref<any[]>([])
 const loadingCustomFormSignups = ref(false)
 const selectedCustomFormSlug = ref('')
+const showCustomFormFilters = ref(false)
 const expandedCustomFormSignups = ref<Set<number>>(new Set())
 const showCustomFormReplyModal = ref(false)
 const selectedCustomFormSignup = ref<any | null>(null)
