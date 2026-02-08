@@ -156,6 +156,40 @@ class Database {
       this.db.run(`CREATE INDEX IF NOT EXISTS idx_ground_school_signup_email ON ground_school_signups(Email)`);
       this.db.run(`CREATE INDEX IF NOT EXISTS idx_ground_school_signup_created ON ground_school_signups(CreatedAt)`);
 
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS custom_form_signups (
+          SignupID INTEGER PRIMARY KEY AUTOINCREMENT,
+          FormKey TEXT NOT NULL,
+          FormName TEXT,
+          MemberID INTEGER,
+          FirstName TEXT NOT NULL,
+          LastName TEXT NOT NULL,
+          Email TEXT NOT NULL,
+          EAANumber TEXT,
+          Street TEXT,
+          City TEXT,
+          State TEXT,
+          Zip TEXT,
+          SessionName TEXT,
+          AssignedRoles TEXT,
+          AssignedActivities TEXT,
+          Status TEXT DEFAULT 'new',
+          Notes TEXT,
+          RawPayload TEXT,
+          ReplySubject TEXT,
+          ReplyBody TEXT,
+          ReplyToEmail TEXT,
+          CreatedIp TEXT,
+          UserAgent TEXT,
+          CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          RepliedAt DATETIME,
+          FOREIGN KEY (MemberID) REFERENCES members(MemberID)
+        )
+      `);
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_custom_form_signup_form ON custom_form_signups(FormKey)`);
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_custom_form_signup_email ON custom_form_signups(Email)`);
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_custom_form_signup_created ON custom_form_signups(CreatedAt)`);
+
       // Remove legacy AdditionalFamilyMembers column if present
       this.db.all('PRAGMA table_info(members)', [], (err, columns) => {
         if (err) return;
@@ -971,6 +1005,127 @@ class Database {
     return new Promise((resolve, reject) => {
       this.db.run(
         `DELETE FROM ground_school_signups WHERE SignupID = ?`,
+        [id],
+        (err) => {
+          if (err) reject(err);
+          else resolve({ deleted: true });
+        }
+      );
+    });
+  }
+
+  createCustomFormSignup(signup) {
+    return new Promise((resolve, reject) => {
+      const {
+        FormKey,
+        FormName,
+        MemberID,
+        FirstName,
+        LastName,
+        Email,
+        EAANumber,
+        Street,
+        City,
+        State,
+        Zip,
+        SessionName,
+        AssignedRoles,
+        AssignedActivities,
+        Status,
+        Notes,
+        RawPayload,
+        CreatedIp,
+        UserAgent
+      } = signup;
+
+      const sql = `
+        INSERT INTO custom_form_signups (
+          FormKey, FormName, MemberID, FirstName, LastName, Email, EAANumber,
+          Street, City, State, Zip,
+          SessionName, AssignedRoles, AssignedActivities,
+          Status, Notes, RawPayload,
+          CreatedIp, UserAgent
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      this.db.run(
+        sql,
+        [
+          FormKey,
+          FormName || null,
+          MemberID || null,
+          FirstName,
+          LastName,
+          Email,
+          EAANumber || null,
+          Street || null,
+          City || null,
+          State || null,
+          Zip || null,
+          SessionName || null,
+          AssignedRoles || null,
+          AssignedActivities || null,
+          Status || 'new',
+          Notes || null,
+          RawPayload || null,
+          CreatedIp || null,
+          UserAgent || null
+        ],
+        function(err) {
+          if (err) reject(err);
+          else resolve({ id: this.lastID });
+        }
+      );
+    });
+  }
+
+  listCustomFormSignups(formKey, limit = 200) {
+    return new Promise((resolve, reject) => {
+      const safeLimit = Number.isFinite(Number(limit)) ? Number(limit) : 200;
+      this.db.all(
+        `SELECT * FROM custom_form_signups WHERE FormKey = ? ORDER BY CreatedAt DESC LIMIT ?`,
+        [formKey, safeLimit],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        }
+      );
+    });
+  }
+
+  getCustomFormSignupById(id) {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `SELECT * FROM custom_form_signups WHERE SignupID = ?`,
+        [id],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row || null);
+        }
+      );
+    });
+  }
+
+  saveCustomFormSignupReply(id, { subject, body, replyToEmail }) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `UPDATE custom_form_signups
+         SET ReplySubject = ?, ReplyBody = ?, ReplyToEmail = ?,
+             Status = 'replied', RepliedAt = CURRENT_TIMESTAMP
+         WHERE SignupID = ?`,
+        [subject || null, body || null, replyToEmail || null, id],
+        (err) => {
+          if (err) reject(err);
+          else resolve({ updated: true });
+        }
+      );
+    });
+  }
+
+  deleteCustomFormSignup(id) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `DELETE FROM custom_form_signups WHERE SignupID = ?`,
         [id],
         (err) => {
           if (err) reject(err);

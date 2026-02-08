@@ -496,6 +496,279 @@ app.post('/public/ground-school', async (req, res) => {
   }
 });
 
+// Public custom form (no auth)
+app.get('/public/forms/:slug/form', async (req, res) => {
+  try {
+    const forms = await getCustomFormsConfig();
+    const slug = String(req.params.slug || '').trim().toLowerCase();
+    const form = forms.find(item => item.slug === slug);
+    if (!form || !form.enabled) {
+      return res.status(404).send('Form not found.');
+    }
+
+    const actionUrl = `${req.protocol}://${req.get('host')}/public/forms/${form.slug}`;
+    const sessionLabel = form.sessionName
+      ? `Session: ${form.sessionName}`
+      : 'Session details will be shared after signup.';
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>${form.name}</title>
+        <style>
+          :root { color-scheme: light; }
+          body { font-family: "Inter", "Segoe UI", Arial, sans-serif; background: #f3f4f6; color: #111827; padding: 24px; }
+          .card { max-width: 720px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08); padding: 24px; }
+          h1 { font-size: 22px; margin: 0 0 6px; }
+          p.sub { margin: 0 0 20px; color: #6b7280; font-size: 14px; }
+          .grid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .field { display: flex; flex-direction: column; gap: 6px; }
+          label { font-size: 13px; color: #374151; font-weight: 600; }
+          input, select { width: 100%; padding: 11px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+          input:focus, select:focus { outline: 2px solid rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
+          .full { grid-column: span 2; }
+          .notice { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: #eff6ff; color: #1e3a8a; font-size: 13px; }
+          .actions { margin-top: 18px; display: flex; justify-content: flex-end; }
+          button { background: #2563eb; color: white; border: 0; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+          button:hover { background: #1d4ed8; }
+          @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } .full { grid-column: span 1; } }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h1>${form.name}</h1>
+          <p class="sub">${sessionLabel}</p>
+          <form method="POST" action="${actionUrl}">
+            <div class="grid">
+              <div class="field"><label>First Name</label><input name="FirstName" required /></div>
+              <div class="field"><label>Last Name</label><input name="LastName" required /></div>
+              <div class="field"><label>Email</label><input name="Email" type="email" required /></div>
+              <div class="field"><label>EAA Number (optional)</label><input name="EAANumber" /></div>
+              <div class="field full"><label>Street Address</label><input name="Street" required /></div>
+              <div class="field"><label>City</label><input name="City" required /></div>
+              <div class="field"><label>State</label><input name="State" required /></div>
+              <div class="field"><label>ZIP</label><input name="Zip" required /></div>
+              <div class="field full">
+                <label>How did you hear about us?</label>
+                <select name="HearAbout">
+                  <option value="">Select...</option>
+                  <option>Friend or family</option>
+                  <option>Chapter event</option>
+                  <option>EAA website</option>
+                  <option>Social media</option>
+                  <option>Search engine</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="notice">
+              By submitting this form, you agree to be added to our chapter events email list.
+            </div>
+            <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off" />
+            <div class="actions">
+              <button type="submit">Submit</button>
+            </div>
+          </form>
+        </div>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Unable to render form');
+  }
+});
+
+app.post('/public/forms/:slug', async (req, res) => {
+  try {
+    const forms = await getCustomFormsConfig();
+    const slug = String(req.params.slug || '').trim().toLowerCase();
+    const form = forms.find(item => item.slug === slug);
+    if (!form || !form.enabled) {
+      return res.status(404).send('Form not found.');
+    }
+
+    if (req.body?.website) {
+      return res.status(200).send('Thank you for your submission.');
+    }
+
+    const FirstName = String(req.body?.FirstName || '').trim();
+    const LastName = String(req.body?.LastName || '').trim();
+    const Email = String(req.body?.Email || '').trim();
+    const EAANumber = String(req.body?.EAANumber || '').trim();
+    const Street = String(req.body?.Street || '').trim();
+    const City = String(req.body?.City || '').trim();
+    const State = String(req.body?.State || '').trim();
+    const Zip = String(req.body?.Zip || '').trim();
+    const HearAbout = String(req.body?.HearAbout || '').trim();
+
+    if (!FirstName || !LastName || !Email || !Street || !City || !State || !Zip) {
+      return res.status(400).send('Missing required fields.');
+    }
+
+    const optionKeys = await getMemberOptionKeys();
+    await db.ensureMemberOptionColumns(optionKeys);
+
+    const roleOptions = await getMemberRoleOptions();
+    const activityOptions = await getMemberActivityOptions();
+    const roleAllowlist = new Set(roleOptions.map(option => option.value));
+    const activityAllowlist = new Set(activityOptions.map(option => option.value));
+    const assignedRoles = (form.assignedRoles || []).filter(role => roleAllowlist.has(role));
+    const assignedActivities = (form.assignedActivities || []).filter(activity => activityAllowlist.has(activity));
+    const sessionName = form.sessionName || '';
+
+    const existingMember = await db.getMemberByEmail(Email);
+    let memberId = null;
+    let createdNew = false;
+
+    if (existingMember) {
+      const updatePayload = {
+        HouseholdID: existingMember.HouseholdID,
+        FirstName: existingMember.FirstName,
+        LastName: existingMember.LastName,
+        EAANumber: existingMember.EAANumber,
+        Phone: existingMember.Phone,
+        Email: existingMember.Email,
+        MemberType: existingMember.MemberType,
+        Status: existingMember.Status,
+        DuesRate: existingMember.DuesRate,
+        LastPaidYear: existingMember.LastPaidYear,
+        AmountDue: existingMember.AmountDue,
+        YouthProtectionExpiration: existingMember.YouthProtectionExpiration,
+        BackgroundCheckExpiration: existingMember.BackgroundCheckExpiration,
+        Notes: existingMember.Notes,
+        Street: existingMember.Street,
+        City: existingMember.City,
+        State: existingMember.State,
+        Zip: existingMember.Zip
+      };
+      optionKeys.forEach(key => {
+        updatePayload[key] = existingMember[key] ?? 0;
+      });
+      assignedRoles.forEach(role => {
+        updatePayload[role] = 1;
+      });
+      assignedActivities.forEach(activity => {
+        updatePayload[activity] = 1;
+      });
+
+      await db.updateMember(existingMember.MemberID, updatePayload, optionKeys);
+      memberId = existingMember.MemberID;
+    } else {
+      createdNew = true;
+      const memberType = form.defaultMemberType || 'Prospect';
+      const notesParts = [`Form signup: ${form.name}`];
+      if (sessionName) notesParts.push(`Session: ${sessionName}`);
+      if (HearAbout) notesParts.push(`Heard about us: ${HearAbout}`);
+      const notes = `${notesParts.join('. ')}.`;
+
+      const createPayload = {
+        FirstName,
+        LastName,
+        Email,
+        EAANumber,
+        Street,
+        City,
+        State,
+        Zip,
+        MemberType: memberType,
+        Status: 'Prospect',
+        Notes: notes
+      };
+      optionKeys.forEach(key => {
+        createPayload[key] = 0;
+      });
+      assignedRoles.forEach(role => {
+        createPayload[role] = 1;
+      });
+      assignedActivities.forEach(activity => {
+        createPayload[activity] = 1;
+      });
+
+      const createdMember = await db.createMember(createPayload, optionKeys);
+      memberId = createdMember.id;
+    }
+
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || '';
+    const signupNotes = createdNew
+      ? `Created new member from ${form.name} signup`
+      : `Updated existing member from ${form.name} signup`;
+
+    await db.createCustomFormSignup({
+      FormKey: form.slug,
+      FormName: form.name,
+      MemberID: memberId,
+      FirstName,
+      LastName,
+      Email,
+      EAANumber,
+      Street,
+      City,
+      State,
+      Zip,
+      SessionName: sessionName,
+      AssignedRoles: JSON.stringify(assignedRoles),
+      AssignedActivities: JSON.stringify(assignedActivities),
+      Status: 'new',
+      Notes: signupNotes,
+      RawPayload: JSON.stringify({
+        FirstName,
+        LastName,
+        Email,
+        EAANumber,
+        Street,
+        City,
+        State,
+        Zip,
+        HearAbout,
+        sessionName,
+        assignedRoles,
+        assignedActivities,
+        createdNew
+      }),
+      CreatedIp: ipAddress,
+      UserAgent: userAgent
+    });
+
+    if (form.notificationEmail) {
+      const html = `
+        <p>A new ${form.name} signup was received.</p>
+        <ul>
+          <li>Name: ${FirstName} ${LastName}</li>
+          <li>Email: ${Email}</li>
+          <li>EAA Number: ${EAANumber || '—'}</li>
+          <li>Address: ${Street}, ${City}, ${State} ${Zip}</li>
+          <li>Session: ${sessionName || '—'}</li>
+          <li>Assigned Roles: ${assignedRoles.length ? assignedRoles.join(', ') : '—'}</li>
+          <li>Assigned Activities: ${assignedActivities.length ? assignedActivities.join(', ') : '—'}</li>
+          <li>Existing Member: ${createdNew ? 'No (created new)' : 'Yes (updated)'} </li>
+          <li>Heard about us: ${HearAbout || '—'}</li>
+        </ul>
+      `;
+      await emailService.sendReportEmail({
+        recipients: form.notificationEmail,
+        subject: `${form.name} Signup: ${FirstName} ${LastName}`,
+        html
+      });
+    }
+
+    scheduleGoogleSheetsSync();
+    scheduleGoogleGroupsSync();
+
+    const wantsJson = String(req.headers.accept || '').includes('application/json');
+    if (wantsJson) {
+      return res.json({ success: true });
+    }
+    return res.send('Thank you for your submission.');
+  } catch (error) {
+    res.status(500).send('Unable to process signup.');
+  }
+});
+
 // Auth middleware for API routes
 app.use('/api', async (req, res, next) => {
   const publicPaths = ['/payments/square/webhook'];
@@ -572,6 +845,7 @@ app.use('/api', async (req, res, next) => {
   const MEMBER_ACTIVITY_OPTIONS_KEY = 'member_activity_options';
   const PUBLIC_SIGNUP_SETTING_KEY = 'public_signup_config';
   const GROUND_SCHOOL_SETTING_KEY = 'ground_school_signup_config';
+  const CUSTOM_FORMS_SETTING_KEY = 'custom_forms_config';
   const DEFAULT_REPORT_SCHEDULE = {
     enabled: false,
     recipients: [],
@@ -627,6 +901,17 @@ app.use('/api', async (req, res, next) => {
     assignedActivities: []
   };
 
+  const DEFAULT_CUSTOM_FORM_CONFIG = {
+    name: '',
+    slug: '',
+    enabled: false,
+    sessionName: '',
+    defaultMemberType: 'Prospect',
+    notificationEmail: '',
+    assignedRoles: [],
+    assignedActivities: []
+  };
+
   const normalizePublicSignupConfig = (input = {}) => {
     const merged = { ...DEFAULT_PUBLIC_SIGNUP_CONFIG, ...(input || {}) };
     return {
@@ -659,6 +944,48 @@ app.use('/api', async (req, res, next) => {
       assignedRoles: normalizeList(merged.assignedRoles),
       assignedActivities: normalizeList(merged.assignedActivities)
     };
+  };
+
+  const normalizeFormSlug = (value) => String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-_]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$|_/g, '')
+    .slice(0, 48);
+
+  const normalizeCustomFormsConfig = (input = []) => {
+    const rawList = Array.isArray(input) ? input : [];
+    const normalizeList = (value) => (Array.isArray(value)
+      ? value.map(item => String(item || '').trim()).filter(Boolean)
+      : []);
+
+    const seen = new Set();
+    const normalized = [];
+    rawList.forEach((form) => {
+      const merged = { ...DEFAULT_CUSTOM_FORM_CONFIG, ...(form || {}) };
+      const name = typeof merged.name === 'string' ? merged.name.trim() : '';
+      const baseSlug = normalizeFormSlug(merged.slug || name);
+      const slug = baseSlug || normalizeFormSlug(name || 'form');
+      if (!slug || seen.has(slug)) return;
+      seen.add(slug);
+      normalized.push({
+        name: name || slug,
+        slug,
+        enabled: Boolean(merged.enabled),
+        sessionName: typeof merged.sessionName === 'string' ? merged.sessionName.trim() : '',
+        defaultMemberType: typeof merged.defaultMemberType === 'string'
+          ? merged.defaultMemberType.trim()
+          : DEFAULT_CUSTOM_FORM_CONFIG.defaultMemberType,
+        notificationEmail: typeof merged.notificationEmail === 'string'
+          ? merged.notificationEmail.trim()
+          : '',
+        assignedRoles: normalizeList(merged.assignedRoles),
+        assignedActivities: normalizeList(merged.assignedActivities)
+      });
+    });
+    return normalized;
   };
 
   const normalizeGoogleSheetsConfig = (input = {}) => {
@@ -792,6 +1119,16 @@ app.use('/api', async (req, res, next) => {
       return normalizeGroundSchoolConfig(JSON.parse(raw));
     } catch (error) {
       return { ...DEFAULT_GROUND_SCHOOL_CONFIG };
+    }
+  };
+
+  const getCustomFormsConfig = async () => {
+    const raw = await db.getSetting(CUSTOM_FORMS_SETTING_KEY);
+    if (!raw) return [];
+    try {
+      return normalizeCustomFormsConfig(JSON.parse(raw));
+    } catch (error) {
+      return [];
     }
   };
 
@@ -2730,6 +3067,117 @@ app.delete('/api/ground-school-signups/:id', async (req, res) => {
     }
 
     await db.deleteGroundSchoolSignup(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Custom forms config
+app.get('/api/forms', async (req, res) => {
+  try {
+    const forms = await getCustomFormsConfig();
+    res.json({ forms });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/forms', async (req, res) => {
+  try {
+    const normalized = normalizeCustomFormsConfig(req.body?.forms || []);
+    const oldValue = await db.getSetting(CUSTOM_FORMS_SETTING_KEY);
+    await db.setSetting(CUSTOM_FORMS_SETTING_KEY, JSON.stringify(normalized));
+
+    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    await db.logAudit(
+      req.user.email,
+      'UPDATE',
+      'app_settings',
+      null,
+      { customForms: oldValue },
+      { customForms: normalized },
+      ipAddress,
+      'Updated custom forms settings'
+    );
+
+    res.json({ success: true, forms: normalized });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Custom form signups
+app.get('/api/forms/:slug/signups', async (req, res) => {
+  try {
+    const forms = await getCustomFormsConfig();
+    const slug = String(req.params.slug || '').trim().toLowerCase();
+    const form = forms.find(item => item.slug === slug);
+    if (!form) {
+      return res.status(404).json({ error: 'Form not found' });
+    }
+    const limit = req.query?.limit ? Number(req.query.limit) : 200;
+    const rows = await db.listCustomFormSignups(slug, limit);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/forms/:slug/signups/:id/reply', async (req, res) => {
+  try {
+    const forms = await getCustomFormsConfig();
+    const slug = String(req.params.slug || '').trim().toLowerCase();
+    const form = forms.find(item => item.slug === slug);
+    if (!form) {
+      return res.status(404).json({ error: 'Form not found' });
+    }
+
+    const signup = await db.getCustomFormSignupById(req.params.id);
+    if (!signup || signup.FormKey !== slug) {
+      return res.status(404).json({ error: 'Signup not found' });
+    }
+
+    const subject = String(req.body?.subject || '').trim();
+    const body = String(req.body?.body || '').trim();
+    if (!subject || !body) {
+      return res.status(400).json({ error: 'Subject and body are required' });
+    }
+
+    const html = body
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map(line => `<p>${line}</p>`)
+      .join('');
+
+    const replyToEmail = String(req.body?.replyToEmail || '').trim() || (process.env.CHAPTER_EMAIL || '');
+
+    const sendResult = await emailService.sendReportEmail({
+      recipients: signup.Email,
+      subject,
+      html,
+      replyTo: replyToEmail
+    });
+
+    if (!sendResult.success) {
+      return res.status(500).json({ error: sendResult.error || 'Failed to send reply' });
+    }
+
+    await db.saveCustomFormSignupReply(req.params.id, { subject, body, replyToEmail });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/forms/:slug/signups/:id', async (req, res) => {
+  try {
+    const signup = await db.getCustomFormSignupById(req.params.id);
+    if (!signup || signup.FormKey !== String(req.params.slug || '').trim().toLowerCase()) {
+      return res.status(404).json({ error: 'Signup not found' });
+    }
+    await db.deleteCustomFormSignup(req.params.id);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
