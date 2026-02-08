@@ -811,7 +811,7 @@ const fetchCustomForms = async () => {
   }
 }
 
-const saveCustomForms = async () => {
+const saveCustomForms = async (silent = false) => {
   try {
     savingCustomForms.value = true
     const headers = await getAuthHeaders()
@@ -826,13 +826,17 @@ const saveCustomForms = async () => {
     }
     const data = await response.json()
     customForms.value = Array.isArray(data.forms) ? data.forms : []
-    alert('Forms saved')
+    if (!silent) {
+      alert('Forms saved')
+    }
   } catch (error) {
     if (error instanceof AuthError) {
       router.push('/signin')
     } else {
       console.error('Error saving forms:', error)
-      alert(error instanceof Error ? error.message : 'Failed to save forms')
+      if (!silent) {
+        alert(error instanceof Error ? error.message : 'Failed to save forms')
+      }
     }
   } finally {
     savingCustomForms.value = false
@@ -898,7 +902,7 @@ watch(
   }
 )
 
-const saveCustomFormDraft = () => {
+const saveCustomFormDraft = async () => {
   const draft = { ...customFormDraft.value }
   if (!draft.name.trim()) {
     alert('Form name is required')
@@ -910,6 +914,7 @@ const saveCustomFormDraft = () => {
   } else {
     customForms.value.push(draft)
   }
+  await saveCustomForms(true)
   closeCustomFormModal()
 }
 
