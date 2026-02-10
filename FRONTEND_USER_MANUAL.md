@@ -81,6 +81,7 @@ Available for primary members (not household members).
 
 ### Square Payment Links (optional)
 - Renewal emails include a Square payment link when enabled.
+- The Square checkout page includes an optional **Donation** line item.
 - Payment provider IDs are tracked for reconciliation.
 
 ---
@@ -162,8 +163,8 @@ Manage new member registration responses and settings.
 ## Renewal Payments
 Use this page to view and manually record dues payments.
 
-- **Manual entry**: Record a payment for a member with year, amount, and method.
-- **Payment history**: Filter by member, provider, or year.
+- **Manual entry**: Record a payment for a member with year, amount, method, and category (Dues or Donation).
+- **Payment history**: Filter by member, provider, year, or category.
 - **Refresh**: Reload the table with the latest data.
 
 ---

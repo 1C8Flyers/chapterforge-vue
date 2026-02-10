@@ -299,6 +299,7 @@ class Database {
           Amount REAL DEFAULT 0,
           DuesAmount REAL DEFAULT 0,
           SquareFee REAL DEFAULT 0,
+          PaymentCategory TEXT DEFAULT 'dues',
           Method TEXT DEFAULT 'manual',
           Provider TEXT DEFAULT 'manual',
           ProviderPaymentId TEXT,
@@ -327,6 +328,7 @@ class Database {
       addPaymentColumn('SquareFee', 'REAL DEFAULT 0');
       addPaymentColumn('ProviderStatus', 'TEXT');
       addPaymentColumn('ProviderLinkId', 'TEXT');
+      addPaymentColumn('PaymentCategory', "TEXT DEFAULT 'dues'");
 
       // App settings for configurable values (e.g., Square fee)
       this.db.run(`
@@ -1397,6 +1399,20 @@ class Database {
     });
   }
 
+  getPaymentByProviderPaymentIdAndCategory(providerPaymentId, category = 'dues') {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT * FROM payments
+        WHERE ProviderPaymentId = ?
+          AND COALESCE(PaymentCategory, 'dues') = ?
+      `;
+      this.db.get(sql, [providerPaymentId, category], (err, row) => {
+        if (err) reject(err);
+        else resolve(row || null);
+      });
+    });
+  }
+
   getSquarePaymentsNeedingBackfill() {
     return new Promise((resolve, reject) => {
       const sql = `
@@ -1404,6 +1420,7 @@ class Database {
         FROM payments
         WHERE Provider = 'square'
           AND ProviderPaymentId IS NOT NULL
+          AND (PaymentCategory IS NULL OR PaymentCategory = 'dues')
           AND (Amount IS NULL OR Amount = 0 OR DuesAmount IS NULL OR DuesAmount = 0)
         ORDER BY PaymentID ASC
       `;
@@ -1424,15 +1441,16 @@ class Database {
         ProviderStatus = null,
         ProviderLinkId = null,
         DuesAmount = null,
-        SquareFee = null
+        SquareFee = null,
+        PaymentCategory = null
       } = provider || {};
       const sql = `
         INSERT INTO payments (
           MemberID, Year, Amount, Method,
           Provider, ProviderPaymentId, ProviderOrderId, ProviderInvoiceId, ProviderStatus, ProviderLinkId,
-          DuesAmount, SquareFee
+          DuesAmount, SquareFee, PaymentCategory
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       this.db.run(
         sql,
@@ -1448,7 +1466,8 @@ class Database {
           ProviderStatus,
           ProviderLinkId,
           DuesAmount,
-          SquareFee
+          SquareFee,
+          PaymentCategory
         ],
         function(err) {
         if (err) reject(err);
@@ -1467,7 +1486,8 @@ class Database {
         ProviderStatus = null,
         ProviderLinkId = null,
         DuesAmount = null,
-        SquareFee = null
+        SquareFee = null,
+        PaymentCategory = null
       } = provider || {};
       const sql = `
         UPDATE payments
@@ -1480,7 +1500,8 @@ class Database {
             ProviderStatus = COALESCE(?, ProviderStatus),
             ProviderLinkId = COALESCE(?, ProviderLinkId),
             DuesAmount = COALESCE(?, DuesAmount),
-            SquareFee = COALESCE(?, SquareFee)
+            SquareFee = COALESCE(?, SquareFee),
+            PaymentCategory = COALESCE(?, PaymentCategory)
         WHERE PaymentID = ?
       `;
       this.db.run(
@@ -1498,6 +1519,7 @@ class Database {
           ProviderLinkId,
           DuesAmount,
           SquareFee,
+          PaymentCategory,
           paymentId
         ],
         (err) => {
@@ -1532,7 +1554,12 @@ class Database {
 
   refreshMemberPaymentSummary(memberId) {
     return new Promise((resolve, reject) => {
-      const maxSql = 'SELECT MAX(Year) as maxYear FROM payments WHERE MemberID = ?';
+      const maxSql = `
+        SELECT MAX(Year) as maxYear
+        FROM payments
+        WHERE MemberID = ?
+          AND COALESCE(PaymentCategory, 'dues') = 'dues'
+      `;
       this.db.get(maxSql, [memberId], (err, row) => {
         if (err) {
           reject(err);
@@ -1758,6 +1785,7 @@ class Database {
           SUM(p.Amount) AS Total
         FROM payments p
         LEFT JOIN members m ON p.MemberID = m.MemberID
+        WHERE COALESCE(p.PaymentCategory, 'dues') = 'dues'
         GROUP BY p.Year, Category
         ORDER BY p.Year, Category
       `;
@@ -1781,6 +1809,7 @@ class Database {
           COUNT(DISTINCT p.MemberID) AS Total
         FROM payments p
         LEFT JOIN members m ON p.MemberID = m.MemberID
+        WHERE COALESCE(p.PaymentCategory, 'dues') = 'dues'
         GROUP BY p.Year, Category
         ORDER BY p.Year, Category
       `;
@@ -1799,6 +1828,7 @@ class Database {
         FROM payments p
         LEFT JOIN members m ON p.MemberID = m.MemberID
         WHERE p.Year = ?
+          AND COALESCE(p.PaymentCategory, 'dues') = 'dues'
         ORDER BY m.LastName, m.FirstName
       `;
       this.db.all(sql, [year], (err, rows) => {
@@ -1820,6 +1850,7 @@ class Database {
           SUM(p.Amount) AS TotalPaid
         FROM payments p
         LEFT JOIN members m ON p.MemberID = m.MemberID
+        WHERE COALESCE(p.PaymentCategory, 'dues') = 'dues'
         GROUP BY m.MemberID, p.Year
         ORDER BY p.Year DESC, m.LastName, m.FirstName
       `;

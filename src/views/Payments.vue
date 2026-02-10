@@ -5,7 +5,7 @@
     <!-- Manual Payment Entry Form -->
     <div class="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-900 dark:bg-blue-950">
       <h3 class="mb-4 text-lg font-semibold text-blue-900 dark:text-blue-100">Record Manual Payment</h3>
-      <div class="grid gap-3 sm:grid-cols-5">
+      <div class="grid gap-3 sm:grid-cols-6">
         <div class="relative">
           <label class="block text-xs font-medium text-blue-800 dark:text-blue-200">Member</label>
           <input
@@ -59,6 +59,16 @@
             <option value="other">Other</option>
           </select>
         </div>
+        <div>
+          <label class="block text-xs font-medium text-blue-800 dark:text-blue-200">Category</label>
+          <select
+            v-model="manualPayment.category"
+            class="mt-1 w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-blue-700 dark:bg-gray-900 dark:text-white/90"
+          >
+            <option value="dues">Dues</option>
+            <option value="donation">Donation</option>
+          </select>
+        </div>
         <div class="flex items-end">
           <button
             @click="recordManualPayment"
@@ -94,7 +104,7 @@
         </div>
         
         <!-- Filter Options -->
-        <div class="mt-4 grid gap-3 sm:grid-cols-3">
+        <div class="mt-4 grid gap-3 sm:grid-cols-4">
           <div>
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Member ID</label>
             <input
@@ -124,6 +134,17 @@
               class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
             />
           </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Category</label>
+            <select
+              v-model="filters.category"
+              class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+            >
+              <option value="">All Categories</option>
+              <option value="dues">Dues</option>
+              <option value="donation">Donation</option>
+            </select>
+          </div>
         </div>
       </div>
       
@@ -141,6 +162,7 @@
               <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Payment ID</th>
               <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Member ID</th>
               <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Year</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold text-gray-800 dark:text-white/90">Category</th>
               <th class="px-4 py-3 text-right text-sm font-semibold text-gray-800 dark:text-white/90">Dues</th>
               <th class="px-4 py-3 text-right text-sm font-semibold text-gray-800 dark:text-white/90">Fee</th>
               <th class="px-4 py-3 text-right text-sm font-semibold text-gray-800 dark:text-white/90">Total</th>
@@ -165,6 +187,15 @@
               <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">
                 <span v-if="payment.Year > 0">{{ payment.Year }}</span>
                 <span v-else class="text-gray-400 italic">-</span>
+              </td>
+              <td class="px-4 py-4">
+                <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  :class="(payment.PaymentCategory || 'dues') === 'donation'
+                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-500/10 dark:text-purple-400'
+                    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400'"
+                >
+                  {{ payment.PaymentCategory || 'dues' }}
+                </span>
               </td>
               <td class="px-4 py-4 text-right text-sm font-medium text-gray-800 dark:text-white/90">
                 ${{ (payment.DuesAmount || 0).toFixed(2) }}
@@ -255,6 +286,13 @@
             <input v-model="editForm.squareFee" type="number" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
           </div>
           <div>
+            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Category</label>
+            <select v-model="editForm.category" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+              <option value="dues">dues</option>
+              <option value="donation">donation</option>
+            </select>
+          </div>
+          <div>
             <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">Total Amount</label>
             <input v-model="editForm.amount" type="number" step="0.01" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-3 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90" />
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ formatTotalAmount() }}</p>
@@ -336,6 +374,7 @@ interface Payment {
   ProviderLinkId: string | null
   DuesAmount: number
   SquareFee: number
+  PaymentCategory?: string | null
   CreatedAt: string
 }
 
@@ -359,12 +398,14 @@ const manualPayment = ref({
   amount: '',
   duesAmount: '',
   squareFee: '',
-  method: 'cash'
+  method: 'cash',
+  category: 'dues'
 })
 const filters = ref({
   memberId: '',
   provider: '',
-  year: ''
+  year: '',
+  category: ''
 })
 
 const editModalOpen = ref(false)
@@ -381,7 +422,8 @@ const editForm = ref({
   providerPaymentId: '',
   providerOrderId: '',
   providerInvoiceId: '',
-  providerLinkId: ''
+  providerLinkId: '',
+  category: 'dues'
 })
 
 const getAuthHeaders = async () => {
@@ -453,6 +495,9 @@ const filteredPayments = computed(() => {
     if (filters.value.year && payment.Year !== Number(filters.value.year)) {
       return false
     }
+    if (filters.value.category && (payment.PaymentCategory || 'dues') !== filters.value.category) {
+      return false
+    }
     return true
   }).sort((a, b) => new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime())
 })
@@ -470,6 +515,7 @@ const exportPaymentsCsv = () => {
     'MemberID',
     'MemberName',
     'Year',
+    'Category',
     'DuesAmount',
     'SquareFee',
     'Amount',
@@ -496,6 +542,7 @@ const exportPaymentsCsv = () => {
     payment.MemberID,
     payment.MemberID > 0 ? getMemberName(payment.MemberID) : 'unmatched',
     payment.Year,
+    payment.PaymentCategory || 'dues',
     (payment.DuesAmount || 0).toFixed(2),
     (payment.SquareFee || 0).toFixed(2),
     (payment.Amount || 0).toFixed(2),
@@ -558,7 +605,8 @@ const recordManualPayment = async () => {
         Amount: amount,
         DuesAmount: Number(manualPayment.value.duesAmount) || 0,
         SquareFee: Number(manualPayment.value.squareFee) || 0,
-        Method: manualPayment.value.method
+        Method: manualPayment.value.method,
+        PaymentCategory: manualPayment.value.category || 'dues'
       })
     })
 
@@ -574,7 +622,8 @@ const recordManualPayment = async () => {
       amount: '',
       duesAmount: '',
       squareFee: '',
-      method: 'cash'
+      method: 'cash',
+      category: 'dues'
     }
     await fetchPayments()
   } catch (error) {
@@ -603,7 +652,8 @@ const openEdit = (payment: Payment) => {
     providerPaymentId: payment.ProviderPaymentId || '',
     providerOrderId: payment.ProviderOrderId || '',
     providerInvoiceId: payment.ProviderInvoiceId || '',
-    providerLinkId: payment.ProviderLinkId || ''
+    providerLinkId: payment.ProviderLinkId || '',
+    category: payment.PaymentCategory || 'dues'
   }
   editModalOpen.value = true
 }
@@ -617,6 +667,7 @@ const saveEdit = async () => {
       Amount: Number(editForm.value.amount),
       DuesAmount: Number(editForm.value.duesAmount) || 0,
       SquareFee: Number(editForm.value.squareFee) || 0,
+      PaymentCategory: editForm.value.category || 'dues',
       Method: editForm.value.method,
       Provider: editForm.value.provider || null,
       ProviderStatus: editForm.value.providerStatus || null,

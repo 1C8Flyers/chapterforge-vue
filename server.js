@@ -2130,11 +2130,10 @@ app.post('/api/payments/square/webhook', async (req, res) => {
       return res.json({ received: true });
     }
 
-    const existing = await db.getPaymentByProviderPaymentId(payment.id);
-    if (existing) {
-      console.log('[WEBHOOK] Payment already exists with ID:', payment.id);
-      await db.updatePaymentProviderStatus(existing.PaymentID, payment.status);
-      return res.json({ received: true });
+    const existingDues = await db.getPaymentByProviderPaymentIdAndCategory(payment.id, 'dues');
+    if (existingDues) {
+      console.log('[WEBHOOK] Dues payment already exists with ID:', payment.id);
+      await db.updatePaymentProviderStatus(existingDues.PaymentID, payment.status);
     }
 
     const orderId = payment.orderId || payment.order_id;
@@ -2172,23 +2171,72 @@ app.post('/api/payments/square/webhook', async (req, res) => {
     const amount = Number(amountCents) / 100;
     console.log('[WEBHOOK] Amount: $' + amount + ' (' + amountCents + ' cents)');
 
+    const orderLineItems = order?.lineItems || order?.line_items || [];
+    const donationLineTotalCents = Array.isArray(orderLineItems)
+      ? orderLineItems
+        .filter(item => String(item?.name || '').toLowerCase().includes('donation'))
+        .reduce((sum, item) => sum + Number(item?.totalMoney?.amount || item?.total_money?.amount || 0), 0)
+      : 0;
+    const donationAmount = donationLineTotalCents / 100;
+    if (donationAmount > 0) {
+      console.log('[WEBHOOK] Donation: $' + donationAmount + ' (' + donationLineTotalCents + ' cents)');
+    }
+
+    const tipCents =
+      payment.tipMoney?.amount ||
+      payment.tip_money?.amount ||
+      0;
+    const tipAmount = Number(tipCents) / 100;
+    const optionalDonationAmount = donationAmount > 0 ? donationAmount : tipAmount;
+    if (tipAmount > 0 && donationAmount <= 0) {
+      console.log('[WEBHOOK] Tip/Donation: $' + tipAmount + ' (' + tipCents + ' cents)');
+    }
+
     // Separate dues from fee
     const squareFee = await db.getSquareFeeAmount(1);
     const feeAmount = Number.isFinite(squareFee) ? squareFee : 0;
-    const duesAmount = Math.max(0, amount - feeAmount);
+    const duesPaymentAmount = Math.max(0, amount - optionalDonationAmount);
+    const duesAmount = Math.max(0, duesPaymentAmount - feeAmount);
 
-    console.log('[WEBHOOK] Creating payment record...');
-    // Record payment even if metadata is missing - helps with debugging
-    await db.createPayment(memberId, year, amount, 'square', {
-      Provider: 'square',
-      ProviderPaymentId: payment.id,
-      ProviderOrderId: orderId,
-      ProviderInvoiceId: payment.invoice_id || null,
-      ProviderStatus: payment.status,
-      DuesAmount: duesAmount,
-      SquareFee: feeAmount
-    });
-    console.log('[WEBHOOK] Payment created');
+    if (!existingDues) {
+      console.log('[WEBHOOK] Creating dues payment record...');
+      // Record payment even if metadata is missing - helps with debugging
+      await db.createPayment(memberId, year, duesPaymentAmount, 'square', {
+        Provider: 'square',
+        ProviderPaymentId: payment.id,
+        ProviderOrderId: orderId,
+        ProviderInvoiceId: payment.invoice_id || null,
+        ProviderStatus: payment.status,
+        DuesAmount: duesAmount,
+        SquareFee: feeAmount,
+        PaymentCategory: 'dues'
+      });
+      console.log('[WEBHOOK] Dues payment created');
+    }
+
+    if (optionalDonationAmount > 0) {
+      const existingDonation = await db.getPaymentByProviderPaymentIdAndCategory(payment.id, 'donation');
+      if (!existingDonation) {
+        console.log('[WEBHOOK] Creating donation payment record...');
+        await db.createPayment(memberId, year, optionalDonationAmount, 'square', {
+          Provider: 'square',
+          ProviderPaymentId: payment.id,
+          ProviderOrderId: orderId,
+          ProviderInvoiceId: payment.invoice_id || null,
+          ProviderStatus: payment.status,
+          DuesAmount: 0,
+          SquareFee: 0,
+          PaymentCategory: 'donation'
+        });
+        console.log('[WEBHOOK] Donation payment created');
+      } else {
+        await db.updatePaymentProviderStatus(existingDonation.PaymentID, payment.status);
+      }
+    }
+
+    if (existingDues && optionalDonationAmount <= 0) {
+      return res.json({ received: true });
+    }
     
     // Only refresh member summary if we have a valid memberId
     if (memberId > 0) {
@@ -2231,7 +2279,7 @@ app.get('/api/members/:id/payments', async (req, res) => {
 app.post('/api/members/:id/payments', async (req, res) => {
   try {
     const memberId = Number(req.params.id);
-    const { Year, Amount, Method, DuesAmount, SquareFee } = req.body;
+    const { Year, Amount, Method, DuesAmount, SquareFee, PaymentCategory } = req.body;
     const yearNum = Number(Year);
     const amountNum = Number(Amount);
 
@@ -2240,15 +2288,18 @@ app.post('/api/members/:id/payments', async (req, res) => {
     }
 
     // Manual payments are marked as COMPLETED since they represent received payments
+    const normalizedCategory = PaymentCategory || 'dues';
+    const isDonation = normalizedCategory === 'donation';
     const result = await db.createPayment(memberId, yearNum, Number.isFinite(amountNum) ? amountNum : 0, Method || 'manual', {
       Provider: Method || 'manual',
       ProviderStatus: 'COMPLETED',
-      DuesAmount: DuesAmount !== undefined ? Number(DuesAmount) : 0,
-      SquareFee: SquareFee !== undefined ? Number(SquareFee) : 0
+      DuesAmount: isDonation ? 0 : (DuesAmount !== undefined ? Number(DuesAmount) : 0),
+      SquareFee: isDonation ? 0 : (SquareFee !== undefined ? Number(SquareFee) : 0),
+      PaymentCategory: normalizedCategory
     });
     await db.refreshMemberPaymentSummary(memberId);
     const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
-    await db.logAudit(req.user.email, 'CREATE', 'payments', result.id, null, { MemberID: memberId, Year: yearNum, Amount: amountNum, Method, DuesAmount, SquareFee }, ipAddress, 'Created manual payment');
+    await db.logAudit(req.user.email, 'CREATE', 'payments', result.id, null, { MemberID: memberId, Year: yearNum, Amount: amountNum, Method, DuesAmount, SquareFee, PaymentCategory: normalizedCategory }, ipAddress, 'Created manual payment');
     scheduleGoogleSheetsSync();
     res.json({ success: true });
   } catch (error) {
@@ -2259,7 +2310,7 @@ app.post('/api/members/:id/payments', async (req, res) => {
 app.put('/api/payments/:id', async (req, res) => {
   try {
     const paymentId = Number(req.params.id);
-    const { Year, Amount, Method, MemberID, Provider, ProviderStatus, ProviderPaymentId, ProviderOrderId, ProviderInvoiceId, ProviderLinkId, DuesAmount, SquareFee } = req.body;
+    const { Year, Amount, Method, MemberID, Provider, ProviderStatus, ProviderPaymentId, ProviderOrderId, ProviderInvoiceId, ProviderLinkId, DuesAmount, SquareFee, PaymentCategory } = req.body;
     const yearNum = Number(Year);
     const amountNum = Number(Amount);
     const memberIdNum = MemberID !== undefined ? Number(MemberID) : null;
@@ -2281,7 +2332,8 @@ app.put('/api/payments/:id', async (req, res) => {
       ProviderStatus,
       ProviderLinkId,
       DuesAmount: DuesAmount !== undefined ? Number(DuesAmount) : null,
-      SquareFee: SquareFee !== undefined ? Number(SquareFee) : null
+      SquareFee: SquareFee !== undefined ? Number(SquareFee) : null,
+      PaymentCategory: PaymentCategory || null
     };
 
     const newMemberId = Number.isFinite(memberIdNum) && memberIdNum > 0 ? memberIdNum : payment.MemberID;

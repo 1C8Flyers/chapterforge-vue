@@ -59,6 +59,15 @@ async function createPaymentLink({ memberId, year, amount, description }) {
             amount: BigInt(cents),
             currency: 'USD'
           }
+        },
+        {
+          name: 'Donation (optional)',
+          quantity: '1',
+          basePriceMoney: {
+            amount: BigInt(0),
+            currency: 'USD'
+          },
+          pricingType: 'VARIABLE_PRICING'
         }
       ],
       metadata: {
