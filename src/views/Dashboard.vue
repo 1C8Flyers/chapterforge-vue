@@ -18,6 +18,51 @@
         </div>
       </div>
 
+      <!-- Total Families Card -->
+      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ stats.totalFamilies }}</h4>
+            <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">Total Families</span>
+          </div>
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-purple-50 dark:bg-purple-500/10">
+            <svg class="h-6 w-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-1a4 4 0 00-5-3.873M9 20h6v-1a4 4 0 00-5-3.873M6 9a4 4 0 11-8 0 4 4 0 018 0zm10 0a4 4 0 11-8 0 4 4 0 018 0zm8 3a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Individuals Card -->
+      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ stats.totalIndividuals }}</h4>
+            <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">Total Individuals</span>
+          </div>
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-500/10">
+            <svg class="h-6 w-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14a7 7 0 00-7 7v1h14v-1a7 7 0 00-7-7zm0-2a4 4 0 100-8 4 4 0 000 8z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Other Card -->
+      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ stats.totalOther }}</h4>
+            <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">Total Other</span>
+          </div>
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-500/10">
+            <svg class="h-6 w-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2h6v2m-7 4h8a3 3 0 003-3V8a3 3 0 00-3-3h-2.5a2.5 2.5 0 00-5 0H8a3 3 0 00-3 3v10a3 3 0 003 3z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
       <!-- Active Members Card -->
       <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="flex items-center justify-between">
@@ -186,6 +231,9 @@ const ypDetailsError = ref('')
 
 const stats = ref({
   totalMembers: 0,
+  totalFamilies: 0,
+  totalIndividuals: 0,
+  totalOther: 0,
   activeMembers: 0,
   renewalsDue: 0,
   youthProtectionExpiring: 0
