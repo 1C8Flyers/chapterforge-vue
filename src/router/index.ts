@@ -53,6 +53,15 @@ const router = createRouter({
       },
     },
     {
+      path: '/help',
+      name: 'Help',
+      component: () => import('../views/Help.vue'),
+      meta: {
+        title: 'Help',
+        requiresAuth: true
+      },
+    },
+    {
       path: '/forms',
       name: 'Forms',
       component: () => import('../views/Forms.vue'),
