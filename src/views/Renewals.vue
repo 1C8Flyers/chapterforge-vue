@@ -27,14 +27,10 @@
           </button>
         </div>
       </div>
-      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+      <div class="mt-6 grid gap-4 sm:grid-cols-1">
         <div class="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200">
           <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Outstanding Renewals</div>
           <div class="mt-2 text-2xl font-semibold text-gray-800 dark:text-white/90">{{ outstandingCount }}</div>
-        </div>
-        <div class="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200">
-          <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Outstanding Amount</div>
-          <div class="mt-2 text-2xl font-semibold text-gray-800 dark:text-white/90">{{ formatCurrency(outstandingAmount) }}</div>
         </div>
       </div>
     </div>
@@ -136,13 +132,6 @@ const allSelected = computed(() => {
 
 const outstandingCount = computed(() => renewals.value.length)
 
-const outstandingAmount = computed(() => {
-  return renewals.value.reduce((sum, member) => {
-    const amount = Number(member.AmountDue || member.DuesRate || 0)
-    return sum + (Number.isFinite(amount) ? amount : 0)
-  }, 0)
-})
-
 const fetchRenewals = async () => {
   try {
     const headers = await getAuthHeaders()
@@ -231,11 +220,6 @@ const formatDate = (dateString: string | null) => {
   if (!dateString) return 'Never'
   const date = new Date(dateString)
   return date.toLocaleDateString()
-}
-
-const formatCurrency = (value: number) => {
-  const safeValue = Number.isFinite(value) ? value : 0
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(safeValue)
 }
 
 onMounted(() => {
