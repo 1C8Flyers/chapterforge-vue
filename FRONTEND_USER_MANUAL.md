@@ -230,6 +230,19 @@ Manage configuration and email templates.
 - **Admins** can create/update/delete data.
 - **Users** have read-only access.
 
+### Admin vs User Access
+**Admins** can:
+- Add/edit/delete members, households, and payments.
+- Send renewal emails (individual or bulk).
+- Manage settings (member types, users, email templates, scheduled reports).
+- Configure integrations (Square, Google Sheets, Google Groups).
+- Import/export data and run syncs.
+
+**Users** can:
+- View dashboards, members, renewals, reports, and forms.
+- Search, filter, and download reports/exports.
+- View member details and participation history.
+
 ---
 
 ## Theme Switcher

@@ -140,7 +140,13 @@
             <tbody>
               <tr v-for="member in ypExpiringMembers" :key="member.MemberID" class="border-b border-gray-200 dark:border-gray-800">
                 <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">
-                  {{ member.FirstName }} {{ member.LastName }}
+                  <button
+                    type="button"
+                    @click="openMemberRecord(member.MemberID)"
+                    class="text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                  >
+                    {{ member.FirstName }} {{ member.LastName }}
+                  </button>
                 </td>
                 <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
                   {{ member.Email }}
@@ -223,6 +229,11 @@ const stats = ref({
 
 const goToProspects = () => {
   router.push({ path: '/members', query: { memberType: 'Prospect' } })
+}
+
+const openMemberRecord = (memberId: number) => {
+  router.push({ path: '/members', query: { memberId: String(memberId) } })
+  showYPDetailsModal.value = false
 }
 
 const fetchStats = async () => {
