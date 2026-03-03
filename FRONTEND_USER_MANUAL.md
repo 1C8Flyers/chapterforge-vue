@@ -240,7 +240,7 @@ Manage configuration and email templates.
 
 **Users** can:
 - View dashboards, members, renewals, reports, and forms.
-- Search, filter, and download reports/exports.
+- Search and filter reports/exports (view only; no downloads).
 - View member details and participation history.
 
 ---
