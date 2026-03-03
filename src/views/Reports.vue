@@ -133,6 +133,9 @@
           <div v-if="sheetError" class="mt-3 text-sm text-red-600">{{ sheetError }}</div>
 
           <div class="mt-4 overflow-x-auto">
+            <div v-if="!canEditSheet" class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+              Spreadsheet edits are view-only for your account.
+            </div>
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800 text-left text-xs uppercase text-gray-500">
@@ -152,7 +155,7 @@
                   >
                     Paid {{ year }}
                   </th>
-                  <th class="px-3 py-2 text-right">Save</th>
+                  <th v-if="canEditSheet" class="px-3 py-2 text-right">Save</th>
                 </tr>
               </thead>
               <tbody>
@@ -162,14 +165,14 @@
                   class="border-b border-gray-200 dark:border-gray-800"
                 >
                   <td class="px-3 py-2 text-gray-600">{{ member.MemberID }}</td>
-                  <td class="px-3 py-2"><input v-model="member.FirstName" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model="member.LastName" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model="member.Email" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model="member.MemberType" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model="member.Status" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model.number="member.DuesRate" type="number" step="0.01" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model.number="member.LastPaidYear" type="number" class="sheet-input" /></td>
-                  <td class="px-3 py-2"><input v-model.number="member.AmountDue" type="number" step="0.01" class="sheet-input" /></td>
+                  <td class="px-3 py-2"><input v-model="member.FirstName" class="sheet-input" :disabled="!canEditSheet" /></td>
+                  <td class="px-3 py-2"><input v-model="member.LastName" class="sheet-input" :disabled="!canEditSheet" /></td>
+                  <td class="px-3 py-2"><input v-model="member.Email" class="sheet-input" :disabled="!canEditSheet" /></td>
+                  <td class="px-3 py-2"><input v-model="member.MemberType" class="sheet-input" :disabled="!canEditSheet" /></td>
+                  <td class="px-3 py-2"><input v-model="member.Status" class="sheet-input" :disabled="!canEditSheet" /></td>
+                  <td class="px-3 py-2"><input v-model.number="member.DuesRate" type="number" step="0.01" class="sheet-input" :disabled="!canEditSheet" /></td>
+                  <td class="px-3 py-2"><input v-model.number="member.LastPaidYear" type="number" class="sheet-input" :disabled="!canEditSheet" /></td>
+                  <td class="px-3 py-2"><input v-model.number="member.AmountDue" type="number" step="0.01" class="sheet-input" :disabled="!canEditSheet" /></td>
                   <td
                     v-for="year in sheetYears"
                     :key="`dues-${member.MemberID}-${year}`"
@@ -177,7 +180,7 @@
                   >
                     {{ formatCurrency(member.DuesByYear?.[year] || 0) }}
                   </td>
-                  <td class="px-3 py-2 text-right">
+                  <td v-if="canEditSheet" class="px-3 py-2 text-right">
                     <button
                       @click="saveSheetMember(member)"
                       :disabled="rowSavingMembers[member.MemberID]"
@@ -312,6 +315,7 @@ type PaidMembersSummaryRow = { Year: number; Category: string; Total: number }
 const router = useRouter()
 const { currentUser, isAdmin } = useAuth()
 const canExport = computed(() => isAdmin.value)
+const canEditSheet = computed(() => isAdmin.value)
 
 const tables = [
   { id: 'members', name: 'Members' },
@@ -452,6 +456,10 @@ const refreshSpreadsheet = async () => {
 }
 
 const saveSheetMember = async (member: any) => {
+  if (!canEditSheet.value) {
+    sheetError.value = 'Spreadsheet edits are view-only for your account.'
+    return
+  }
   if (!member?.MemberID) return
   rowSavingMembers.value = { ...rowSavingMembers.value, [member.MemberID]: true }
   try {

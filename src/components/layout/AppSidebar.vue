@@ -139,25 +139,25 @@
                       isSubmenuOpen(groupIndex, index) &&
                       (isExpanded || isHovered || isMobileOpen)
                     "
-                  >
+                      adminOnly: false,
                     <ul class="mt-2 space-y-1 ml-9">
                       <li v-for="subItem in item.subItems" :key="subItem.name">
                         <router-link
                           :to="subItem.path"
                           :class="[
-                            'menu-dropdown-item',
+                      adminOnly: false,
                             {
                               'menu-dropdown-item-active': isActive(
                                 subItem.path
                               ),
                               'menu-dropdown-item-inactive': !isActive(
-                                subItem.path
+                      adminOnly: false,
                               ),
                             },
                           ]"
                         >
                           {{ subItem.name }}
-                          <span class="flex items-center gap-1 ml-auto">
+                      adminOnly: false,
                             <span
                               v-if="subItem.new"
                               :class="[

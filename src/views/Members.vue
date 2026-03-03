@@ -16,6 +16,7 @@
             />
             <button
               @click="$refs.fileInput.click()"
+              v-if="canManageMembers"
               class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Import CSV
@@ -28,7 +29,8 @@
             </button>
             <button
               @click="exportMembersCsv"
-              :disabled="filteredMembers.length === 0"
+              :disabled="!canManageMembers || filteredMembers.length === 0"
+              :title="!canManageMembers ? 'View-only access' : ''"
               class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Export CSV
@@ -41,6 +43,7 @@
             </button>
             <button
               @click="openAddModal"
+              v-if="canManageMembers"
               class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
             >
               Add Member
@@ -159,7 +162,7 @@
                 </td>
                 <td class="px-4 py-4 text-right text-sm">
                   <button
-                    v-if="item.type === 'household'"
+                    v-if="item.type === 'household' && canManageMembers"
                     @click="openAddFamilyModal(item.primary)"
                     class="mr-3 text-blue-500 hover:text-blue-600 dark:text-blue-400"
                   >
@@ -172,6 +175,7 @@
                     View
                   </button>
                   <button
+                    v-if="canManageMembers"
                     @click="deleteMember(item.type === 'individual' ? item.member.MemberID : item.primary.MemberID)"
                     class="text-red-500 hover:text-red-600 dark:text-red-400"
                   >
@@ -219,6 +223,7 @@
                       View
                     </button>
                     <button
+                      v-if="canManageMembers"
                       @click="deleteMember(familyMember.MemberID)"
                       class="text-red-500 hover:text-red-600 dark:text-red-400"
                     >
@@ -245,7 +250,7 @@
             {{ isViewOnly ? 'View Member' : (isEditing ? 'Edit Member' : 'Add Member') }}
           </h3>
           <button
-            v-if="isViewOnly"
+            v-if="isViewOnly && canManageMembers"
             type="button"
             @click="enterEditMode"
             class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
@@ -684,10 +689,13 @@ import { useRouter, useRoute } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
 import { auth } from '@/firebase'
+import { useAuth } from '@/composables/useAuth'
 import { getAuthHeaders, apiFetch, AuthError } from '@/utils/apiAuth'
 
 const router = useRouter()
 const route = useRoute()
+const { isAdmin } = useAuth()
+const canManageMembers = computed(() => isAdmin.value)
 
 const currentPageTitle = ref('Members')
 const members = ref<any[]>([])
@@ -1062,6 +1070,7 @@ watch([roleOptions, activityOptions], () => {
 })
 
 const openAddModal = () => {
+  if (!canManageMembers.value) return
   isEditing.value = false
   formData.value = buildMemberForm()
   participationItems.value = []
@@ -1069,6 +1078,7 @@ const openAddModal = () => {
 }
 
 const openAddFamilyModal = (primaryMember: any) => {
+  if (!canManageMembers.value) return
   isEditing.value = false
   isViewOnly.value = false
   familyPrimaryId.value = primaryMember.MemberID
@@ -1081,6 +1091,10 @@ const openAddFamilyModal = (primaryMember: any) => {
 }
 
 const openEditModal = (member: any) => {
+  if (!canManageMembers.value) {
+    openViewModal(member)
+    return
+  }
   isEditing.value = true
   isViewOnly.value = false
   familyPrimaryId.value = null
@@ -1116,6 +1130,7 @@ const closeModal = () => {
 }
 
 const enterEditMode = () => {
+  if (!canManageMembers.value) return
   isViewOnly.value = false
   isEditing.value = Boolean(formData.value.MemberID)
 }
@@ -1153,6 +1168,10 @@ const formatParticipationDate = (dateString: string) => {
 }
 
 const deleteParticipation = async (item: any) => {
+  if (!canManageMembers.value) {
+    alert('View-only access: deleting participation is disabled for your account.')
+    return
+  }
   if (!item?.signupId || !item.formKey) {
     return
   }
@@ -1182,6 +1201,10 @@ const deleteParticipation = async (item: any) => {
 }
 
 const saveMember = async () => {
+  if (!canManageMembers.value) {
+    alert('View-only access: saving members is disabled for your account.')
+    return
+  }
   try {
     const isFamily = formData.value.MemberType === 'Family Member'
     const isAddingFamily = !isEditing.value && isFamily && familyPrimaryId.value
@@ -1211,6 +1234,10 @@ const saveMember = async () => {
 }
 
 const deleteMember = async (id: number) => {
+  if (!canManageMembers.value) {
+    alert('View-only access: deleting members is disabled for your account.')
+    return
+  }
   if (!confirm('Are you sure you want to delete this member?')) return
   
   try {
@@ -1232,6 +1259,10 @@ const deleteMember = async (id: number) => {
 }
 
 const handleFileUpload = async (event: Event) => {
+  if (!canManageMembers.value) {
+    alert('View-only access: importing members is disabled for your account.')
+    return
+  }
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   

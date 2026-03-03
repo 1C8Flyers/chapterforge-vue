@@ -20,7 +20,8 @@
           </select>
           <button
             @click="sendBulkRenewals"
-            :disabled="selectedMembers.length === 0"
+            :disabled="!canManageRenewals || selectedMembers.length === 0"
+            :title="!canManageRenewals ? 'View-only access' : ''"
             class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Send to Selected ({{ selectedMembers.length }})
@@ -45,6 +46,7 @@
                   type="checkbox"
                   @change="toggleSelectAll"
                   :checked="allSelected"
+                  :disabled="!canManageRenewals"
                   class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
                 />
               </th>
@@ -67,6 +69,7 @@
                   type="checkbox"
                   v-model="selectedMembers"
                   :value="member.MemberID"
+                  :disabled="!canManageRenewals"
                   class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
                 />
               </td>
@@ -85,6 +88,7 @@
               </td>
               <td class="px-4 py-4 text-right text-sm">
                 <button
+                  v-if="canManageRenewals"
                   @click="sendRenewalNotice(member.MemberID)"
                   class="text-brand-500 hover:text-brand-600 dark:text-brand-400"
                 >
@@ -108,9 +112,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import PageBreadcrumb from '@/components/common/PageBreadcrumb.vue'
+import { useAuth } from '@/composables/useAuth'
 import { getAuthHeaders, apiFetch, AuthError } from '@/utils/apiAuth'
 
 const router = useRouter()
+const { isAdmin } = useAuth()
+const canManageRenewals = computed(() => isAdmin.value)
 
 const currentPageTitle = ref('Renewals')
 const renewals = ref<any[]>([])
@@ -152,6 +159,10 @@ const fetchRenewals = async () => {
 }
 
 const sendRenewalNotice = async (memberId: number) => {
+  if (!canManageRenewals.value) {
+    alert('View-only access: sending notices is disabled for your account.')
+    return
+  }
   try {
     const headers = await getAuthHeaders()
     const response = await apiFetch(`/api/renewals/send/${memberId}`, {
@@ -177,6 +188,10 @@ const sendRenewalNotice = async (memberId: number) => {
 }
 
 const sendBulkRenewals = async () => {
+  if (!canManageRenewals.value) {
+    alert('View-only access: sending notices is disabled for your account.')
+    return
+  }
   if (selectedMembers.value.length === 0) return
   
   if (!confirm(`Send renewal notices to ${selectedMembers.value.length} members?`)) return
@@ -209,6 +224,7 @@ const sendBulkRenewals = async () => {
 }
 
 const toggleSelectAll = () => {
+  if (!canManageRenewals.value) return
   if (allSelected.value) {
     selectedMembers.value = []
   } else {
