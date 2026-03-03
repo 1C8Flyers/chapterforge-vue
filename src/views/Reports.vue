@@ -56,7 +56,9 @@
             v-for="table in tables"
             :key="table.id"
             @click="exportReport(table)"
-            class="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+            :disabled="!canExport"
+            :title="!canExport ? 'View-only access' : ''"
+            class="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
           >
             <span>{{ table.name }}</span>
             <span class="text-xs text-gray-500 dark:text-gray-400">Export CSV</span>
@@ -65,11 +67,17 @@
           <button
             :key="duesByMemberReport.id"
             @click="exportDuesByMemberYear()"
-            class="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 dark:border-emerald-900/40 dark:bg-emerald-900/30 dark:text-emerald-100 dark:hover:bg-emerald-900/50"
+            :disabled="!canExport"
+            :title="!canExport ? 'View-only access' : ''"
+            class="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-900/40 dark:bg-emerald-900/30 dark:text-emerald-100 dark:hover:bg-emerald-900/50"
           >
             <span>{{ duesByMemberReport.name }}</span>
             <span class="text-xs text-emerald-700 dark:text-emerald-200">Export CSV</span>
           </button>
+        </div>
+
+        <div v-if="!canExport" class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          Reports are view-only for your account.
         </div>
 
         <div v-if="exporting" class="mt-4 text-sm text-gray-500">Preparing export...</div>
@@ -302,7 +310,8 @@ type PaymentsSummaryRow = { Year: number; Category: string; Total: number }
 type PaidMembersSummaryRow = { Year: number; Category: string; Total: number }
 
 const router = useRouter()
-const { currentUser } = useAuth()
+const { currentUser, isAdmin } = useAuth()
+const canExport = computed(() => isAdmin.value)
 
 const tables = [
   { id: 'members', name: 'Members' },
@@ -469,6 +478,10 @@ const saveSheetMember = async (member: any) => {
 
 
 const exportReport = async (table: { id: string; name: string }) => {
+  if (!canExport.value) {
+    errorMessage.value = 'Reports are view-only for your account.'
+    return
+  }
   if (!currentUser.value) {
     errorMessage.value = 'Please sign in to export reports.'
     return
@@ -550,6 +563,10 @@ const exportReport = async (table: { id: string; name: string }) => {
 }
 
 const exportDuesByMemberYear = async () => {
+  if (!canExport.value) {
+    errorMessage.value = 'Reports are view-only for your account.'
+    return
+  }
   if (!currentUser.value) {
     errorMessage.value = 'Please sign in to export reports.'
     return

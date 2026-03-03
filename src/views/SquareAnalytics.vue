@@ -106,7 +106,8 @@
               </div>
               <button
                 @click="exportTransactions"
-                :disabled="loadingTransactions || transactions.length === 0"
+                :disabled="!canExport || loadingTransactions || transactions.length === 0"
+                :title="!canExport ? 'View-only access' : ''"
                 class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
               >
                 Export CSV
@@ -352,7 +353,8 @@
               </button>
               <button
                 @click="exportPayouts"
-                :disabled="payouts.length === 0"
+                :disabled="!canExport || payouts.length === 0"
+                :title="!canExport ? 'View-only access' : ''"
                 class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
               >
                 Export CSV
@@ -433,7 +435,9 @@
                   <td class="px-4 py-3 text-right">
                     <button
                       @click.stop="exportSelectedPayout(payout)"
-                      class="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                      :disabled="!canExport"
+                      :title="!canExport ? 'View-only access' : ''"
+                      class="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
                     >
                       Export Entries
                     </button>
@@ -466,7 +470,9 @@
           <div class="flex items-center gap-2">
             <button
               @click="exportSelectedPayout(selectedPayout)"
-              class="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+              :disabled="!canExport"
+              :title="!canExport ? 'View-only access' : ''"
+              class="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
             >
               Export Entries CSV
             </button>
@@ -512,7 +518,8 @@
           <div class="flex items-center justify-end mb-3">
             <button
               @click="exportPayoutEntries"
-              :disabled="payoutEntries.length === 0"
+              :disabled="!canExport || payoutEntries.length === 0"
+              :title="!canExport ? 'View-only access' : ''"
               class="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
             >
               Export Entries CSV
@@ -625,7 +632,8 @@ interface PayoutEntry {
   payout_ref?: string | null
 }
 
-const { currentUser, getAuthHeaders } = useAuth()
+const { currentUser, getAuthHeaders, isAdmin } = useAuth()
+const canExport = computed(() => isAdmin.value)
 
 const activeTab = ref<'transactions' | 'charts' | 'payouts'>('transactions')
 const transactions = ref<Transaction[]>([])
@@ -798,6 +806,10 @@ const formatMoney = (amount?: number, currency?: string) => {
 }
 
 const exportPayouts = () => {
+  if (!canExport.value) {
+    payoutsError.value = 'View-only access: exports are disabled for your account.'
+    return
+  }
   if (payouts.value.length === 0) return
 
   const headers = [
@@ -942,6 +954,10 @@ const downloadPayoutEntriesCsv = (payout: Payout, entries: PayoutEntry[]) => {
 }
 
 const exportSelectedPayout = async (payoutOverride?: Payout) => {
+  if (!canExport.value) {
+    payoutEntriesError.value = 'View-only access: exports are disabled for your account.'
+    return
+  }
   const payout = payoutOverride || selectedPayout.value
   if (!payout) return
 
@@ -961,12 +977,20 @@ const exportSelectedPayout = async (payoutOverride?: Payout) => {
 }
 
 const exportPayoutEntries = () => {
+  if (!canExport.value) {
+    payoutEntriesError.value = 'View-only access: exports are disabled for your account.'
+    return
+  }
   if (!selectedPayout.value || payoutEntries.value.length === 0) return
   downloadPayoutEntriesCsv(selectedPayout.value, payoutEntries.value)
 }
 
 
 const exportTransactions = () => {
+  if (!canExport.value) {
+    transactionsError.value = 'View-only access: exports are disabled for your account.'
+    return
+  }
   if (filteredTransactions.value.length === 0) return
 
   const headers = [

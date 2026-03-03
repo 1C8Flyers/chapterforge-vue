@@ -2,8 +2,15 @@
   <AdminLayout>
     <PageBreadcrumb pageTitle="Renewal Payments" />
 
+    <div
+      v-if="!canManagePayments"
+      class="mb-6 rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300"
+    >
+      View-only access: manual payment entry and exports are disabled.
+    </div>
+
     <!-- Manual Payment Entry Form -->
-    <div class="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-900 dark:bg-blue-950">
+    <div v-if="canManagePayments" class="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-900 dark:bg-blue-950">
       <h3 class="mb-4 text-lg font-semibold text-blue-900 dark:text-blue-100">Record Manual Payment</h3>
       <div class="grid gap-3 sm:grid-cols-6">
         <div class="relative">
@@ -88,8 +95,9 @@
           <div class="flex flex-wrap gap-2">
             <button
               @click="exportPaymentsCsv"
-              :disabled="loading || filteredPayments.length === 0"
-              class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+              :disabled="!canManagePayments || loading || filteredPayments.length === 0"
+              :title="!canManagePayments ? 'View-only access' : ''"
+              class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
             >
               Export CSV
             </button>
@@ -234,7 +242,7 @@
                 <span v-else class="text-gray-400">-</span>
               </td>
                 <td class="px-4 py-4 text-sm text-gray-800 dark:text-white/90">
-                  <div class="flex flex-wrap gap-2">
+                  <div v-if="canManagePayments" class="flex flex-wrap gap-2">
                     <button
                       @click="openEdit(payment)"
                       class="rounded-md bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
@@ -384,7 +392,8 @@ interface Member {
   LastName: string
 }
 
-const { currentUser } = useAuth()
+const { currentUser, isAdmin } = useAuth()
+const canManagePayments = computed(() => isAdmin.value)
 
 const payments = ref<Payment[]>([])
 const members = ref<Map<number, string>>(new Map())
@@ -507,6 +516,10 @@ const refreshPayments = () => {
 }
 
 const exportPaymentsCsv = () => {
+  if (!canManagePayments.value) {
+    alert('View-only access: exports are disabled for your account.')
+    return
+  }
   const rows = filteredPayments.value
   if (rows.length === 0) return
 
@@ -585,6 +598,10 @@ const selectMember = (member: Member) => {
 }
 
 const recordManualPayment = async () => {
+  if (!canManagePayments.value) {
+    alert('View-only access: manual payment entry is disabled for your account.')
+    return
+  }
   try {
     recordingPayment.value = true
     const memberId = Number(manualPayment.value.memberId)
@@ -639,6 +656,7 @@ const recordManualPayment = async () => {
 }
 
 const openEdit = (payment: Payment) => {
+  if (!canManagePayments.value) return
   editForm.value = {
     paymentId: payment.PaymentID,
     memberId: payment.MemberID ? payment.MemberID.toString() : '',
@@ -659,6 +677,10 @@ const openEdit = (payment: Payment) => {
 }
 
 const saveEdit = async () => {
+  if (!canManagePayments.value) {
+    alert('View-only access: editing payments is disabled for your account.')
+    return
+  }
   try {
     const headers = await getAuthHeaders()
     const body = {
@@ -701,6 +723,10 @@ const saveEdit = async () => {
 }
 
 const confirmDelete = async (payment: Payment) => {
+  if (!canManagePayments.value) {
+    alert('View-only access: deleting payments is disabled for your account.')
+    return
+  }
   const ok = window.confirm(`Delete payment #${payment.PaymentID}? This cannot be undone.`)
   if (!ok) return
   try {
