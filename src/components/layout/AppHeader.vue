@@ -74,6 +74,14 @@
         class="items-center justify-between w-full gap-4 px-5 py-4 shadow-theme-md lg:flex lg:justify-end lg:px-0 lg:shadow-none"
       >
         <div class="flex items-center gap-2 2xsm:gap-3">
+          <a
+            href="/FRONTEND_USER_MANUAL.md"
+            target="_blank"
+            rel="noopener"
+            class="flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            Help
+          </a>
           <ThemeToggler />
         </div>
         <UserMenu />
