@@ -94,7 +94,7 @@ Use this page to manage renewal emails.
 3. Send individual emails or use **Send All**.
 4. If Square is configured, renewal emails include a payment link with the configured fee.
 5. Renewal cards show the last notice sent timestamp when available.
-6. Outstanding totals show count and amount due for the selected year.
+6. Outstanding totals show count due for the selected year.
 
 ---
 
