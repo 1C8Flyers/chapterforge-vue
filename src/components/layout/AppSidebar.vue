@@ -252,31 +252,26 @@ const allMenuItems = [
     icon: UserCircleIcon,
     name: "Members",
     path: "/members",
-    adminOnly: true,
   },
   {
     icon: CalenderIcon,
     name: "Renewals",
     path: "/renewals",
-    adminOnly: true,
   },
   {
     icon: PieChartIcon,
     name: "Reports",
     path: "/reports",
-    adminOnly: true,
   },
   {
     icon: PieChartIcon,
     name: "Renewal Payments",
     path: "/payments",
-    adminOnly: true,
   },
   {
     icon: PieChartIcon,
     name: "Square Analytics",
     path: "/square-analytics",
-    adminOnly: true,
   },
   {
     icon: HorizontalDots,
