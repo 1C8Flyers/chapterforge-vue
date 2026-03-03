@@ -3,21 +3,6 @@
     <PageBreadcrumb :pageTitle="currentPageTitle" />
     
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4">
-      <!-- Total Members Card -->
-      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-        <div class="flex items-center justify-between">
-          <div>
-            <h4 class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ stats.totalMembers }}</h4>
-            <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">Total Members</span>
-          </div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-500/10">
-            <svg class="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          </div>
-        </div>
-      </div>
-
       <!-- Total Families Card -->
       <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="flex items-center justify-between">
@@ -63,36 +48,6 @@
         </div>
       </div>
 
-      <!-- Active Members Card -->
-      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-        <div class="flex items-center justify-between">
-          <div>
-            <h4 class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ stats.activeMembers }}</h4>
-            <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">Active Members</span>
-          </div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-green-50 dark:bg-green-500/10">
-            <svg class="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <!-- Renewals Due Card -->
-      <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
-        <div class="flex items-center justify-between">
-          <div>
-            <h4 class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ stats.renewalsDue }}</h4>
-            <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">Renewals Due</span>
-          </div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-50 dark:bg-yellow-500/10">
-            <svg class="h-6 w-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-        </div>
-      </div>
-
       <!-- Youth Protection / Background Check Card -->
       <div
         role="button"
@@ -105,7 +60,7 @@
         <div class="flex items-center justify-between">
           <div>
             <h4 class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ stats.youthProtectionExpiring }}</h4>
-            <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">YP / Background Expiring Soon</span>
+            <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">YP / Background Expiring Soon (60 days)</span>
             <span class="mt-2 inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-600 dark:bg-red-500/10 dark:text-red-300">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -131,7 +86,7 @@
       <div class="w-full max-w-2xl my-8 rounded-xl bg-white p-6 dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-xl font-semibold text-gray-800 dark:text-white/90">
-            YP / Background Expiring Soon (30 days)
+            YP / Background Expiring Soon (60 days)
           </h3>
           <button
             @click="showYPDetailsModal = false"

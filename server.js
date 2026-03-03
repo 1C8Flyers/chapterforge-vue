@@ -1494,13 +1494,13 @@ app.get('/api/members/stats', async (req, res) => {
     const members = await db.getAllMembers();
     const now = new Date();
     const currentYear = now.getFullYear();
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
 
     const isExpiringSoon = (dateString) => {
       if (!dateString) return false;
       const expirationDate = new Date(dateString);
       if (Number.isNaN(expirationDate.getTime())) return false;
-      return expirationDate <= thirtyDaysFromNow;
+      return expirationDate <= sixtyDaysFromNow;
     };
 
     const normalizeMemberType = (value) => String(value || '').trim().toLowerCase();
@@ -1536,13 +1536,13 @@ app.get('/api/members/yp-expiring', async (req, res) => {
   try {
     const members = await db.getAllMembers();
     const now = new Date();
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
 
     const isExpiringSoon = (dateString) => {
       if (!dateString) return false;
       const expirationDate = new Date(dateString);
       if (Number.isNaN(expirationDate.getTime())) return false;
-      return expirationDate <= thirtyDaysFromNow;
+      return expirationDate <= sixtyDaysFromNow;
     };
 
     const getSoonestDate = (member) => {
