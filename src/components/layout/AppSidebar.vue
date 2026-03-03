@@ -139,57 +139,43 @@
                       isSubmenuOpen(groupIndex, index) &&
                       (isExpanded || isHovered || isMobileOpen)
                     "
-                      adminOnly: false,
+                  >
                     <ul class="mt-2 space-y-1 ml-9">
                       <li v-for="subItem in item.subItems" :key="subItem.name">
                         <router-link
                           :to="subItem.path"
                           :class="[
-                      adminOnly: false,
+                            'menu-dropdown-item',
                             {
-                              'menu-dropdown-item-active': isActive(
-                                subItem.path
-                              ),
-                              'menu-dropdown-item-inactive': !isActive(
-                      adminOnly: false,
-                              ),
+                              'menu-dropdown-item-active': isActive(subItem.path),
+                              'menu-dropdown-item-inactive': !isActive(subItem.path),
                             },
                           ]"
                         >
                           {{ subItem.name }}
-                      adminOnly: false,
-                            <span
-                              v-if="subItem.new"
-                              :class="[
-                                'menu-dropdown-badge',
-                                {
-                                  'menu-dropdown-badge-active': isActive(
-                                    subItem.path
-                                  ),
-                                  'menu-dropdown-badge-inactive': !isActive(
-                                    subItem.path
-                                  ),
-                                },
-                              ]"
-                            >
-                              new
-                            </span>
-                            <span
-                              v-if="subItem.pro"
-                              :class="[
-                                'menu-dropdown-badge',
-                                {
-                                  'menu-dropdown-badge-active': isActive(
-                                    subItem.path
-                                  ),
-                                  'menu-dropdown-badge-inactive': !isActive(
-                                    subItem.path
-                                  ),
-                                },
-                              ]"
-                            >
-                              pro
-                            </span>
+                          <span
+                            v-if="subItem.new"
+                            :class="[
+                              'menu-dropdown-badge',
+                              {
+                                'menu-dropdown-badge-active': isActive(subItem.path),
+                                'menu-dropdown-badge-inactive': !isActive(subItem.path),
+                              },
+                            ]"
+                          >
+                            new
+                          </span>
+                          <span
+                            v-if="subItem.pro"
+                            :class="[
+                              'menu-dropdown-badge',
+                              {
+                                'menu-dropdown-badge-active': isActive(subItem.path),
+                                'menu-dropdown-badge-inactive': !isActive(subItem.path),
+                              },
+                            ]"
+                          >
+                            pro
                           </span>
                         </router-link>
                       </li>
