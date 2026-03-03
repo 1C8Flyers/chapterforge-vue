@@ -48,6 +48,32 @@
         </div>
       </div>
 
+      <!-- Prospects Card -->
+      <div
+        v-if="stats.totalProspects > 0"
+        role="button"
+        tabindex="0"
+        @click="goToProspects"
+        @keydown.enter="goToProspects"
+        @keydown.space.prevent="goToProspects"
+        class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] cursor-pointer transition-all hover:shadow-lg hover:border-orange-300 dark:hover:border-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
+      >
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="text-2xl font-bold text-gray-800 dark:text-white/90">{{ stats.totalProspects }}</h4>
+            <span class="mt-1 block text-sm text-gray-500 dark:text-gray-400">Prospects</span>
+            <span class="mt-2 inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-medium text-orange-600 dark:bg-orange-500/10 dark:text-orange-300">
+              View in Members
+            </span>
+          </div>
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-orange-50 dark:bg-orange-500/10">
+            <svg class="h-6 w-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
       <!-- Youth Protection / Background Check Card -->
       <div
         role="button"
@@ -188,11 +214,16 @@ const stats = ref({
   totalMembers: 0,
   totalFamilies: 0,
   totalIndividuals: 0,
+  totalProspects: 0,
   totalOther: 0,
   activeMembers: 0,
   renewalsDue: 0,
   youthProtectionExpiring: 0
 })
+
+const goToProspects = () => {
+  router.push({ path: '/members', query: { memberType: 'Prospect' } })
+}
 
 const fetchStats = async () => {
   try {

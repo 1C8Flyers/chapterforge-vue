@@ -53,7 +53,7 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Search members by name or email..."
+            placeholder="Search by name, email, status, member type, or last paid..."
             class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
           />
         </div>
@@ -697,6 +697,7 @@ const isEditing = ref(false)
 const isViewOnly = ref(false)
 const familyPrimaryId = ref<number | null>(null)
 const searchQuery = ref('')
+const memberTypeFilter = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const expandedHouseholds = ref<Set<number>>(new Set())
 const memberTypes = ref<any[]>([])
@@ -749,6 +750,19 @@ const toOptionValue = (label: string) => {
   const pascal = words.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('')
   if (!pascal) return ''
   return /^[A-Za-z]/.test(pascal) ? pascal : `Option${pascal}`
+}
+
+const normalizeMemberType = (value: unknown) => String(value || '').trim().toLowerCase()
+
+const setMemberTypeFilterFromQuery = () => {
+  const raw = route.query.memberType
+  if (Array.isArray(raw)) {
+    memberTypeFilter.value = raw[0] || ''
+  } else if (typeof raw === 'string') {
+    memberTypeFilter.value = raw
+  } else {
+    memberTypeFilter.value = ''
+  }
 }
 
 const buildMemberForm = (overrides: Record<string, any> = {}) => {
@@ -804,6 +818,9 @@ const filteredMembers = computed(() => {
       member.FirstName?.toLowerCase().includes(query) ||
       member.LastName?.toLowerCase().includes(query) ||
       member.Email?.toLowerCase().includes(query) ||
+      String(member.Status || '').toLowerCase().includes(query) ||
+      String(member.MemberType || '').toLowerCase().includes(query) ||
+      String(member.LastPaidYear || '').toLowerCase().includes(query) ||
       matchesRoleActivity(member)
 
     const matchingMembers = members.value.filter(isMatch)
@@ -819,6 +836,11 @@ const filteredMembers = computed(() => {
       }
       return isMatch(member)
     })
+  }
+
+  if (memberTypeFilter.value) {
+    const targetType = normalizeMemberType(memberTypeFilter.value)
+    filtered = filtered.filter(member => normalizeMemberType(member.MemberType) === targetType)
   }
 
   // Apply sorting
@@ -956,6 +978,13 @@ watch(
     if (members.value.length > 0) {
       openMemberFromQuery()
     }
+  }
+)
+
+watch(
+  () => route.query.memberType,
+  () => {
+    setMemberTypeFilterFromQuery()
   }
 )
 
@@ -1354,6 +1383,7 @@ const formatYear = (year: number | string | null) => {
 }
 
 onMounted(() => {
+  setMemberTypeFilterFromQuery()
   fetchMembers()
   fetchMemberTypes()
   fetchMemberOptions()

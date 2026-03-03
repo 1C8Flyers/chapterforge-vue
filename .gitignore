@@ -4,3 +4,4 @@ node_modules/
 *.log
 .DS_Store
 chapterforge-vue-firebase-adminsdk-fbsvc-8e7bf9e0fd.json
+CHAT_HISTORY.md

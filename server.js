@@ -1506,6 +1506,7 @@ app.get('/api/members/stats', async (req, res) => {
     const normalizeMemberType = (value) => String(value || '').trim().toLowerCase();
     const totalFamilies = members.filter(m => normalizeMemberType(m.MemberType) === 'family').length;
     const totalIndividuals = members.filter(m => normalizeMemberType(m.MemberType) === 'individual').length;
+    const totalProspects = members.filter(m => normalizeMemberType(m.MemberType) === 'prospect').length;
     const totalOther = members.filter(m => {
       const memberType = normalizeMemberType(m.MemberType);
       return memberType !== 'family' && memberType !== 'individual' && memberType !== 'family member';
@@ -1515,6 +1516,7 @@ app.get('/api/members/stats', async (req, res) => {
       totalMembers: members.length,
       totalFamilies,
       totalIndividuals,
+      totalProspects,
       totalOther,
       activeMembers: members.filter(m => m.Status === 'Active').length,
       renewalsDue: members.filter(m => m.LastPaidYear < currentYear && m.MemberType !== 'Family Member').length,
