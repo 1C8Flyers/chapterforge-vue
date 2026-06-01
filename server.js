@@ -13,8 +13,16 @@ const emailService = require('./emailService');
 const squareService = require('./squareService');
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 3000;
 const upload = multer({ storage: multer.memoryStorage() });
+
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
 
 let firebaseAuthEnabled = false;
 const firebaseAdminEmails = (process.env.FIREBASE_ADMIN_EMAILS || '')
@@ -66,6 +74,19 @@ app.get('/public/member-signup/form', async (req, res) => {
       return res.status(403).send('Signup form is currently disabled.');
     }
     const actionUrl = `${req.protocol}://${req.get('host')}/public/member-signup`;
+    const memberTypes = await db.getMemberTypes();
+    const selectedMemberType = memberTypes.find(type => type.Name === config.defaultMemberType)?.Name
+      || memberTypes[0]?.Name
+      || config.defaultMemberType
+      || 'Prospect';
+    const memberTypeOptions = memberTypes.length > 0
+      ? memberTypes.map((type) => {
+        const selected = type.Name === selectedMemberType ? ' selected' : '';
+        const duesRate = Number(type.DuesRate || 0);
+        const label = duesRate > 0 ? `${type.Name} - $${duesRate}` : type.Name;
+        return `<option value="${escapeHtml(type.Name)}"${selected}>${escapeHtml(label)}</option>`;
+      }).join('')
+      : `<option value="${escapeHtml(selectedMemberType)}">${escapeHtml(selectedMemberType)}</option>`;
     res.setHeader('Content-Type', 'text/html');
     res.send(`
       <!DOCTYPE html>
@@ -103,6 +124,12 @@ app.get('/public/member-signup/form', async (req, res) => {
               <div class="field"><label>Last Name</label><input name="LastName" required /></div>
               <div class="field"><label>Email</label><input name="Email" type="email" required /></div>
               <div class="field"><label>EAA Number (optional)</label><input name="EAANumber" /></div>
+              <div class="field full">
+                <label>Membership Type</label>
+                <select name="MemberType" required>
+                  ${memberTypeOptions}
+                </select>
+              </div>
               <div class="field full"><label>Street Address</label><input name="Street" required /></div>
               <div class="field"><label>City</label><input name="City" required /></div>
               <div class="field"><label>State</label><input name="State" required /></div>
@@ -157,12 +184,25 @@ app.post('/public/member-signup', async (req, res) => {
     const State = String(req.body?.State || '').trim();
     const Zip = String(req.body?.Zip || '').trim();
     const HearAbout = String(req.body?.HearAbout || '').trim();
+    const RequestedMemberType = String(req.body?.MemberType || '').trim();
 
     if (!FirstName || !LastName || !Email || !Street || !City || !State || !Zip) {
       return res.status(400).send('Missing required fields.');
     }
 
-    const memberType = config.defaultMemberType || 'Prospect';
+    const memberTypes = await db.getMemberTypes();
+    const fallbackMemberType = memberTypes.find(type => type.Name === config.defaultMemberType)
+      || memberTypes[0]
+      || null;
+    const selectedType = RequestedMemberType
+      ? memberTypes.find(type => type.Name === RequestedMemberType)
+      : fallbackMemberType;
+    if (RequestedMemberType && memberTypes.length > 0 && !selectedType) {
+      return res.status(400).send('Invalid membership type.');
+    }
+
+    const memberType = selectedType?.Name || RequestedMemberType || config.defaultMemberType || 'Prospect';
+    const duesRate = selectedType ? Number(selectedType.DuesRate || 0) : 0;
     const notes = HearAbout
       ? `New member registration. Heard about us: ${HearAbout}`
       : 'New member registration';
@@ -180,6 +220,8 @@ app.post('/public/member-signup', async (req, res) => {
       Zip,
       MemberType: memberType,
       Status: 'Prospect',
+      DuesRate: duesRate,
+      AmountDue: duesRate,
       Notes: notes
     }, optionKeys);
 
@@ -197,7 +239,7 @@ app.post('/public/member-signup', async (req, res) => {
       Zip,
       AssignedMemberType: memberType,
       Notes: notes,
-      RawPayload: JSON.stringify({ FirstName, LastName, Email, EAANumber, Street, City, State, Zip, HearAbout }),
+      RawPayload: JSON.stringify({ FirstName, LastName, Email, EAANumber, MemberType: memberType, Street, City, State, Zip, HearAbout }),
       CreatedIp: ipAddress,
       UserAgent: userAgent
     });

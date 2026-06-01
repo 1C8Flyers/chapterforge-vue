@@ -659,6 +659,29 @@ const publicSignupFormAction = computed(() => {
   return `${publicSignupBaseUrl.value}/public/member-signup`
 })
 
+const escapeHtml = (value: unknown) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;')
+
+const publicSignupMemberTypeOptions = computed(() => {
+  const selectedMemberType = memberTypes.value.find(type => type.Name === publicSignupSettings.value.defaultMemberType)?.Name
+    || memberTypes.value[0]?.Name
+    || publicSignupSettings.value.defaultMemberType
+    || 'Prospect'
+  if (memberTypes.value.length === 0) {
+    return `<option value="${escapeHtml(selectedMemberType)}">${escapeHtml(selectedMemberType)}</option>`
+  }
+  return memberTypes.value.map((type) => {
+    const selected = type.Name === selectedMemberType ? ' selected' : ''
+    const duesRate = Number(type.DuesRate || 0)
+    const label = duesRate > 0 ? `${type.Name} - $${duesRate}` : type.Name
+    return `<option value="${escapeHtml(type.Name)}"${selected}>${escapeHtml(label)}</option>`
+  }).join('\n        ')
+})
+
 const publicSignupEmbedSnippet = computed(() => {
   const actionUrl = publicSignupFormAction.value || 'https://your-domain.example.com/public/member-signup'
   return `<style>
@@ -679,6 +702,12 @@ const publicSignupEmbedSnippet = computed(() => {
     <div class="cf-field"><label>Last Name</label><input name="LastName" required /></div>
     <div class="cf-field"><label>Email</label><input name="Email" type="email" required /></div>
     <div class="cf-field"><label>EAA Number (optional)</label><input name="EAANumber" /></div>
+    <div class="cf-field cf-full">
+      <label>Membership Type</label>
+      <select name="MemberType" required>
+        ${publicSignupMemberTypeOptions.value}
+      </select>
+    </div>
     <div class="cf-field cf-full"><label>Street Address</label><input name="Street" required /></div>
     <div class="cf-field"><label>City</label><input name="City" required /></div>
     <div class="cf-field"><label>State</label><input name="State" required /></div>
