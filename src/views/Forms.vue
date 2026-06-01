@@ -333,6 +333,7 @@
                     <div class="grid gap-3 md:grid-cols-2">
                       <div><span class="font-semibold text-gray-700 dark:text-gray-200">EAA Number:</span> {{ signup.EAANumber || '—' }}</div>
                       <div><span class="font-semibold text-gray-700 dark:text-gray-200">Heard about us:</span> {{ getSignupHearAbout(signup) || '—' }}</div>
+                      <div class="md:col-span-2 whitespace-pre-line"><span class="font-semibold text-gray-700 dark:text-gray-200">Message:</span> {{ getSignupMessage(signup) || '—' }}</div>
                       <div class="md:col-span-2"><span class="font-semibold text-gray-700 dark:text-gray-200">Address:</span> {{ formatAddress(signup) }}</div>
                       <div class="md:col-span-2"><span class="font-semibold text-gray-700 dark:text-gray-200">Assigned Roles:</span> {{ formatAssignedList(parseStoredList(signup.AssignedRoles), roleLabelMap) }}</div>
                       <div class="md:col-span-2"><span class="font-semibold text-gray-700 dark:text-gray-200">Assigned Activities:</span> {{ formatAssignedList(parseStoredList(signup.AssignedActivities), activityLabelMap) }}</div>
@@ -533,6 +534,36 @@
             />
           </div>
 
+          <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-800">
+            <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              <input
+                v-model="customFormDraft.messageFieldEnabled"
+                type="checkbox"
+                class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+              />
+              Include free text message field
+            </label>
+            <div v-if="customFormDraft.messageFieldEnabled" class="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message Field Label</label>
+                <input
+                  v-model="customFormDraft.messageFieldLabel"
+                  type="text"
+                  placeholder="Message"
+                  class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                />
+              </div>
+              <label class="flex items-center gap-2 self-end pb-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <input
+                  v-model="customFormDraft.messageFieldRequired"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                />
+                Require message
+              </label>
+            </div>
+          </div>
+
           <div class="grid gap-4 md:grid-cols-2">
             <div>
               <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Assign Roles</p>
@@ -639,6 +670,9 @@ const customFormDraft = ref({
   sessionName: '',
   defaultMemberType: 'Prospect',
   notificationEmail: '',
+  messageFieldEnabled: true,
+  messageFieldLabel: 'Message',
+  messageFieldRequired: false,
   assignedRoles: [] as string[],
   assignedActivities: [] as string[]
 })
@@ -666,15 +700,26 @@ const escapeHtml = (value: unknown) => String(value ?? '')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;')
 
+const publicSignupMemberTypeNames = ['Individual', 'Family', 'Student']
+const publicSignupMemberTypes = computed(() => {
+  const byName = new Map(
+    memberTypes.value.map(type => [String(type.Name || '').trim().toLowerCase(), type])
+  )
+  return publicSignupMemberTypeNames.map(name => byName.get(name.toLowerCase()) || {
+    Name: name,
+    DuesRate: 0
+  })
+})
+
 const publicSignupMemberTypeOptions = computed(() => {
-  const selectedMemberType = memberTypes.value.find(type => type.Name === publicSignupSettings.value.defaultMemberType)?.Name
-    || memberTypes.value[0]?.Name
+  const selectedMemberType = publicSignupMemberTypes.value.find(type => type.Name === publicSignupSettings.value.defaultMemberType)?.Name
+    || publicSignupMemberTypes.value[0]?.Name
     || publicSignupSettings.value.defaultMemberType
-    || 'Prospect'
-  if (memberTypes.value.length === 0) {
+    || 'Individual'
+  if (publicSignupMemberTypes.value.length === 0) {
     return `<option value="${escapeHtml(selectedMemberType)}">${escapeHtml(selectedMemberType)}</option>`
   }
-  return memberTypes.value.map((type) => {
+  return publicSignupMemberTypes.value.map((type) => {
     const selected = type.Name === selectedMemberType ? ' selected' : ''
     const duesRate = Number(type.DuesRate || 0)
     const label = duesRate > 0 ? `${type.Name} - $${duesRate}` : type.Name
@@ -746,12 +791,16 @@ const buildCustomFormEmbedSnippet = (form: any) => {
   const sessionLine = form?.sessionName
     ? `<div class="cf-session">Session: ${form.sessionName}</div>`
     : ''
+  const messageField = form?.messageFieldEnabled !== false
+    ? `<div class="cf-field cf-full"><label>${escapeHtml(form?.messageFieldLabel || 'Message')}</label><textarea name="Message"${form?.messageFieldRequired ? ' required' : ''}></textarea></div>`
+    : ''
   return `<style>
 .cf-signup{font-family:Arial,sans-serif;max-width:680px;background:#fff;border-radius:14px;box-shadow:0 16px 30px rgba(15,23,42,.08);padding:22px}
 .cf-grid{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
 .cf-field{display:flex;flex-direction:column;gap:6px}
 .cf-field label{font-size:13px;color:#374151;font-weight:600}
-.cf-field input,.cf-field select{padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px}
+.cf-field input,.cf-field select,.cf-field textarea{padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px}
+.cf-field textarea{min-height:110px;resize:vertical}
 .cf-full{grid-column:span 2}
 .cf-notice{margin-top:10px;padding:10px 12px;border-radius:10px;background:#eff6ff;color:#1e3a8a;font-size:12px}
 .cf-session{margin-top:8px;color:#1d4ed8;font-size:12px;font-weight:600}
@@ -781,6 +830,7 @@ const buildCustomFormEmbedSnippet = (form: any) => {
         <option>Other</option>
       </select>
     </div>
+    ${messageField}
   </div>
   ${sessionLine}
   <div class="cf-notice">By submitting this form, you agree to be added to our chapter events email list.</div>
@@ -888,6 +938,9 @@ const openCustomFormModal = (form: any | null = null) => {
       sessionName: form.sessionName || '',
       defaultMemberType: form.defaultMemberType || 'Prospect',
       notificationEmail: form.notificationEmail || '',
+      messageFieldEnabled: form.messageFieldEnabled !== false,
+      messageFieldLabel: form.messageFieldLabel || 'Message',
+      messageFieldRequired: Boolean(form.messageFieldRequired),
       assignedRoles: Array.isArray(form.assignedRoles) ? [...form.assignedRoles] : [],
       assignedActivities: Array.isArray(form.assignedActivities) ? [...form.assignedActivities] : []
     }
@@ -902,6 +955,9 @@ const openCustomFormModal = (form: any | null = null) => {
       sessionName: '',
       defaultMemberType: 'Prospect',
       notificationEmail: '',
+      messageFieldEnabled: true,
+      messageFieldLabel: 'Message',
+      messageFieldRequired: false,
       assignedRoles: [],
       assignedActivities: []
     }
@@ -1220,6 +1276,11 @@ const getHearAbout = (signup: any) => {
 const getSignupHearAbout = (signup: any) => {
   const payload = parseSignupPayload(signup)
   return payload?.HearAbout || ''
+}
+
+const getSignupMessage = (signup: any) => {
+  const payload = parseSignupPayload(signup)
+  return payload?.Message || ''
 }
 
 const formatAddress = (signup: any) => {

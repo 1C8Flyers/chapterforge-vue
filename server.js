@@ -24,6 +24,17 @@ const escapeHtml = (value) => String(value ?? '')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
 
+const PUBLIC_SIGNUP_MEMBER_TYPE_NAMES = ['Individual', 'Family', 'Student'];
+const getPublicSignupMemberTypes = (memberTypes = []) => {
+  const byName = new Map(
+    memberTypes.map(type => [String(type.Name || '').trim().toLowerCase(), type])
+  );
+  return PUBLIC_SIGNUP_MEMBER_TYPE_NAMES.map(name => byName.get(name.toLowerCase()) || {
+    Name: name,
+    DuesRate: 0
+  });
+};
+
 let firebaseAuthEnabled = false;
 const firebaseAdminEmails = (process.env.FIREBASE_ADMIN_EMAILS || '')
   .split(',')
@@ -74,11 +85,11 @@ app.get('/public/member-signup/form', async (req, res) => {
       return res.status(403).send('Signup form is currently disabled.');
     }
     const actionUrl = `${req.protocol}://${req.get('host')}/public/member-signup`;
-    const memberTypes = await db.getMemberTypes();
+    const memberTypes = getPublicSignupMemberTypes(await db.getMemberTypes());
     const selectedMemberType = memberTypes.find(type => type.Name === config.defaultMemberType)?.Name
       || memberTypes[0]?.Name
       || config.defaultMemberType
-      || 'Prospect';
+      || 'Individual';
     const memberTypeOptions = memberTypes.length > 0
       ? memberTypes.map((type) => {
         const selected = type.Name === selectedMemberType ? ' selected' : '';
@@ -197,7 +208,7 @@ app.post('/public/member-signup', async (req, res) => {
       return res.status(400).send('Missing required fields.');
     }
 
-    const memberTypes = await db.getMemberTypes();
+    const memberTypes = getPublicSignupMemberTypes(await db.getMemberTypes());
     const fallbackMemberType = memberTypes.find(type => type.Name === config.defaultMemberType)
       || memberTypes[0]
       || null;
@@ -322,6 +333,13 @@ app.get('/public/forms/:slug/form', async (req, res) => {
     const sessionLabel = form.sessionName
       ? `Session: ${form.sessionName}`
       : 'Session details will be shared after signup.';
+    const messageFieldHtml = form.messageFieldEnabled !== false
+      ? `
+              <div class="field full">
+                <label>${escapeHtml(form.messageFieldLabel || 'Message')}</label>
+                <textarea name="Message"${form.messageFieldRequired ? ' required' : ''}></textarea>
+              </div>`
+      : '';
 
     res.setHeader('Content-Type', 'text/html');
     res.send(`
@@ -340,8 +358,9 @@ app.get('/public/forms/:slug/form', async (req, res) => {
           .grid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .field { display: flex; flex-direction: column; gap: 6px; }
           label { font-size: 13px; color: #374151; font-weight: 600; }
-          input, select { width: 100%; padding: 11px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
-          input:focus, select:focus { outline: 2px solid rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
+          input, select, textarea { width: 100%; padding: 11px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+          textarea { min-height: 120px; resize: vertical; }
+          input:focus, select:focus, textarea:focus { outline: 2px solid rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
           .full { grid-column: span 2; }
           .notice { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: #eff6ff; color: #1e3a8a; font-size: 13px; }
           .actions { margin-top: 18px; display: flex; justify-content: flex-end; }
@@ -376,6 +395,7 @@ app.get('/public/forms/:slug/form', async (req, res) => {
                   <option>Other</option>
                 </select>
               </div>
+              ${messageFieldHtml}
             </div>
             <div class="notice">
               By submitting this form, you agree to be added to our chapter events email list.
@@ -416,8 +436,12 @@ app.post('/public/forms/:slug', async (req, res) => {
     const State = String(req.body?.State || '').trim();
     const Zip = String(req.body?.Zip || '').trim();
     const HearAbout = String(req.body?.HearAbout || '').trim();
+    const Message = String(req.body?.Message || '').trim().slice(0, 5000);
 
     if (!FirstName || !LastName || !Email || !Street || !City || !State || !Zip) {
+      return res.status(400).send('Missing required fields.');
+    }
+    if (form.messageFieldEnabled !== false && form.messageFieldRequired && !Message) {
       return res.status(400).send('Missing required fields.');
     }
 
@@ -475,6 +499,7 @@ app.post('/public/forms/:slug', async (req, res) => {
       const notesParts = [`Form signup: ${form.name}`];
       if (sessionName) notesParts.push(`Session: ${sessionName}`);
       if (HearAbout) notesParts.push(`Heard about us: ${HearAbout}`);
+      if (Message) notesParts.push(`Message: ${Message}`);
       const notes = `${notesParts.join('. ')}.`;
 
       const createPayload = {
@@ -537,6 +562,7 @@ app.post('/public/forms/:slug', async (req, res) => {
         State,
         Zip,
         HearAbout,
+        Message,
         sessionName,
         assignedRoles,
         assignedActivities,
@@ -559,6 +585,7 @@ app.post('/public/forms/:slug', async (req, res) => {
           <li>Assigned Activities: ${assignedActivities.length ? assignedActivities.join(', ') : '—'}</li>
           <li>Existing Member: ${createdNew ? 'No (created new)' : 'Yes (updated)'} </li>
           <li>Heard about us: ${HearAbout || '—'}</li>
+          <li>Message: ${Message ? `<span style="white-space:pre-wrap">${escapeHtml(Message)}</span>` : '—'}</li>
         </ul>
       `;
       await emailService.sendReportEmail({
@@ -711,6 +738,9 @@ app.use('/api', async (req, res, next) => {
     sessionName: '',
     defaultMemberType: 'Prospect',
     notificationEmail: '',
+    messageFieldEnabled: true,
+    messageFieldLabel: 'Message',
+    messageFieldRequired: false,
     assignedRoles: [],
     assignedActivities: []
   };
@@ -764,6 +794,11 @@ app.use('/api', async (req, res, next) => {
         notificationEmail: typeof merged.notificationEmail === 'string'
           ? merged.notificationEmail.trim()
           : '',
+        messageFieldEnabled: merged.messageFieldEnabled !== false,
+        messageFieldLabel: typeof merged.messageFieldLabel === 'string' && merged.messageFieldLabel.trim()
+          ? merged.messageFieldLabel.trim().slice(0, 80)
+          : DEFAULT_CUSTOM_FORM_CONFIG.messageFieldLabel,
+        messageFieldRequired: Boolean(merged.messageFieldRequired),
         assignedRoles: normalizeList(merged.assignedRoles),
         assignedActivities: normalizeList(merged.assignedActivities)
       });
