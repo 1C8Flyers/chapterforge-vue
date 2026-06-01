@@ -244,22 +244,38 @@
       class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
       @click.self="closeModal"
     >
-      <div class="w-full max-w-4xl my-8 rounded-xl bg-white p-6 dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
-        <div class="mb-6 flex items-center justify-between gap-4">
-          <h3 class="text-xl font-semibold text-gray-800 dark:text-white/90">
-            {{ isViewOnly ? 'View Member' : (isEditing ? 'Edit Member' : 'Add Member') }}
-          </h3>
-          <button
-            v-if="isViewOnly && canManageMembers"
-            type="button"
-            @click="enterEditMode"
-            class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-          >
-            Edit
-          </button>
-        </div>
-        
+      <div class="w-full max-w-4xl my-8 rounded-xl bg-white dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
         <form @submit.prevent="saveMember">
+          <div class="sticky top-0 z-10 mb-6 flex flex-col gap-4 border-b border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
+            <h3 class="text-xl font-semibold text-gray-800 dark:text-white/90">
+              {{ isViewOnly ? 'View Member' : (isEditing ? 'Edit Member' : 'Add Member') }}
+            </h3>
+            <div class="flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                @click="closeModal"
+                class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                {{ isViewOnly ? 'Close' : 'Cancel' }}
+              </button>
+              <button
+                v-if="isViewOnly && canManageMembers"
+                type="button"
+                @click="enterEditMode"
+                class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+              >
+                Edit
+              </button>
+              <button
+                v-if="!isViewOnly"
+                type="submit"
+                class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+              >
+                {{ isEditing ? 'Update' : 'Add' }} Member
+              </button>
+            </div>
+          </div>
+          <div class="px-6 pb-6">
           <!-- Basic Information -->
           <div class="mb-6">
             <h4 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Basic Information</h4>
@@ -617,22 +633,6 @@
               placeholder="Additional notes about this member..."
             ></textarea>
           </div>
-          
-          <div class="mt-6 flex justify-end gap-3">
-            <button
-              type="button"
-              @click="closeModal"
-              class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-            >
-              {{ isViewOnly ? 'Close' : 'Cancel' }}
-            </button>
-            <button
-              v-if="!isViewOnly"
-              type="submit"
-              class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-            >
-              {{ isEditing ? 'Update' : 'Add' }} Member
-            </button>
           </div>
         </form>
       </div>
