@@ -724,6 +724,9 @@ const publicSignupEmbedSnippet = computed(() => {
         <option>Other</option>
       </select>
     </div>
+    <div class="cf-field cf-full">
+      <label><input type="checkbox" name="PayOnline" value="true" checked style="width:auto;margin-right:8px" />Pay online after submitting</label>
+    </div>
   </div>
   <div class="cf-notice">By submitting this form, you agree to be added to our chapter events email list.</div>
   <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off" />

@@ -813,6 +813,21 @@ class Database {
     });
   }
 
+  markPublicSignupPaidByMemberId(memberId) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `UPDATE public_member_signups
+         SET Status = 'paid'
+         WHERE MemberID = ? AND Status != 'replied'`,
+        [memberId],
+        (err) => {
+          if (err) reject(err);
+          else resolve({ updated: true });
+        }
+      );
+    });
+  }
+
   getPublicSignupById(id) {
     return new Promise((resolve, reject) => {
       this.db.get(
@@ -1579,6 +1594,22 @@ class Database {
           if (updateErr) reject(updateErr);
           else resolve({ updated: true, lastPaidYear: maxYear });
         });
+      });
+    });
+  }
+
+  activateProspectMember(memberId) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        UPDATE members SET
+          Status = 'Active',
+          UpdatedAt = CURRENT_TIMESTAMP
+        WHERE MemberID = ?
+          AND Status = 'Prospect'
+      `;
+      this.db.run(sql, [memberId], (err) => {
+        if (err) reject(err);
+        else resolve({ updated: true });
       });
     });
   }

@@ -146,6 +146,12 @@ app.get('/public/member-signup/form', async (req, res) => {
                   <option>Other</option>
                 </select>
               </div>
+              <div class="field full">
+                <label>
+                  <input type="checkbox" name="PayOnline" value="true" checked style="width:auto; margin-right:8px;" />
+                  Pay online after submitting
+                </label>
+              </div>
             </div>
             <div class="notice">
               By submitting this form, you agree to be added to our chapter events email list.
@@ -185,6 +191,7 @@ app.post('/public/member-signup', async (req, res) => {
     const Zip = String(req.body?.Zip || '').trim();
     const HearAbout = String(req.body?.HearAbout || '').trim();
     const RequestedMemberType = String(req.body?.MemberType || '').trim();
+    const PayOnline = ['true', 'on', '1', 'yes'].includes(String(req.body?.PayOnline || '').trim().toLowerCase());
 
     if (!FirstName || !LastName || !Email || !Street || !City || !State || !Zip) {
       return res.status(400).send('Missing required fields.');
@@ -265,6 +272,31 @@ app.post('/public/member-signup', async (req, res) => {
 
     scheduleGoogleSheetsSync();
     scheduleGoogleGroupsSync();
+
+    if (PayOnline && squareService.isConfigured() && duesRate > 0) {
+      try {
+        const year = new Date().getFullYear();
+        const squareFee = await db.getSquareFeeAmount(1);
+        const feeAmount = Number.isFinite(squareFee) ? squareFee : 0;
+        const totalAmount = duesRate + (feeAmount > 0 ? feeAmount : 0);
+        const result = await squareService.createPaymentLink({
+          memberId: createdMember.id,
+          year,
+          amount: totalAmount,
+          description: `${year} ${memberType} Membership Dues`
+        });
+        const paymentLinkUrl = result?.paymentLink?.url || '';
+        if (paymentLinkUrl) {
+          const wantsJson = String(req.headers.accept || '').includes('application/json');
+          if (wantsJson) {
+            return res.json({ success: true, paymentLinkUrl });
+          }
+          return res.redirect(303, paymentLinkUrl);
+        }
+      } catch (paymentError) {
+        console.error('Failed to create Square payment link for signup:', paymentError);
+      }
+    }
 
     const wantsJson = String(req.headers.accept || '').includes('application/json');
     if (wantsJson) {
@@ -2297,6 +2329,10 @@ app.post('/api/payments/square/webhook', async (req, res) => {
     if (memberId > 0) {
       console.log('[WEBHOOK] Refreshing member summary...');
       await db.refreshMemberPaymentSummary(memberId);
+      if (duesPaymentAmount > 0) {
+        await db.activateProspectMember(memberId);
+        await db.markPublicSignupPaidByMemberId(memberId);
+      }
       console.log('[WEBHOOK] Payment processing complete for member', memberId);
     } else {
       console.log('[WEBHOOK] Skipping member summary refresh - no valid memberId');
